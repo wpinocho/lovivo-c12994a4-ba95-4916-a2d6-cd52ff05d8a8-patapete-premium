@@ -39,7 +39,10 @@ export const PatapeteHero = () => {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-xl md:text-2xl text-white/78 mb-9 max-w-xl leading-relaxed font-light">
+          <p
+            className="text-xl md:text-2xl text-white mb-9 max-w-xl leading-relaxed font-light"
+            style={{ textShadow: '0 1px 6px rgba(0,0,0,0.55)' }}
+          >
             Sube su foto, elige el estilo y mira cómo queda tu tapete antes de comprarlo.
           </p>
 
