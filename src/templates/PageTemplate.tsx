@@ -83,7 +83,7 @@ export const PageTemplate = ({
         </header>
       )}
       
-      <div className="flex-1 py-6">
+      <div className={cn("flex-1", layout !== 'full-width' && "py-6")}>
         {renderContent()}
       </div>
 

@@ -19,6 +19,11 @@ export default {
 		},
 		extend: {
 			fontFamily: {
+				// Default sans = Plus Jakarta Sans
+				sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+				// Display serif = Playfair Display
+				display: ['"Playfair Display"', 'serif'],
+				// Keep all existing fonts for flexibility
 				'dm-sans': ['"DM Sans"', 'sans-serif'],
 				'inter': ['Inter', 'sans-serif'],
 				'lato': ['Lato', 'sans-serif'],
@@ -87,27 +92,55 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
+				},
+				'fade-up': {
+					from: { opacity: '0', transform: 'translateY(24px)' },
+					to: { opacity: '1', transform: 'translateY(0)' }
+				},
+				'fade-in': {
+					from: { opacity: '0' },
+					to: { opacity: '1' }
+				},
+				'scale-in': {
+					from: { opacity: '0', transform: 'scale(0.95)' },
+					to: { opacity: '1', transform: 'scale(1)' }
+				},
+				'slide-in-right': {
+					from: { opacity: '0', transform: 'translateX(32px)' },
+					to: { opacity: '1', transform: 'translateX(0)' }
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-8px)' }
+				},
+				'shimmer': {
+					from: { backgroundPosition: '-200% 0' },
+					to: { backgroundPosition: '200% 0' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-up': 'fade-up 0.6s ease-out',
+				'fade-up-delay': 'fade-up 0.6s ease-out 0.2s both',
+				'fade-in': 'fade-in 0.5s ease-out',
+				'scale-in': 'scale-in 0.4s ease-out',
+				'slide-in-right': 'slide-in-right 0.5s ease-out',
+				'float': 'float 3s ease-in-out infinite',
+			},
+			boxShadow: {
+				'warm': '0 4px 24px -4px hsl(20 20% 12% / 0.12)',
+				'warm-lg': '0 8px 40px -8px hsl(20 20% 12% / 0.18)',
+				'primary': '0 4px 20px -4px hsl(16 58% 42% / 0.35)',
+				'primary-lg': '0 8px 32px -4px hsl(16 58% 42% / 0.4)',
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;
