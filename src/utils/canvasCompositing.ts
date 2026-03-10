@@ -20,6 +20,7 @@ function fillRoundRect(
 export interface PetCompositeData {
   imageUrl: string
   name?: string
+  isDemo?: boolean  // When true, renders at reduced opacity to signal it's a placeholder
 }
 
 const TAPETE_MOCKUP_URL = '/tapete-mockup.jpg'
@@ -110,12 +111,19 @@ export async function compositeRug(
 
       ctx.save()
 
+      // Demo images render at reduced opacity so users know it's a placeholder
+      if (pet.isDemo) {
+        ctx.globalAlpha = 0.55
+      }
+
       // Draw subtle warm ring
       ctx.beginPath()
       ctx.arc(cx, cy, radius + 4, 0, Math.PI * 2)
-      ctx.strokeStyle = 'rgba(210, 170, 120, 0.7)'
-      ctx.lineWidth = 3
+      ctx.strokeStyle = pet.isDemo ? 'rgba(210, 170, 120, 0.4)' : 'rgba(210, 170, 120, 0.7)'
+      ctx.lineWidth = pet.isDemo ? 2 : 3
+      ctx.setLineDash(pet.isDemo ? [6, 4] : [])
       ctx.stroke()
+      ctx.setLineDash([])
 
       // Circular clip
       ctx.beginPath()

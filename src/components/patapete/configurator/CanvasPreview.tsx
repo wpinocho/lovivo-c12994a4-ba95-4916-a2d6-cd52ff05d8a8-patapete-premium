@@ -3,6 +3,14 @@ import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
 import { Loader2 } from 'lucide-react'
 
+// Demo images: pre-generated pet illustrations shown before user uploads their photo.
+// Same technique used by TeeInBlue and PawPeludo — tapete always looks complete from load.
+const DEMO_IMAGES = [
+  '/demo/pet-demo-1.png',
+  '/demo/pet-demo-2.png',
+  '/demo/pet-demo-3.png',
+]
+
 interface CanvasPreviewProps {
   style: Style
   pets: Pet[]
@@ -13,6 +21,7 @@ interface CanvasPreviewProps {
 export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPreviewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [hasRealImage, setHasRealImage] = useState(false)
   const renderKeyRef = useRef(0)
 
   useEffect(() => {
@@ -23,21 +32,23 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
       setIsLoading(true)
 
       try {
-        const petData: PetCompositeData[] = pets.map(pet => ({
-          imageUrl: pet.generatedArtUrl || pet.photoPreviewUrl || '',
-          name: pet.name,
-        }))
+        // Build petData: use real image (generated or photo preview) if available,
+        // otherwise fall back to a demo image so the tapete always looks populated.
+        const petData: PetCompositeData[] = pets.map((pet, i) => {
+          const realUrl = pet.generatedArtUrl || pet.photoPreviewUrl
+          return {
+            imageUrl: realUrl || DEMO_IMAGES[i % DEMO_IMAGES.length],
+            name: pet.name,
+            isDemo: !realUrl,
+          }
+        })
 
-        // Only composite if we have at least one image
-        const hasSomething = petData.some(p => p.imageUrl)
-        if (!hasSomething) {
-          setIsLoading(false)
-          return
-        }
+        const anyReal = petData.some(p => !p.isDemo)
+        setHasRealImage(anyReal)
 
         const dataUrl = await compositeRug(petData, phrase)
 
-        if (myKey !== renderKeyRef.current) return // stale
+        if (myKey !== renderKeyRef.current) return // stale render, discard
 
         setPreviewUrl(dataUrl)
         onPreviewReady?.(dataUrl)
@@ -63,16 +74,23 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <p className="text-4xl">🐾</p>
-            <p className="text-sm text-muted-foreground">Tu tapete aparecerá aquí</p>
-          </div>
+          <Loader2 className="w-8 h-8 animate-spin text-primary/40" />
+        </div>
+      )}
+
+      {/* Demo badge: subtle indicator that it's an example preview */}
+      {previewUrl && !hasRealImage && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/75 backdrop-blur-sm border border-border/50 rounded-full px-3 py-1">
+          <p className="text-xs text-muted-foreground font-medium">Ejemplo · Sube tu foto para ver tu mascota</p>
         </div>
       )}
 
       {isLoading && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center rounded-2xl">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="text-center space-y-2">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+            <p className="text-xs text-muted-foreground">Generando preview...</p>
+          </div>
         </div>
       )}
     </div>
