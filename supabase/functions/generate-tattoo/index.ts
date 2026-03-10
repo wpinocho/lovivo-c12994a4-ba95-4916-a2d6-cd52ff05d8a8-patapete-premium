@@ -1,4 +1,4 @@
-// v2
+// v3
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
