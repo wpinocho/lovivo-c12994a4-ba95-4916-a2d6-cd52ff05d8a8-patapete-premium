@@ -11,7 +11,7 @@ const features = [
   {
     icon: Palette,
     title: 'Elige el estilo de arte',
-    desc: 'Tatuaje IA, Vector o Icono. Cada uno con una personalidad distinta.',
+    desc: 'Tatuaje IA o Vector. Cada uno con una personalidad distinta y única.',
   },
   {
     icon: Type,
@@ -97,7 +97,7 @@ export const PatapetePersonalization = () => {
               <div className="mt-8 pt-6 border-t border-border">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <div className="flex -space-x-2">
-                    {['/style-tattoo.jpg', '/style-vector.jpg', '/style-icon.jpg'].map(function(src, i) {
+                    {['/style-tattoo.jpg', '/style-vector.jpg'].map(function(src, i) {
                       return (
                         <div key={i} className="w-9 h-9 rounded-full overflow-hidden border-2 border-background bg-muted">
                           <img src={src} alt="" className="w-full h-full object-cover" aria-hidden="true" />

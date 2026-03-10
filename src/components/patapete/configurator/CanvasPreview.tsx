@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
-import { getBreedById } from '@/data/breedData'
 import { Loader2 } from 'lucide-react'
 
 interface CanvasPreviewProps {
@@ -24,21 +23,10 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
       setIsLoading(true)
 
       try {
-        const petData: PetCompositeData[] = pets.map(pet => {
-          if (style === 'icon') {
-            const breed = getBreedById(pet.breedId)
-            return {
-              imageUrl: breed?.imageUrl || '',
-              name: pet.name,
-            }
-          } else {
-            // IA/Vector: use generatedArtUrl if available, else photoPreviewUrl
-            return {
-              imageUrl: pet.generatedArtUrl || pet.photoPreviewUrl || '',
-              name: pet.name,
-            }
-          }
-        })
+        const petData: PetCompositeData[] = pets.map(pet => ({
+          imageUrl: pet.generatedArtUrl || pet.photoPreviewUrl || '',
+          name: pet.name,
+        }))
 
         // Only composite if we have at least one image
         const hasSomething = petData.some(p => p.imageUrl)

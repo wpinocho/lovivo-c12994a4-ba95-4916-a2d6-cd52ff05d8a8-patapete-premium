@@ -4,8 +4,6 @@ import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
-import { getBreedById } from '@/data/breedData'
-import { cn } from '@/lib/utils'
 
 // Real variant IDs from the product
 const VARIANT_IDS: Record<Style, Record<1 | 2 | 3, string>> = {
@@ -18,11 +16,6 @@ const VARIANT_IDS: Record<Style, Record<1 | 2 | 3, string>> = {
     1: '27cec5b7-10cf-427e-925e-bd643e98c849',
     2: '6527bbc6-db01-41ea-aa55-65b8b1f92e72',
     3: '0adfce44-7a85-4b30-952b-fe38edd2869f',
-  },
-  icon: {
-    1: '802557e3-7509-420c-b4bd-e90bf7365847',
-    2: '052f9fae-c5ee-4670-adbe-f7c283b285ba',
-    3: '00a90496-b1e9-431b-94d4-cfebc386fdcb',
   },
 }
 
@@ -49,13 +42,11 @@ export function StepSummary({
   const handleAddToCart = () => {
     if (!product) return
 
-    // Save customization data to localStorage so the store owner can see it in orders
     const customization = {
       style: STYLE_LABELS[style],
       petCount,
       pets: pets.slice(0, petCount).map((p, i) => ({
         name: p.name || `Mascota ${i + 1}`,
-        ...(style === 'icon' ? { breed: getBreedById(p.breedId)?.label || p.breedId } : {}),
         ...(p.generatedArtUrl ? { artUrl: p.generatedArtUrl } : {}),
         ...(p.photoPreviewUrl && !p.generatedArtUrl ? { photoUrl: p.photoPreviewUrl } : {}),
       })),
@@ -93,7 +84,6 @@ export function StepSummary({
 
         {/* Details */}
         <div className="space-y-5">
-          {/* Order summary */}
           <div className="rounded-2xl border border-border p-5 space-y-4 bg-card">
             <h3 className="font-bold text-foreground">Resumen del pedido</h3>
 
@@ -109,14 +99,7 @@ export function StepSummary({
               {activePets.map((p, i) => p.name && (
                 <div key={i} className="flex justify-between">
                   <span className="text-muted-foreground">Mascota {i + 1}</span>
-                  <span className="font-medium text-foreground flex items-center gap-1.5">
-                    {style === 'icon' && (
-                      <span className="text-xs bg-muted rounded-full px-1.5 py-0.5">
-                        {getBreedById(p.breedId)?.label}
-                      </span>
-                    )}
-                    {p.name}
-                  </span>
+                  <span className="font-medium text-foreground">{p.name}</span>
                 </div>
               ))}
               {phrase && (
@@ -151,7 +134,6 @@ export function StepSummary({
             ))}
           </div>
 
-          {/* Add to cart */}
           {added ? (
             <div className="rounded-xl bg-green-50 border border-green-200 p-4 flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />

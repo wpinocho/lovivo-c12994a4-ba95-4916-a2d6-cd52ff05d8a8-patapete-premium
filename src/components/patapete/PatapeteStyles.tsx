@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Star } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const styles = [
@@ -9,7 +9,7 @@ const styles = [
     name: 'Tatuaje IA',
     badge: '⭐ Más vendido',
     badgeClass: 'bg-primary text-primary-foreground',
-    desc: 'Retrato detallado en estilo tatuaje con finos trazos y adornos botánicos. El resultado más sofisticado y llamativo.',
+    desc: 'Sube la foto de tu mascota y la IA la convierte en un retrato estilo tatuaje fino con trazos botánicos. El resultado más sofisticado y llamativo.',
     featured: true,
   },
   {
@@ -18,16 +18,7 @@ const styles = [
     name: 'Vector',
     badge: '🎨 Moderno',
     badgeClass: 'bg-accent text-accent-foreground',
-    desc: 'Silueta limpia y gráfica con relleno sólido. Look moderno y contrastante, muy impactante.',
-    featured: false,
-  },
-  {
-    id: 'icon',
-    image: '/style-icon.jpg',
-    name: 'Icono',
-    badge: '✦ Minimalista',
-    badgeClass: 'bg-secondary text-secondary-foreground',
-    desc: 'Ilustración de línea simple y adorable. Perfecto para un look más limpio y discreto.',
+    desc: 'Tu foto se transforma en arte vectorial plano con colores vivos y trazos limpios. Estilo sticker ilustrado, moderno y contrastante.',
     featured: false,
   },
 ]
@@ -45,18 +36,18 @@ export const PatapeteStyles = () => {
             Elige el arte de tu tapete
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Tres estilos únicos, todos con el retrato de tu mascota sobre fibra de coco natural.
+            Dos estilos únicos, ambos con el retrato de tu mascota sobre fibra de coco natural.
           </p>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        {/* Cards — centered 2-column */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10 max-w-3xl mx-auto">
           {styles.map((style) => (
             <div
               key={style.id}
               className={`card-premium overflow-hidden flex flex-col ${
                 style.featured
-                  ? 'ring-2 ring-primary/40 shadow-warm-lg md:scale-[1.03] md:-translate-y-1'
+                  ? 'ring-2 ring-primary/40 shadow-warm-lg md:scale-[1.02]'
                   : ''
               }`}
             >
@@ -71,7 +62,6 @@ export const PatapeteStyles = () => {
                     decoding="async"
                   />
                 </div>
-                {/* Badge */}
                 <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${style.badgeClass}`}>
                   {style.badge}
                 </span>
