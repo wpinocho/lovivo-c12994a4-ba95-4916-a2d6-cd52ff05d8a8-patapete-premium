@@ -23,6 +23,9 @@ import type { Product, ProductVariant, SellingPlan } from "@/lib/supabase"
 import { VolumeBadge } from "@/components/ui/VolumeBadge"
 import { BOGOLabel } from "@/components/ui/BOGOLabel"
 import { intervalLabel } from "@/lib/subscription-utils"
+import { PatapeteConfigurator } from "@/components/patapete/configurator/PatapeteConfigurator"
+
+const PATAPETE_SLUG = 'tapete-personalizado-patapete'
 
 /**
  * EDITABLE UI COMPONENT - ProductPageUI
@@ -120,6 +123,17 @@ export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
   }
 
   if (!logic.product) return null
+
+  // Tapete Personalizado Patapete — custom configurator
+  if (logic.product?.slug === PATAPETE_SLUG) {
+    return (
+      <EcommerceTemplate>
+        <div className="max-w-4xl mx-auto px-2 sm:px-0">
+          <PatapeteConfigurator product={logic.product} />
+        </div>
+      </EcommerceTemplate>
+    )
+  }
 
   return (
     <EcommerceTemplate hideFloatingCartOnMobile>
