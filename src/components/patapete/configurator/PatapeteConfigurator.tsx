@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
 import { StepPets } from './StepPets'
 import { StepSummary } from './StepSummary'
@@ -87,15 +87,20 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   }, [state.pets, state.style])
 
   const handleContinueToSummary = useCallback(() => {
-    setState(s => ({ ...s, step: 2, error: null }))
+    setState(s => ({ ...s, step: 2, error: null, finalPreviewDataUrl: finalPreviewRef.current }))
   }, [])
 
   const handleBack = useCallback(() => {
     setState(s => ({ ...s, step: 1 }))
   }, [])
 
+  // Use a ref so onPreviewReady never triggers a re-render (which would cause an
+  // infinite loop: re-render → new pets.slice() array → useEffect fires → repeat).
+  // The dataUrl is captured into state only when the user navigates to the summary.
+  const finalPreviewRef = useRef<string | null>(null)
+
   const handlePreviewReady = useCallback((dataUrl: string) => {
-    setState(s => ({ ...s, finalPreviewDataUrl: dataUrl }))
+    finalPreviewRef.current = dataUrl
   }, [])
 
   return (

@@ -1,72 +1,50 @@
-# Patapete — Plan del proyecto
+# Patapete — Plan de Implementación
 
-## Estado actual
-Configurador de tapetes personalizados para mascotas. Funcional con 2 estilos (Tatuaje IA + Vector).
+## Estado Actual
+Configurador de tapetes personalizados con dos estilos: **Tatuaje IA** y **Vector**.
+El flujo arranca directo en la vista de personalización con selector de estilo integrado.
 
-## Cambios recientes
-- Eliminado estilo Ícono de Raza completamente
-- Eliminados indicadores de pasos
-- Flujo simplificado: CTAs van directo al configurador (step 1 con style: 'tattoo' por defecto)
-- Selector de estilo integrado en StepPets (2 columnas compacto)
-- Solo 2 pasos: Configura (step 1) → Resumen (step 2)
-- **NUEVO:** Demo images (3 PNGs tattoo art style) en `public/demo/`
-- **NUEVO:** CanvasPreview ahora siempre muestra el tapete con demo images al cargar
-- **NUEVO:** canvasCompositing soporta `isDemo` → opacidad 0.55 + borde punteado
-- **NUEVO:** Edge Function `supabase/functions/generate-tattoo/index.ts` para Replicate
-- **NUEVO:** replicateApi.ts migrado a edge function segura (no expone API key)
+## Stack Técnico
+- Frontend: React/TS + Tailwind
+- Backend: Supabase (conectado y funcional)
+- IA: Replicate API (`REPLICATE_API_KEY` en secrets de Supabase)
+- Proceso de imagen: remove background en canvas (navegador, sin API) + vector effect en canvas + Replicate para tatuaje
 
-## Estilos disponibles
-- **Tatuaje IA** (popular, $649 MXN): foto → bg removal → Edge Function → Replicate API → arte tatuaje
-- **Vector** ($549 MXN): foto → bg removal → filtro vectorial CSS/canvas
+## Archivos Clave del Configurador
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — estado global, orquesta el flujo
+- `src/components/patapete/configurator/StepPets.tsx` — formulario + preview (desktop y mobile)
+- `src/components/patapete/configurator/CanvasPreview.tsx` — canvas compositing con demo images
+- `src/components/patapete/configurator/PhotoPetForm.tsx` — upload foto + botón generar
+- `src/components/patapete/configurator/StepSummary.tsx` — resumen antes de añadir al carrito
+- `src/utils/canvasCompositing.ts` — lógica de composición sobre el tapete mockup
+- `src/utils/replicateApi.ts` — llamada a edge function generate-tattoo
+- `src/utils/backgroundRemoval.ts` — remove background en navegador
+- `src/utils/vectorFilter.ts` — vector effect en canvas
+- `supabase/functions/generate-tattoo/index.ts` — proxy seguro hacia Replicate
 
-## Archivos clave del configurador
-```
-src/components/patapete/configurator/
-  PatapeteConfigurator.tsx   — orquestador principal
-  StepPets.tsx               — paso 1: selector estilo + config mascotas
-  StepSummary.tsx            — paso 2: resumen + add to cart
-  PhotoPetForm.tsx           — upload foto + generar arte
-  CanvasPreview.tsx          — preview canvas en tiempo real (con demo images)
-  types.ts                   — Style = 'tattoo' | 'vector'
-src/utils/
-  canvasCompositing.ts       — lógica canvas: tapete mockup + pet images (isDemo support)
-  backgroundRemoval.ts       — @imgly/background-removal (browser, gratis)
-  vectorFilter.ts            — efecto vectorial CSS/canvas (browser, gratis)
-  replicateApi.ts            — llama a edge function generate-tattoo
-supabase/functions/
-  generate-tattoo/index.ts   — Edge Function: proxy seguro a Replicate API ✅
-public/demo/
-  pet-demo-1.png             — Golden retriever, tattoo line art ✅
-  pet-demo-2.png             — French bulldog, tattoo line art ✅
-  pet-demo-3.png             — Labrador, tattoo line art ✅
-```
+## Imágenes Demo
+Generadas en `public/demo/`:
+- `pet-demo-1.webp` — Golden retriever con corona botánica (estilo tatuaje línea fina)
+- `pet-demo-2.webp` — Gato atigrado con estrellas (estilo tatuaje línea fina)
+- `pet-demo-3.webp` — Bulldog francés con flores (estilo tatuaje línea fina)
 
-## Variantes del producto (IDs reales)
-```
-tattoo: { 1: '28fc993c...', 2: '1aee4582...', 3: '5f7e007d...' }
-vector: { 1: '27cec5b7...', 2: '6527bbc6...', 3: '0adfce44...' }
-```
+## Bugs Corregidos (sesión actual)
+**Bug: Loading spinner nunca se quitaba**
+- **Causa raíz**: loop infinito. `pets.slice(0, petCount)` en StepPets creaba nueva referencia de array en cada render. El `useEffect` en CanvasPreview tenía `pets` como dep (referencia), así que se disparaba en cada re-render del padre. `onPreviewReady(dataUrl)` hacía `setState` en PatapeteConfigurator → re-render → nuevo array → efecto se dispara de nuevo. Con el mecanismo de `renderKeyRef`, el render anterior era siempre "stale" → `setIsLoading(false)` nunca se llamaba.
+- **Fix 1 (CanvasPreview)**: Reemplazar `pets` en las deps del useEffect por `petKey` (string estable derivada del CONTENIDO de pets). El efecto sólo re-corre cuando el contenido real cambia.
+- **Fix 2 (PatapeteConfigurator)**: `onPreviewReady` ahora guarda en un `ref` (`finalPreviewRef`) en lugar de `setState`, eliminando el ciclo de re-renders. El URL sólo pasa a state cuando el usuario hace clic en "Ver resumen".
+- **Simplificación**: Se eliminó el `renderKeyRef` y se reemplazó por un flag `cancelled` con cleanup de useEffect (más idiomático en React).
 
-## Secret configurado en Supabase
-- `REPLICATE_API_KEY` — ya configurado por el usuario ✅
+## Flujo de Usuario
+1. Entra al configurador → ve tapete con mascotas demo (50% opacidad, borde punteado)
+2. Elige estilo (Tatuaje IA / Vector) y cantidad de mascotas
+3. Sube foto de su mascota
+4. Hace clic en "Generar con IA" (tatuaje) o "Vectorizar" (vector)
+5. Ve el resultado en el preview en tiempo real
+6. Agrega frase opcional
+7. "Ver resumen" → selecciona tamaño → añade al carrito
 
-## Cómo funciona el preview con demo images
-1. Al cargar el configurador → tapete aparece inmediatamente con demo images (opacidad 55%, borde punteado)
-2. Badge en el tapete: "Ejemplo · Sube tu foto para ver tu mascota"
-3. Usuario sube foto → se procesa (bg removal + arte IA/vector) → reemplaza el slot demo
-4. Cuando al menos una mascota tiene imagen real → badge desaparece
-
-## Resumen de tecnologías finales
-| Función | Tecnología | Costo | Dónde corre |
-|---------|-----------|-------|-------------|
-| Remove BG | @imgly/background-removal | GRATIS | Navegador |
-| Efecto Vector | Canvas CSS filters | GRATIS | Navegador |
-| Tatuaje IA | Replicate via Edge Function | ~$0.003/img | Supabase → Replicate |
-| Demo preview | PNG estáticos en /public/demo | GRATIS | Navegador |
-| Canvas compositing | HTML Canvas | GRATIS | Navegador |
-
-## Próximos pasos posibles
-- Probar pipeline completo: foto → bg removal → IA/vector → preview
-- Verificar que los nombres de mascotas aparecen correctamente en el canvas
-- Considerar agregar más demo images (gatos, otras razas)
-- Optimizar tamaño de las demo images (actualmente ~1MB, podrían ser webp pequeños)
+## Pendiente / Mejoras Futuras
+- Verificar que la edge function `generate-tattoo` conecta correctamente con Replicate en producción
+- Agregar tapete mockup real en `public/tapete-mockup.jpg` (actualmente usa gradient fallback)
+- Test de flujo completo end-to-end con foto real de mascota

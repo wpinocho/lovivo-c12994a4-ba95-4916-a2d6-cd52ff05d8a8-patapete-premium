@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
 import { Loader2 } from 'lucide-react'
 
 // Demo images: pre-generated pet illustrations shown before user uploads their photo.
-// Same technique used by TeeInBlue and PawPeludo — tapete always looks complete from load.
 const DEMO_IMAGES = [
-  '/demo/pet-demo-1.png',
-  '/demo/pet-demo-2.png',
-  '/demo/pet-demo-3.png',
+  '/demo/pet-demo-1.webp',
+  '/demo/pet-demo-2.webp',
+  '/demo/pet-demo-3.webp',
 ]
 
 interface CanvasPreviewProps {
@@ -22,18 +21,19 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasRealImage, setHasRealImage] = useState(false)
-  const renderKeyRef = useRef(0)
+
+  // Stable key derived from pet CONTENT (not array reference) — prevents re-running the
+  // effect just because pets.slice() created a new array with the same data.
+  const petKey = pets.map(p => `${p.generatedArtUrl || p.photoPreviewUrl || ''}:${p.name}`).join('|')
 
   useEffect(() => {
-    const currentKey = ++renderKeyRef.current
-    const myKey = currentKey
+    let cancelled = false
 
     const buildPreview = async () => {
       setIsLoading(true)
 
       try {
-        // Build petData: use real image (generated or photo preview) if available,
-        // otherwise fall back to a demo image so the tapete always looks populated.
+        // Build petData: use real image if available, otherwise fall back to demo image.
         const petData: PetCompositeData[] = pets.map((pet, i) => {
           const realUrl = pet.generatedArtUrl || pet.photoPreviewUrl
           return {
@@ -44,25 +44,28 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
         })
 
         const anyReal = petData.some(p => !p.isDemo)
-        setHasRealImage(anyReal)
 
         const dataUrl = await compositeRug(petData, phrase)
 
-        if (myKey !== renderKeyRef.current) return // stale render, discard
+        if (cancelled) return // newer render started, discard this result
 
+        setHasRealImage(anyReal)
         setPreviewUrl(dataUrl)
         onPreviewReady?.(dataUrl)
       } catch (err) {
         console.error('Canvas preview error:', err)
       } finally {
-        if (myKey === renderKeyRef.current) {
+        if (!cancelled) {
           setIsLoading(false)
         }
       }
     }
 
     buildPreview()
-  }, [style, pets, phrase])
+
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [style, petKey, phrase])
 
   return (
     <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden bg-muted border border-border shadow-inner">
