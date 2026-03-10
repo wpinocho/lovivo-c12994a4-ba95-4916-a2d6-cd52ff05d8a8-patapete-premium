@@ -9,17 +9,17 @@
 ## Problemas resueltos
 - Loop infinito de loading: `petKey` derivada de contenido, `onPreviewReady` en ref
 - Imágenes demo faltantes: generadas y colocadas
-- Edge Function requería redeploy forzado
-
-## Error resuelto: CORS / JWT verification
-**Causa**: Supabase Edge Functions tienen JWT verification activado por defecto.
-El preflight OPTIONS es bloqueado con 401 ANTES de que el código maneje CORS.
-
-**Solución aplicada**:
-1. `supabase/config.toml` → añadido `[functions.generate-tattoo] verify_jwt = false`
-2. Bump a `v4` en el index.ts para forzar redeploy
+- Edge Function requería redeploy forzado (v4)
+- **CORS / JWT verification**: `verify_jwt = false` en `supabase/config.toml`
+- **Cliente Supabase incorrecto**: `replicateApi.ts` usaba `callEdge()` → Lovivo's Supabase (`ptgmltivisbtvmoxwnhd`). Corregido a `userSupabase.functions.invoke()` → Supabase del usuario (`vqmqdhsajdldsraxsqba`)
 
 ## Arquitectura
 - Edge Function: `supabase/functions/generate-tattoo/index.ts` (proxy a Replicate)
-- Cliente: `src/utils/replicateApi.ts` → `callEdge()` → `src/lib/edge.ts`
-- Secret: `REPLICATE_API_KEY` en Supabase secrets
+- Cliente: `src/utils/replicateApi.ts` → `userSupabase.functions.invoke()` → `src/integrations/supabase/client.ts`
+- Secret: `REPLICATE_API_KEY` en Supabase del usuario
+- `supabase/config.toml` → `[functions.generate-tattoo] verify_jwt = false`
+
+## Regla importante
+La función `generate-tattoo` vive en el Supabase del USUARIO (`vqmqdhsajdldsraxsqba`).
+NUNCA usar `callEdge()` de `src/lib/edge.ts` para esta función — ese usa el Supabase de Lovivo.
+SIEMPRE usar `userSupabase` de `src/integrations/supabase/client.ts`.
