@@ -3,4 +3,5 @@
 
 project_id = "vqmqdhsajdldsraxsqba"
 
-# Edge Functions configuration will be added here when you create functions
+[functions.generate-tattoo]
+verify_jwt = false
