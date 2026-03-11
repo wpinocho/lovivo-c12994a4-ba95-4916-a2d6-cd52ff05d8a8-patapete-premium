@@ -1,25 +1,27 @@
-# Patapete - Plan
+# Patapete — Plan de proyecto
 
 ## Estado actual
-- Tienda de tapetes personalizados con mascotas
-- Configurador visual con generación de tatuajes IA (Replicate)
-- Canvas compositing con preview en tiempo real
-- 3 imágenes demo en `public/demo/`
+UI rediseñada con flujo unificado. La funcionalidad de generación IA está conectada.
 
-## Problemas resueltos
-- Loop infinito de loading: `petKey` derivada de contenido, `onPreviewReady` en ref
-- Imágenes demo faltantes: generadas y colocadas
-- Edge Function requería redeploy forzado (v4)
-- **CORS / JWT verification**: `verify_jwt = false` en `supabase/config.toml`
-- **Cliente Supabase incorrecto**: `replicateApi.ts` usaba `callEdge()` → Lovivo's Supabase (`ptgmltivisbtvmoxwnhd`). Corregido a `userSupabase.functions.invoke()` → Supabase del usuario (`vqmqdhsajdldsraxsqba`)
+## Cambios recientes
+### UI Unificada (flujo único)
+- **types.ts**: `Style = 'tattoo'` (eliminado vector). `PRICES` solo para tattoo.
+- **PatapeteConfigurator.tsx**: Eliminado vector logic. `handleGenerate(petIndex, fileOverride?)` acepta file override para auto-generar tras upload.
+- **PhotoPetForm.tsx**: Auto-genera al subir foto (`onGenerate(file)` en handleFileChange/handleDrop). Sin botón "Generar". Botón "Reintentar" cuando falla.
+- **StepPets.tsx**: Sin selector de estilo. Botón continuar muestra precio `$649 MXN →`. Badge "Retrato IA · Arte único".
+- **StepSummary.tsx**: Sin campo "Estilo". Muestra "Retrato IA". VARIANT_IDS solo tattoo.
+- **PatapeteHero.tsx**: Subheadline "Sube su foto. La IA crea su retrato artístico. Ve cómo queda antes de comprarlo." 2do CTA → "¿Cómo funciona?" → `#como-funciona`.
+- **PatapeteStyles.tsx**: Sección convertida a showcase de features del arte IA (4 cards: recorte, tatuaje fino, resultado rápido, arte exclusivo).
+- **PatapeteHowItWorks.tsx**: Paso 02 → "La IA crea el retrato".
+- **EcommerceTemplate.tsx**: Nav "Estilos" → "El arte IA".
 
-## Arquitectura
-- Edge Function: `supabase/functions/generate-tattoo/index.ts` (proxy a Replicate)
-- Cliente: `src/utils/replicateApi.ts` → `userSupabase.functions.invoke()` → `src/integrations/supabase/client.ts`
-- Secret: `REPLICATE_API_KEY` en Supabase del usuario
-- `supabase/config.toml` → `[functions.generate-tattoo] verify_jwt = false`
+## Arquitectura técnica
+- Edge function `generate-tattoo` en Supabase del usuario (`vqmqdhsajdldsraxsqba`)
+- Frontend usa `userSupabase.functions.invoke()` desde `src/integrations/supabase/client.ts`
+- `replicateApi.ts` → llama a `userSupabase.functions.invoke('generate-tattoo')`
+- Flujo: upload foto → removeBackground → generateTattooArt (IA via Replicate) → muestra retrato en preview
 
-## Regla importante
-La función `generate-tattoo` vive en el Supabase del USUARIO (`vqmqdhsajdldsraxsqba`).
-NUNCA usar `callEdge()` de `src/lib/edge.ts` para esta función — ese usa el Supabase de Lovivo.
-SIEMPRE usar `userSupabase` de `src/integrations/supabase/client.ts`.
+## Próximos pasos
+- Mejorar calidad del crop (cabeza/hombros) en el modelo de IA
+- Probar el flujo end-to-end con fotos reales de mascotas
+- Afinar el prompt del modelo para mejor resultado visual

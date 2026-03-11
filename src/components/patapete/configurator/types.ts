@@ -1,4 +1,4 @@
-export type Style = 'tattoo' | 'vector'
+export type Style = 'tattoo'
 
 export interface Pet {
   photoFile: File | null
@@ -32,11 +32,9 @@ export const DEFAULT_PET: Pet = {
 }
 
 export const STYLE_LABELS: Record<Style, string> = {
-  tattoo: 'Tatuaje IA',
-  vector: 'Vector',
+  tattoo: 'Retrato IA',
 }
 
 export const PRICES: Record<Style, Record<1 | 2 | 3, number>> = {
   tattoo: { 1: 649, 2: 799, 3: 949 },
-  vector: { 1: 549, 2: 699, 3: 849 },
 }

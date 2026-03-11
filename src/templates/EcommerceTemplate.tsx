@@ -51,7 +51,7 @@ export const EcommerceTemplate = ({
   }, [])
 
   const navLinks = [
-    { label: 'Estilos', href: '/#estilos' },
+    { label: 'El arte IA', href: '/#estilos' },
     { label: '¿Cómo funciona?', href: '/#como-funciona' },
     { label: 'Galería', href: '/#galeria' },
   ]
@@ -180,7 +180,7 @@ export const EcommerceTemplate = ({
             <div className="space-y-3">
               {[
                 { label: 'Inicio', href: '/' },
-                { label: 'Estilos', href: '/#estilos' },
+                { label: 'El arte IA', href: '/#estilos' },
                 { label: '¿Cómo funciona?', href: '/#como-funciona' },
                 { label: 'Blog', href: '/blog' },
               ].map(({ label, href }) => (

@@ -8,7 +8,7 @@ import {
 const faqs = [
   {
     q: '¿Cómo funciona exactamente?',
-    a: 'Subes la foto de tu mascota, eliges el estilo de arte (Tatuaje IA, Vector o Icono), opcionalmente agregas nombre o frase, y el sistema te muestra un preview de cómo quedará tu tapete. Si te gusta, confirmas y pagamos. Si no, lo ajustas sin costo.',
+    a: 'Subes la foto de tu mascota y nuestra IA crea automáticamente su retrato artístico en segundos. Puedes agregar su nombre o una frase. Ves un preview del tapete antes de confirmar — si te gusta, ordenas. Si no, lo ajustas sin costo.',
   },
   {
     q: '¿El resultado final se parece al preview?',

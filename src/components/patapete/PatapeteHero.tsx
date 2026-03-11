@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 export const PatapeteHero = () => {
   const trustItems = [
     'Hecho a pedido en México',
-    'Preview antes de comprar',
+    'Ve el resultado antes de pagar',
     '1 a 3 mascotas por tapete',
   ]
 
@@ -43,7 +43,7 @@ export const PatapeteHero = () => {
             className="text-xl md:text-2xl text-white mb-9 max-w-xl leading-relaxed font-light"
             style={{ textShadow: '0 1px 6px rgba(0,0,0,0.55)' }}
           >
-            Sube su foto, elige el estilo y mira cómo queda tu tapete antes de comprarlo.
+            Sube su foto. La IA crea su retrato artístico. Ve cómo queda en tu tapete <strong className="font-semibold">antes de comprarlo.</strong>
           </p>
 
           {/* CTAs */}
@@ -63,8 +63,8 @@ export const PatapeteHero = () => {
               className="font-semibold px-8 py-6 rounded-xl text-base border-2 border-white/50 bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white/70 backdrop-blur-sm"
               style={{ background: 'rgba(255,255,255,0.10)' }}
             >
-              <a href="#estilos">
-                Ver estilos
+              <a href="#como-funciona">
+                ¿Cómo funciona?
               </a>
             </Button>
           </div>

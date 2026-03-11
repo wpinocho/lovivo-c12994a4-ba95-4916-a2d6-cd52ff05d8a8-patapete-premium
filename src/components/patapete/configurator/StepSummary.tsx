@@ -1,26 +1,18 @@
 import { useState } from 'react'
-import { Style, Pet, PRICES, STYLE_LABELS } from './types'
+import { Pet, PRICES } from './types'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, ArrowLeft, CheckCircle } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 
-// Real variant IDs from the product
-const VARIANT_IDS: Record<Style, Record<1 | 2 | 3, string>> = {
-  tattoo: {
-    1: '28fc993c-e638-459b-9a00-08abacdc9f32',
-    2: '1aee4582-040b-477a-b335-e99446fa76c7',
-    3: '5f7e007d-b30e-44c8-baa6-5aa03edb23ad',
-  },
-  vector: {
-    1: '27cec5b7-10cf-427e-925e-bd643e98c849',
-    2: '6527bbc6-db01-41ea-aa55-65b8b1f92e72',
-    3: '0adfce44-7a85-4b30-952b-fe38edd2869f',
-  },
+// Real variant IDs from the product (tattoo style only)
+const VARIANT_IDS: Record<1 | 2 | 3, string> = {
+  1: '28fc993c-e638-459b-9a00-08abacdc9f32',
+  2: '1aee4582-040b-477a-b335-e99446fa76c7',
+  3: '5f7e007d-b30e-44c8-baa6-5aa03edb23ad',
 }
 
 interface StepSummaryProps {
-  style: Style
   petCount: 1 | 2 | 3
   pets: Pet[]
   phrase: string
@@ -30,20 +22,20 @@ interface StepSummaryProps {
 }
 
 export function StepSummary({
-  style, petCount, pets, phrase, product, finalPreviewDataUrl, onBack
+  petCount, pets, phrase, product, finalPreviewDataUrl, onBack
 }: StepSummaryProps) {
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
 
-  const price = PRICES[style][petCount]
-  const variantId = VARIANT_IDS[style][petCount]
+  const price = PRICES['tattoo'][petCount]
+  const variantId = VARIANT_IDS[petCount]
   const variant = product?.variants?.find((v: any) => v.id === variantId)
 
   const handleAddToCart = () => {
     if (!product) return
 
     const customization = {
-      style: STYLE_LABELS[style],
+      style: 'Retrato IA',
       petCount,
       pets: pets.slice(0, petCount).map((p, i) => ({
         name: p.name || `Mascota ${i + 1}`,
@@ -65,15 +57,15 @@ export function StepSummary({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="text-2xl font-bold text-foreground">Tu tapete personalizado</h2>
-        <p className="text-muted-foreground text-sm">Revisa el resumen antes de agregar al carrito</p>
+        <h2 className="text-2xl font-bold text-foreground">¡Tu tapete está listo! 🐾</h2>
+        <p className="text-muted-foreground text-sm">Revisa el preview y agrega al carrito para ordenar</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Preview */}
         <div className="space-y-2">
           <CanvasPreview
-            style={style}
+            style="tattoo"
             pets={activePets}
             phrase={phrase}
           />
@@ -89,8 +81,8 @@ export function StepSummary({
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Estilo</span>
-                <span className="font-semibold text-foreground">{STYLE_LABELS[style]}</span>
+                <span className="text-muted-foreground">Arte</span>
+                <span className="font-semibold text-foreground">Retrato IA</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Mascotas</span>
@@ -104,7 +96,7 @@ export function StepSummary({
               ))}
               {phrase && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Frase</span>
+                  <span className="text-muted-foreground">Texto</span>
                   <span className="font-medium text-foreground italic">"{phrase}"</span>
                 </div>
               )}

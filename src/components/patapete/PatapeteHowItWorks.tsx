@@ -12,8 +12,8 @@ const steps = [
   {
     number: '02',
     icon: Palette,
-    title: 'Elige tu estilo favorito',
-    desc: 'Tatuaje IA, Vector o Icono. Los tres se ven increíbles sobre fibra de coco.',
+    title: 'La IA crea el retrato',
+    desc: 'En segundos, nuestra IA transforma su foto en un hermoso retrato artístico estilo tatuaje fino.',
   },
   {
     number: '03',

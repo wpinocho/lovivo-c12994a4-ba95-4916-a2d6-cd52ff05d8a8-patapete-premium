@@ -1,56 +1,46 @@
-import { Pet, Style, PRICES } from './types'
+import { Pet, PRICES } from './types'
 import { PhotoPetForm } from './PhotoPetForm'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { Sparkles, Pen } from 'lucide-react'
-
-const STYLE_OPTIONS: { id: Style; label: string; tagline: string; icon: React.ReactNode; featured?: boolean }[] = [
-  {
-    id: 'tattoo',
-    label: 'Tatuaje IA',
-    tagline: '⭐ Más popular',
-    icon: <Sparkles className="w-4 h-4" />,
-    featured: true,
-  },
-  {
-    id: 'vector',
-    label: 'Vector',
-    tagline: 'Moderno y minimalista',
-    icon: <Pen className="w-4 h-4" />,
-  },
-]
+import { Sparkles } from 'lucide-react'
 
 interface StepPetsProps {
-  style: Style
   petCount: 1 | 2 | 3
   pets: Pet[]
   phrase: string
-  onStyleChange: (style: Style) => void
   onPetCountChange: (count: 1 | 2 | 3) => void
   onPetChange: (index: number, updates: Partial<Pet>) => void
   onPhraseChange: (phrase: string) => void
-  onGenerate: (petIndex: number) => void
+  onGenerate: (petIndex: number, file: File) => void
   onContinue: () => void
   onPreviewReady: (dataUrl: string) => void
 }
 
 export function StepPets({
-  style, petCount, pets, phrase,
-  onStyleChange, onPetCountChange, onPetChange, onPhraseChange,
+  petCount, pets, phrase,
+  onPetCountChange, onPetChange, onPhraseChange,
   onGenerate, onContinue, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
   const allPhotosUploaded = pets.slice(0, petCount).every(p => !!p.photoFile)
   const canContinue = !isProcessing && allPhotosUploaded
 
+  const price = PRICES['tattoo'][petCount]
+
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-1">
-        <h2 className="text-2xl font-bold text-foreground">Configura tu tapete</h2>
-        <p className="text-muted-foreground text-sm">Personaliza cada detalle de tu tapete único</p>
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full border border-primary/20">
+          <Sparkles className="w-3.5 h-3.5" />
+          Retrato IA · Arte único para tu tapete
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">Diseña tu tapete</h2>
+        <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+          Sube la foto de tu mascota y la IA creará su retrato artístico al instante.
+        </p>
       </div>
 
       {/* Desktop: 2-column layout */}
@@ -59,9 +49,11 @@ export function StepPets({
         {/* LEFT: Canvas preview */}
         <div className="space-y-3">
           <div className="hidden lg:block">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Preview en vivo</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Preview en vivo
+            </p>
             <CanvasPreview
-              style={style}
+              style="tattoo"
               pets={pets.slice(0, petCount)}
               phrase={phrase}
               onPreviewReady={onPreviewReady}
@@ -76,50 +68,6 @@ export function StepPets({
 
         {/* RIGHT: Form */}
         <div className="space-y-6">
-
-          {/* Style selector */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">Elige el estilo de tu tapete</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {STYLE_OPTIONS.map(opt => {
-                const isSelected = style === opt.id
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => onStyleChange(opt.id)}
-                    className={cn(
-                      'relative text-left rounded-xl border-2 p-3.5 transition-all duration-200',
-                      isSelected
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-border bg-card hover:border-primary/40'
-                    )}
-                  >
-                    {opt.featured && !isSelected && (
-                      <span className="absolute top-2 right-2 text-[10px] font-bold bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full">
-                        Popular
-                      </span>
-                    )}
-                    <div className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center mb-2 transition-colors',
-                      isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    )}>
-                      {opt.icon}
-                    </div>
-                    <p className="font-bold text-sm text-foreground">{opt.label}</p>
-                    <p className={cn(
-                      'text-xs mt-0.5',
-                      opt.featured ? 'text-amber-600' : 'text-muted-foreground'
-                    )}>
-                      {opt.tagline}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1.5 font-medium">
-                      Desde ${PRICES[opt.id][1].toLocaleString('es-MX')} MXN
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
 
           {/* Pet count selector */}
           <div className="space-y-2">
@@ -150,10 +98,9 @@ export function StepPets({
             )}>
               <PhotoPetForm
                 petIndex={i}
-                style={style}
                 pet={pets[i]}
                 onChange={updates => onPetChange(i, updates)}
-                onGenerate={() => onGenerate(i)}
+                onGenerate={file => onGenerate(i, file)}
               />
             </div>
           ))}
@@ -162,7 +109,7 @@ export function StepPets({
           <div className="lg:hidden space-y-1">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
             <CanvasPreview
-              style={style}
+              style="tattoo"
               pets={pets.slice(0, petCount)}
               phrase={phrase}
               onPreviewReady={onPreviewReady}
@@ -172,11 +119,11 @@ export function StepPets({
           {/* Phrase input */}
           <div className="space-y-1.5">
             <Label htmlFor="phrase" className="text-sm font-semibold">
-              Frase para el tapete <span className="font-normal text-muted-foreground">(opcional)</span>
+              Texto para el tapete <span className="font-normal text-muted-foreground">(opcional)</span>
             </Label>
             <Input
               id="phrase"
-              placeholder='Ej: "Bienvenido a casa", "Hogar dulce hogar"...'
+              placeholder='Ej: "Bienvenido a casa de Max", "Hogar dulce hogar"...'
               value={phrase}
               onChange={e => onPhraseChange(e.target.value)}
               maxLength={40}
@@ -194,7 +141,12 @@ export function StepPets({
             className="w-full rounded-xl"
             size="lg"
           >
-            {isProcessing ? 'Procesando...' : 'Ver resumen →'}
+            {isProcessing
+              ? 'Generando tu retrato...'
+              : canContinue
+                ? `Ver resumen — $${price.toLocaleString('es-MX')} MXN →`
+                : 'Ver resumen →'
+            }
           </Button>
 
           {!allPhotosUploaded && (

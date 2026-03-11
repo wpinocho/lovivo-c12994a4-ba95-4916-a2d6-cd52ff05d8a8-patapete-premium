@@ -1,9 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
-import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
+import { ConfiguratorState, DEFAULT_PET, Pet } from './types'
 import { StepPets } from './StepPets'
 import { StepSummary } from './StepSummary'
 import { removeBackground } from '@/utils/backgroundRemoval'
-import { applyVectorEffect } from '@/utils/vectorFilter'
 import { generateTattooArt } from '@/utils/replicateApi'
 
 interface PatapeteConfiguratorProps {
@@ -22,10 +21,6 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     error: null,
   })
 
-  const handleStyleChange = useCallback((style: Style) => {
-    setState(s => ({ ...s, style }))
-  }, [])
-
   const handlePetCountChange = useCallback((count: 1 | 2 | 3) => {
     setState(s => ({ ...s, petCount: count }))
   }, [])
@@ -42,10 +37,12 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     setState(s => ({ ...s, phrase }))
   }, [])
 
-  const handleGenerate = useCallback(async (petIndex: number) => {
+  // Accept an optional file override so we can auto-generate right after upload
+  // (React state may not have updated yet when we call this)
+  const handleGenerate = useCallback(async (petIndex: number, fileOverride?: File) => {
     const pet = state.pets[petIndex]
-    const style = state.style
-    if (!pet.photoFile) return
+    const fileToUse = fileOverride ?? pet.photoFile
+    if (!fileToUse) return
 
     const updatePet = (updates: Partial<Pet>) => {
       setState(s => {
@@ -57,23 +54,17 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
     try {
       updatePet({ isProcessingBg: true, isGeneratingArt: false })
-      const removedBgUrl = await removeBackground(pet.photoFile, (progress, status) => {
+      const removedBgUrl = await removeBackground(fileToUse, (progress, status) => {
         console.log(`[BG Removal] ${progress}% - ${status}`)
       })
       updatePet({ processedImageUrl: removedBgUrl, isProcessingBg: false })
 
       updatePet({ isGeneratingArt: true })
-
-      let artUrl: string
-      if (style === 'vector') {
-        artUrl = await applyVectorEffect(removedBgUrl)
-      } else {
-        artUrl = await generateTattooArt(
-          removedBgUrl,
-          pet.name || 'mascota',
-          (status) => console.log(`[IA] ${status}`)
-        )
-      }
+      const artUrl = await generateTattooArt(
+        removedBgUrl,
+        pet.name || 'mascota',
+        (status) => console.log(`[IA] ${status}`)
+      )
 
       updatePet({ generatedArtUrl: artUrl, isGeneratingArt: false })
     } catch (err) {
@@ -84,7 +75,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
         error: err instanceof Error ? err.message : 'Error al generar el arte. Intenta de nuevo.',
       }))
     }
-  }, [state.pets, state.style])
+  }, [state.pets])
 
   const handleContinueToSummary = useCallback(() => {
     setState(s => ({ ...s, step: 2, error: null, finalPreviewDataUrl: finalPreviewRef.current }))
@@ -94,9 +85,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     setState(s => ({ ...s, step: 1 }))
   }, [])
 
-  // Use a ref so onPreviewReady never triggers a re-render (which would cause an
-  // infinite loop: re-render → new pets.slice() array → useEffect fires → repeat).
-  // The dataUrl is captured into state only when the user navigates to the summary.
+  // Use a ref so onPreviewReady never triggers a re-render
   const finalPreviewRef = useRef<string | null>(null)
 
   const handlePreviewReady = useCallback((dataUrl: string) => {
@@ -120,11 +109,9 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
       {state.step === 1 && (
         <StepPets
-          style={state.style}
           petCount={state.petCount}
           pets={state.pets}
           phrase={state.phrase}
-          onStyleChange={handleStyleChange}
           onPetCountChange={handlePetCountChange}
           onPetChange={handlePetChange}
           onPhraseChange={handlePhraseChange}
@@ -136,7 +123,6 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
       {state.step === 2 && (
         <StepSummary
-          style={state.style}
           petCount={state.petCount}
           pets={state.pets}
           phrase={state.phrase}

@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 const items = [
-  { img: '/gallery-patapete.jpg', label: 'Luna · Tatuaje IA', pets: '1 mascota' },
-  { img: '/style-tattoo.jpg', label: 'Max · Tatuaje IA', pets: '1 mascota' },
-  { img: '/style-vector.jpg', label: 'Milo · Vector', pets: '1 mascota' },
-  { img: '/style-icon.jpg', label: 'Choco · Icono', pets: '1 mascota' },
+  { img: '/gallery-patapete.jpg', label: 'Luna · Retrato IA', pets: '1 mascota' },
+  { img: '/style-tattoo.jpg', label: 'Max · Retrato IA', pets: '1 mascota' },
+  { img: '/gallery-patapete.jpg', label: 'Mochi & Nala · Retrato IA', pets: '2 mascotas' },
+  { img: '/style-tattoo.jpg', label: 'Choco · Retrato IA', pets: '1 mascota' },
 ]
 
 export const PatapeteGallery = () => {
