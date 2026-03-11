@@ -52,12 +52,12 @@ function getPetSlots(count: number, W: number, H: number): PetSlot[] {
 
   switch (count) {
     case 1: {
-      const s = Math.round(H * 0.58)           // ~232 px at H=400
+      const s = Math.round(H * 0.68)           // ~272 px at H=400 — más grande para retrato
       return [{ x: Math.round((W - s) / 2), y: Math.round(cy - s / 2), w: s, h: s }]
     }
     case 2: {
-      const s    = Math.round(H * 0.47)         // ~188 px
-      const gap  = Math.round(W * 0.045)        // ~27 px
+      const s    = Math.round(H * 0.54)         // ~216 px
+      const gap  = Math.round(W * 0.04)         // ~24 px
       const startX = Math.round((W - (s * 2 + gap)) / 2)
       const y  = Math.round(cy - s / 2)
       return [
@@ -67,8 +67,8 @@ function getPetSlots(count: number, W: number, H: number): PetSlot[] {
     }
     case 3:
     default: {
-      const s    = Math.round(H * 0.39)         // ~156 px
-      const gap  = Math.round(W * 0.025)        // ~15 px
+      const s    = Math.round(H * 0.42)         // ~168 px
+      const gap  = Math.round(W * 0.022)        // ~13 px
       const startX = Math.round((W - (s * 3 + gap * 2)) / 2)
       const y  = Math.round(cy - s / 2)
       return [
@@ -162,10 +162,18 @@ export async function compositeRug(
         // Dark pixels  × rug_texture ≈ 0            → lines "tattoo" the rug
 
         // Subtle warm frame first (drawn in normal mode)
-        ctx.strokeStyle = 'rgba(160, 120, 70, 0.55)'
-        ctx.lineWidth = 2
+        ctx.strokeStyle = 'rgba(160, 120, 70, 0.4)'
+        ctx.lineWidth = 1.5
         ctx.strokeRect(x - 1, y - 1, w + 2, h + 2)
 
+        // Warm tint pre-boost: cream overlay so white areas read warm, not cold
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.globalAlpha = 0.08
+        ctx.fillStyle = '#d4a866'
+        ctx.fillRect(x, y, w, h)
+        ctx.globalAlpha = 1.0
+
+        // Multiply: white disappears, dark lines "tattoo" the rug
         ctx.globalCompositeOperation = 'multiply'
         ctx.drawImage(img, x, y, w, h)
 

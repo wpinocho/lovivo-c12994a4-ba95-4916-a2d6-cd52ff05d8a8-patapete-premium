@@ -103,21 +103,22 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   const subjectW = maxX - minX + 1
   const subjectH = maxY - minY + 1
 
-  // Expand box: 20% sides, 10% top, 40% bottom (captures head + upper chest)
-  const padSide   = Math.round(subjectW * 0.20)
-  const padTop    = Math.round(subjectH * 0.10)
-  const padBottom = Math.round(subjectH * 0.40)
+  // Portrait crop: only top 55% of the subject bounding box (head + upper chest)
+  // This prevents FLUX from seeing the full body and forces a portrait composition
+  const portraitH = Math.round(subjectH * 0.55)
+  const padSide   = Math.round(subjectW * 0.18)
+  const padTop    = Math.round(subjectH * 0.08)
 
   const cropX = Math.max(0, subjectX0 - padSide)
   const cropY = Math.max(0, subjectY0 - padTop)
-  const cropW = Math.min(img.width  - cropX, subjectW + padSide   * 2)
-  const cropH = Math.min(img.height - cropY, subjectH + padTop + padBottom)
+  const cropW = Math.min(img.width  - cropX, subjectW + padSide * 2)
+  const cropH = Math.min(img.height - cropY, portraitH + padTop)  // only top 55% of subject
 
   img.crop(cropX, cropY, cropW, cropH)
 
-  // Scale so subject height fills ~75% of the 800px target
+  // Scale so portrait fills ~82% of the 800px target (bigger = more detail)
   const targetSize = 800
-  const scale  = (targetSize * 0.75) / img.height
+  const scale  = (targetSize * 0.82) / img.height
   const scaledW = Math.max(1, Math.round(img.width  * scale))
   const scaledH = Math.max(1, Math.round(img.height * scale))
   img.resize(scaledW, scaledH)
@@ -142,12 +143,12 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
 // ─── STEP 3: FLUX Dev img2img stylization ────────────────────────────────────
 // Uses black-forest-labs/flux-dev via the models API (always latest version)
 const PROMPT = [
-  'A clean minimalist line art illustration of this exact pet,',
-  'designed for laser engraving on a natural fiber doormat.',
-  'Bold dark brown linework on a solid white background.',
-  'Elegant confident outlining, minimal shading, high contrast.',
-  'Product-ready illustration, premium home decor aesthetic.',
-  'The pet fills most of the frame, facing forward.',
+  'Premium pet portrait illustration for a decorative doormat.',
+  'Close-up of head and upper chest ONLY. No full body. No legs. No paws.',
+  'Pure BLACK outlines on solid WHITE background only.',
+  'No color fills. No shading. No gradients. Only crisp black linework.',
+  'Minimalist engraved line art style. High contrast. Product-ready.',
+  'Face fills most of the frame. Premium home decor aesthetic.',
 ].join(' ')
 
 async function generateWithFluxDev(normalizedBase64: string): Promise<string> {
@@ -161,12 +162,12 @@ async function generateWithFluxDev(normalizedBase64: string): Promise<string> {
       input: {
         prompt: PROMPT,
         image: `data:image/png;base64,${normalizedBase64}`,
-        prompt_strength: 0.78,  // 78% text → stylize heavily; 22% image → keep identity
-        num_inference_steps: 28,
-        guidance: 3.5,
+        prompt_strength: 0.72,  // 72% text → stylize; 28% image → preserve structure
+        num_inference_steps: 30,
+        guidance: 4.0,
         num_outputs: 1,
         output_format: 'webp',
-        output_quality: 92,
+        output_quality: 95,
         disable_safety_checker: true,
       },
     }),
