@@ -2,25 +2,15 @@
 
 ## Estado Actual: v8 implementada ✅
 
-## Problema identificado en v7
-El `normalizeImage` tomaba el **top 55%** del bounding box del sujeto para forzar un portrait crop. Esto funcionaba para fotos de cuerpo completo pero cortaba la cabeza en imágenes que ya eran close-ups (el dachshund de la prueba: BiRefNet ok → FLUX recibía imagen sin la parte superior de la cabeza).
-
-## Fix v8: Eliminar portrait crop — padding uniforme
+## Fix v8: Padding uniforme (aplicado)
 
 ### Cambio en `normalizeImage` (supabase/functions/generate-tattoo/index.ts)
 
-**Antes:**
-```typescript
-const portraitH = Math.round(subjectH * 0.55)  // ← PROBLEMA: cortaba cabezas
-const padSide   = Math.round(subjectW * 0.18)
-const padTop    = Math.round(subjectH * 0.08)
-const cropX = Math.max(0, subjectX0 - padSide)
-const cropY = Math.max(0, subjectY0 - padTop)
-const cropW = Math.min(img.width  - cropX, subjectW + padSide * 2)
-const cropH = Math.min(img.height - cropY, portraitH + padTop)
-```
+**Antes (v5/v7 — ROTO para close-ups):**
+- Tomaba el top 55% del bounding box → cortaba la cabeza en fotos cercanas
+- Scale por `img.height` → diferente comportamiento en fotos horizontales vs verticales
 
-**Después:**
+**Después (v8 — funciona para todos los tipos):**
 ```typescript
 // Padding uniforme en todos lados: 15% del lado más grande del bounding box
 const pad = Math.round(Math.max(subjectW, subjectH) * 0.15)
@@ -28,19 +18,17 @@ const cropX = Math.max(0, subjectX0 - pad)
 const cropY = Math.max(0, subjectY0 - pad)
 const cropW = Math.min(img.width  - cropX, subjectW + pad * 2)
 const cropH = Math.min(img.height - cropY, subjectH + pad * 2)
-```
 
-**Escala: usar el lado más largo para fit dentro de 800px (no solo height):**
-```typescript
+// Scale por lado más largo → consistente para cualquier orientación
 const targetSize = 800
 const longestSide = Math.max(img.width, img.height)
-const scale = (targetSize * 0.88) / longestSide  // 88% para dejar algo de margen
+const scale = (targetSize * 0.88) / longestSide
 ```
 
 ### Por qué funciona para todos los tipos de imagen
-- Foto close-up (ya es retrato): solo recorta el padding de BiRefNet, sujeto llena el frame → FLUX recibe cara completa
-- Foto cuerpo completo: sujeto es alto → ocupa el 88% del canvas vertical → FLUX ve cuerpo completo pero el prompt dice "head and upper chest ONLY" → FLUX genera portrait
-- No hay corte artificial que pueda eliminar partes del sujeto
+- **Close-up (ya es retrato):** solo recorta el padding de BiRefNet, sujeto llena el frame → FLUX recibe cara completa
+- **Cuerpo completo:** sujeto ocupa el 88% del canvas → FLUX ve cuerpo completo pero el prompt dice "head and upper chest ONLY" → FLUX genera portrait
+- **No hay corte artificial** que pueda eliminar partes del sujeto
 
 ### Prompt (sin cambios — ya maneja la composición)
 ```
@@ -52,22 +40,16 @@ Minimalist engraved line art style. High contrast. Product-ready.
 Face fills most of the frame. Premium home decor aesthetic.
 ```
 
-### params FLUX (sin cambios)
+### Params FLUX (sin cambios)
 - `prompt_strength: 0.72`
 - `num_inference_steps: 30`
 - `guidance: 4.0`
 
-## Archivos a modificar
-| Archivo | Cambio |
-|---------|--------|
-| `supabase/functions/generate-tattoo/index.ts` | Reemplazar lógica de portrait crop en `normalizeImage` por padding uniforme + scale por lado más largo |
-
 ## Notas de calibración (post-deploy)
 - Si FLUX sigue coloreando: bajar `prompt_strength` a `0.68`
 - Si el multiply queda muy oscuro: verificar URL del mat
-- Si 1 mascota se ve muy chica: subir slot a `H * 0.62`
-- Si el sujeto se ve muy pequeño en el canvas: subir el `0.88` a `0.92`
-- Si el sujeto toca los bordes: bajar el pad a `0.12`
+- Si el sujeto se ve muy chico: subir el `0.88` a `0.92`
+- Si el sujeto toca los bordes: bajar el pad de `0.15` a `0.12`
 
 ## Mat mockup URL
 ```
@@ -77,7 +59,7 @@ https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images
 ## Archivos clave
 | Archivo | Rol |
 |---------|-----|
-| `supabase/functions/generate-tattoo/index.ts` | Pipeline completo: BiRefNet → normalize (sin portrait crop) → FLUX |
+| `supabase/functions/generate-tattoo/index.ts` | Pipeline completo: BiRefNet → normalize (padding uniforme v8) → FLUX |
 | `src/utils/canvasCompositing.ts` | Preview en canvas cuadrado (600×600), multiply blend |
 | `src/components/patapete/configurator/CanvasPreview.tsx` | `aspect-square` para preview grande |
 | `src/components/patapete/configurator/StepPets.tsx` | Layout 2 columnas: preview izquierda, form derecha |

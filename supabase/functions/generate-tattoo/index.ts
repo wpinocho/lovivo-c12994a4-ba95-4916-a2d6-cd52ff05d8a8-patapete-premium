@@ -1,4 +1,4 @@
-// v5 — BiRefNet bg removal + imagescript smart crop + FLUX Dev img2img
+// v8 — BiRefNet bg removal + uniform padding crop + FLUX Dev img2img
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
@@ -103,22 +103,22 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   const subjectW = maxX - minX + 1
   const subjectH = maxY - minY + 1
 
-  // Portrait crop: only top 55% of the subject bounding box (head + upper chest)
-  // This prevents FLUX from seeing the full body and forces a portrait composition
-  const portraitH = Math.round(subjectH * 0.55)
-  const padSide   = Math.round(subjectW * 0.18)
-  const padTop    = Math.round(subjectH * 0.08)
+  // Uniform padding: 15% of the longest side of the bounding box
+  // No portrait crop — let FLUX handle the composition via prompt
+  // Works for close-ups AND full-body shots without cutting off heads
+  const pad = Math.round(Math.max(subjectW, subjectH) * 0.15)
 
-  const cropX = Math.max(0, subjectX0 - padSide)
-  const cropY = Math.max(0, subjectY0 - padTop)
-  const cropW = Math.min(img.width  - cropX, subjectW + padSide * 2)
-  const cropH = Math.min(img.height - cropY, portraitH + padTop)  // only top 55% of subject
+  const cropX = Math.max(0, subjectX0 - pad)
+  const cropY = Math.max(0, subjectY0 - pad)
+  const cropW = Math.min(img.width  - cropX, subjectW + pad * 2)
+  const cropH = Math.min(img.height - cropY, subjectH + pad * 2)
 
   img.crop(cropX, cropY, cropW, cropH)
 
-  // Scale so portrait fills ~82% of the 800px target (bigger = more detail)
+  // Scale by longest side so the subject fills 88% of canvas regardless of orientation
   const targetSize = 800
-  const scale  = (targetSize * 0.82) / img.height
+  const longestSide = Math.max(img.width, img.height)
+  const scale  = (targetSize * 0.88) / longestSide
   const scaledW = Math.max(1, Math.round(img.width  * scale))
   const scaledH = Math.max(1, Math.round(img.height * scale))
   img.resize(scaledW, scaledH)
