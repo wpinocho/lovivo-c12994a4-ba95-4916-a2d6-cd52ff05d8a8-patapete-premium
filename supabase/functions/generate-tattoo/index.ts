@@ -26,17 +26,19 @@ async function pollReplicate(predictionId: string, maxSeconds = 90): Promise<any
 }
 
 // ─── STEP 1: BiRefNet background removal ─────────────────────────────────────
-// Model: zhengpeng7/birefnet on Replicate
+// Model: men1scus/birefnet (BiRefNet — CAAI AIR 2024) on Replicate
+// Version: f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7
 // Returns a CDN URL to a PNG with transparent background
 async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
-  const response = await fetch('https://api.replicate.com/v1/models/zhengpeng7/birefnet/predictions', {
+  const response = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${REPLICATE_API_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': 'wait=55', // try synchronous first (BiRefNet is fast ~5-15s)
+      'Prefer': 'wait=60', // try synchronous first (BiRefNet is fast ~5-15s)
     },
     body: JSON.stringify({
+      version: 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7',
       input: {
         image: `data:image/png;base64,${imageBase64}`,
       },
@@ -53,15 +55,16 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
   // Synchronous result (Prefer: wait worked)
   if (prediction.status === 'succeeded') {
     const out = prediction.output
-    const url = Array.isArray(out) ? out[0] : out
+    const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
     if (!url) throw new Error('BiRefNet returned empty output')
     return url
   }
 
   // Async — need to poll
-  const result = await pollReplicate(prediction.id, 60)
+  if (!prediction.id) throw new Error(`BiRefNet: no prediction ID in response: ${JSON.stringify(prediction)}`)
+  const result = await pollReplicate(prediction.id, 90)
   const out = result.output
-  const url = Array.isArray(out) ? out[0] : out
+  const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
   if (!url) throw new Error('BiRefNet returned empty output after polling')
   return url
 }

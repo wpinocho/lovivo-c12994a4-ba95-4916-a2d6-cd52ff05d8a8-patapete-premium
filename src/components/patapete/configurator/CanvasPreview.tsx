@@ -22,9 +22,10 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
   const [isLoading, setIsLoading] = useState(false)
   const [hasRealImage, setHasRealImage] = useState(false)
 
-  // Stable key derived from pet CONTENT (not array reference) — prevents re-running the
-  // effect just because pets.slice() created a new array with the same data.
-  const petKey = pets.map(p => `${p.generatedArtUrl || p.photoPreviewUrl || ''}:${p.name}`).join('|')
+  // Stable key: only re-run when AI art URL or name changes.
+  // Intentionally excludes photoPreviewUrl — the canvas should NOT update on raw photo upload,
+  // only when the AI-generated art arrives.
+  const petKey = pets.map(p => `${p.generatedArtUrl || ''}:${p.name}`).join('|')
 
   useEffect(() => {
     let cancelled = false
@@ -33,14 +34,16 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
       setIsLoading(true)
 
       try {
-        // Build petData: use real image if available, otherwise fall back to demo image.
+        // Build petData: ONLY use AI-generated art as the real image.
+        // Raw photoPreviewUrl is intentionally NOT used here — the canvas must only
+        // show the AI result or the demo placeholder, never the raw uploaded photo.
         const petData: PetCompositeData[] = pets.map((pet, i) => {
-          const realUrl = pet.generatedArtUrl || pet.photoPreviewUrl
+          const artUrl = pet.generatedArtUrl  // null until AI pipeline completes
           return {
-            imageUrl: realUrl || DEMO_IMAGES[i % DEMO_IMAGES.length],
+            imageUrl: artUrl || DEMO_IMAGES[i % DEMO_IMAGES.length],
             name: pet.name,
-            isDemo: !realUrl,
-            isGenerated: !!pet.generatedArtUrl,
+            isDemo: !artUrl,
+            isGenerated: !!artUrl,
           }
         })
 
