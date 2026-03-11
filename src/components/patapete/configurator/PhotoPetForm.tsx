@@ -40,9 +40,9 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
   const canRetry = !!pet.photoFile && !hasResult && !isProcessing
 
   const statusMessage = pet.isProcessingBg
-    ? 'Recortando a cabeza y hombros...'
+    ? 'Preparando imagen...'
     : pet.isGeneratingArt
-      ? 'Creando tu retrato con IA... (~30s)'
+      ? 'Creando tu retrato con IA... (~45s)'
       : ''
 
   return (
@@ -115,7 +115,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
               </div>
               <div className="text-center px-4">
                 <p className="text-sm font-semibold text-foreground">{statusMessage}</p>
-                <p className="text-xs text-muted-foreground mt-1">La IA está trabajando en tu retrato</p>
+                <p className="text-xs text-muted-foreground mt-1">BiRefNet + FLUX Dev trabajando en tu retrato</p>
               </div>
             </div>
           )}

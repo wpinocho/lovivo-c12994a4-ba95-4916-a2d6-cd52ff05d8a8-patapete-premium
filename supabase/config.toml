@@ -5,3 +5,4 @@ project_id = "vqmqdhsajdldsraxsqba"
 
 [functions.generate-tattoo]
 verify_jwt = false
+max_duration = 300

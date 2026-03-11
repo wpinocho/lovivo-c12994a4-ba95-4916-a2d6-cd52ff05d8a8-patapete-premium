@@ -40,6 +40,7 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
             imageUrl: realUrl || DEMO_IMAGES[i % DEMO_IMAGES.length],
             name: pet.name,
             isDemo: !realUrl,
+            isGenerated: !!pet.generatedArtUrl,
           }
         })
 

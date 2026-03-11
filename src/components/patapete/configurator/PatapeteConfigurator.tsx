@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { ConfiguratorState, DEFAULT_PET, Pet } from './types'
 import { StepPets } from './StepPets'
 import { StepSummary } from './StepSummary'
-import { removeBackground } from '@/utils/backgroundRemoval'
+import { compressAndResizeImage } from '@/utils/imagePreprocessing'
 import { generateTattooArt } from '@/utils/replicateApi'
 
 interface PatapeteConfiguratorProps {
@@ -53,15 +53,14 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     }
 
     try {
-      updatePet({ isProcessingBg: true, isGeneratingArt: false })
-      const removedBgUrl = await removeBackground(fileToUse, (progress, status) => {
-        console.log(`[BG Removal] ${progress}% - ${status}`)
-      })
-      updatePet({ processedImageUrl: removedBgUrl, isProcessingBg: false })
+      // Step 1: Compress image client-side (max 1024×1024, PNG)
+      updatePet({ isProcessingBg: true, isGeneratingArt: false, generatedArtUrl: null })
+      const compressedBase64 = await compressAndResizeImage(fileToUse)
+      updatePet({ isProcessingBg: false, isGeneratingArt: true })
 
-      updatePet({ isGeneratingArt: true })
+      // Step 2: Full backend pipeline (BiRefNet → smart crop → FLUX Dev)
       const artUrl = await generateTattooArt(
-        removedBgUrl,
+        compressedBase64,
         pet.name || 'mascota',
         (status) => console.log(`[IA] ${status}`)
       )
@@ -85,7 +84,6 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     setState(s => ({ ...s, step: 1 }))
   }, [])
 
-  // Use a ref so onPreviewReady never triggers a re-render
   const finalPreviewRef = useRef<string | null>(null)
 
   const handlePreviewReady = useCallback((dataUrl: string) => {
@@ -94,7 +92,6 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 py-4">
-      {/* Error message */}
       {state.error && (
         <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-xl p-4 text-sm">
           {state.error}
