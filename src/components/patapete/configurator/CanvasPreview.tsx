@@ -72,7 +72,7 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
   }, [style, petKey, phrase])
 
   return (
-    <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden bg-muted border border-border shadow-inner">
+    <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-muted border border-border shadow-inner">
       {previewUrl ? (
         <img
           src={previewUrl}
