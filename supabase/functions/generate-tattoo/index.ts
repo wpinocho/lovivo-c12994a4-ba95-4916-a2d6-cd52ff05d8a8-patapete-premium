@@ -1,8 +1,9 @@
-// v10 — BiRefNet + normalize + Llama 3.2 Vision (lucataco/ollama-llama3.2-vision-11b) → optimized prompt → FLUX 2 Pro
+// v11 — BiRefNet + normalize + Claude Haiku 3 (Anthropic) → optimized prompt → FLUX 2 Pro
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
+const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -125,7 +126,7 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   return btoa(binary)
 }
 
-// ─── STEP 3: Llama 3.2 Vision → generate optimized prompt ────────────────────
+// ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
 const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
 
 Analiza la imagen y extrae lo siguiente:
@@ -163,50 +164,54 @@ CRITICAL: The entire portrait is constructed using ONLY extremely thick, chunky,
 PRESERVE KEY STRUCTURAL FEATURES: [RASGOS FÍSICOS ESTRUCTURALES Y ACCESORIOS], but strictly abstract and simplify them into this chunky, heavy-line graphic execution. No thin strokes. Stencil-like simplicity ready for coarse material printing.`
 
 async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo' | 'icono'): Promise<string> {
+  if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')
+
   const systemPrompt = style === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
+  const t0 = Date.now()
 
-  // Combine system instructions + user task into a single prompt (ollama model doesn't have separate system_prompt field)
-  const fullPrompt = `${systemPrompt}\n\nAnaliza esta imagen y genera el prompt según las instrucciones anteriores. Devuelve ÚNICAMENTE el texto del prompt completado, sin introducciones ni explicaciones.`
-
-  const response = await fetch('https://api.replicate.com/v1/predictions', {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${REPLICATE_API_KEY}`,
-      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
     },
     body: JSON.stringify({
-      version: 'lucataco/ollama-llama3.2-vision-11b:d4e81fc1472556464f1ee5cea4de177b2fe95a6eaadb5f63335df1ba654597af',
-      input: {
-        image: `data:image/png;base64,${normalizedBase64}`,
-        prompt: fullPrompt,
-      },
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/png',
+                data: normalizedBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: 'Analiza esta imagen y genera el prompt según las instrucciones anteriores. Devuelve ÚNICAMENTE el texto del prompt completado, sin introducciones ni explicaciones.',
+            },
+          ],
+        },
+      ],
     }),
   })
 
   if (!response.ok) {
     const err = await response.text()
-    throw new Error(`Llama Vision request failed: ${err}`)
+    throw new Error(`Claude Haiku request failed (${response.status}): ${err}`)
   }
 
-  const prediction = await response.json()
+  const result = await response.json()
+  const text = result?.content?.[0]?.text
+  if (!text) throw new Error('Claude Haiku returned empty output')
 
-  // Handle synchronous result
-  if (prediction.status === 'succeeded') {
-    const out = prediction.output
-    const text = Array.isArray(out) ? out.join('') : out
-    if (!text) throw new Error('Llama Vision returned empty output')
-    console.log('[generate-tattoo] Vision prompt:', text)
-    return text.trim()
-  }
-
-  if (!prediction.id) throw new Error(`Llama Vision: no prediction ID: ${JSON.stringify(prediction)}`)
-
-  // Poll up to 90s (ollama model can take longer to boot)
-  const result = await pollReplicate(prediction.id, 90)
-  const out = result.output
-  const text = Array.isArray(out) ? out.join('') : out
-  if (!text) throw new Error('Llama Vision returned empty output after polling')
-  console.log('[generate-tattoo] Vision prompt:', text)
+  console.log(`[generate-tattoo] Step 3 Claude Haiku done in ${Date.now() - t0}ms. Prompt:`, text)
   return text.trim()
 }
 
@@ -254,6 +259,7 @@ serve(async (req) => {
 
   try {
     if (!REPLICATE_API_KEY) throw new Error('REPLICATE_API_KEY secret not configured')
+    if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')
 
     const { imageBase64, petName, style } = await req.json()
     if (!imageBase64) throw new Error('imageBase64 is required')
@@ -271,8 +277,8 @@ serve(async (req) => {
     const normalizedBase64 = await normalizeImage(transparentPngUrl)
     console.log('[generate-tattoo] Step 2 done: normalized 800×800 PNG')
 
-    // Step 3: Llama Vision → optimized prompt
-    console.log('[generate-tattoo] Step 3: Llama 3.2 Vision generating prompt...')
+    // Step 3: Claude Haiku → optimized prompt
+    console.log('[generate-tattoo] Step 3: Claude Haiku 3 generating prompt...')
     const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
     console.log('[generate-tattoo] Step 3 done: prompt generated')
 
