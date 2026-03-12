@@ -3,17 +3,47 @@
 ## Estado actual
 Pipeline AI para generación de tatuajes de mascotas funcionando. Ambos estilos (DIBUJO e ICONO) usan `input_images[]` con imagen de referencia de estilo.
 
-## Pipeline (v16)
+## Pipeline (v17)
 1. **BiRefNet** — background removal → transparent PNG URL
 2. **Normalize** — smart crop + 800×800 white canvas → PNG base64
 3. **Upload** — sube el pet normalizado a Supabase Storage (bucket `pet-tattoos` en el Supabase del usuario) → URL pública (`pet-tattoos/temp/pet-{timestamp}.png`)
 4. **Claude Haiku 3** — analiza la mascota → prompt descriptivo (prompts diferenciados por estilo)
 5. **FLUX 2 Pro** — genera el arte final via `input_images: [petUrl, styleUrl]` (ambos estilos)
 
-## Estrategia FLUX (v16)
-- **input_images[]** — FLUX 2 Pro acepta un array de URLs (no composite, no data URIs)
-- **DIBUJO**: `input_images: [petUrl, STYLE_REFERENCE_DIBUJO_URL]` + prompt dual-reference ("first = pet, second = style")
-- **ICONO**: `input_images: [petUrl, STYLE_REFERENCE_ICONO_URL]` + prompt dual-reference con énfasis explícito "FULL COLOR, NOT black and white"
+## Bug crítico corregido (v17)
+**Síntoma**: ICONO siempre producía resultado tipo DIBUJO (B&W). Los logs de la edge mostraban `style: dibujo` aunque el frontend tenía "Icono" seleccionado.
+
+**Causa raíz**: `handleGenerate` en `PatapeteConfigurator.tsx` usaba `useCallback` con `[state.pets]` como dependency array, OMITIENDO `state.style`. Esto creaba una closure desactualizada que siempre capturaba el valor inicial `'dibujo'`.
+
+**Fix aplicado**: Se usa `styleRef` (useRef) que siempre tiene el valor actual del estilo, y `handleGenerate` lee `styleRef.current` en lugar de `state.style`. Esto evita el stale closure sin necesidad de recrear el callback.
+
+```typescript
+// PatapeteConfigurator.tsx
+const styleRef = useRef(state.style)
+styleRef.current = state.style  // siempre actualizado en cada render
+
+const handleGenerate = useCallback(async (petIndex, fileOverride) => {
+  // ...
+  const artUrl = await generateTattooArt(
+    compressedBase64,
+    pet.name || 'mascota',
+    styleRef.current,  // ← siempre el estilo correcto
+    ...
+  )
+}, [state.pets])  // sin necesidad de state.style en deps
+```
+
+## Prompts Haiku (v17) — exactos según usuario
+
+### SYSTEM_PROMPT_DIBUJO
+Instruye a Claude a extraer solo información estructural (ignora colores), y completar template de blanco y negro, estilo linocut/sello. Output en inglés.
+
+### SYSTEM_PROMPT_ICONO
+Instruye a Claude a extraer textura del pelo, colores principales, rasgos distinctivos y accesorios, y completar template de vector plano minimalista con colores sólidos (cell-shaded). Output en inglés.
+
+## Estrategia FLUX (v17)
+- **DIBUJO**: prompt = "first image = pet, second = B&W style reference" + haikuPrompt
+- **ICONO**: prompt = "first image = pet, second = flat vector style reference" + haikuPrompt
 - **Parámetros**: `aspect_ratio: '1:1'`, `resolution: '1 MP'`, `output_format: 'webp'`, `output_quality: 80`, `safety_tolerance: 2`
 
 ## Storage — dos Supabase
@@ -25,21 +55,11 @@ Pipeline AI para generación de tatuajes de mascotas funcionando. Ambos estilos 
 - Style ICONO (WebP): `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono.webp`
 - Pets temp: `pet-tattoos/temp/pet-{timestamp}.png` (en Supabase del usuario, overwrite, público)
 
-## Cambios v16 (fix ICONO producía DIBUJO)
-Problema: ICONO generaba resultados blanco/negro idénticos a DIBUJO. Causas:
-1. `STYLE_REFERENCE_ICONO_URL` apuntaba al bucket `message-images` (temporal de chat, no confiable para Replicate)
-2. `SYSTEM_PROMPT_ICONO` no forzaba suficientemente la extracción de colores (Claude generaba output sin colores)
-3. Prompt de FLUX para ICONO no era explícito sobre "FULL COLOR"
-
-Fixes aplicados:
-- `STYLE_REFERENCE_ICONO_URL` → bucket permanente `product-images` (mismo que DIBUJO)
-- `SYSTEM_PROMPT_ICONO` reescrito en inglés, con "CRITICAL: FULL COLOR. You MUST extract exact fur colors" y template que incluye FUR COLORS, FUR TEXTURE, COLOR ACCENTS
-- Prompt FLUX ICONO → "CRITICAL STYLE RULES: FULL COLOR illustration (NOT black and white, NOT grayscale)"
-
 ## Archivos clave
-- `supabase/functions/generate-tattoo/index.ts` — pipeline principal (v16)
+- `supabase/functions/generate-tattoo/index.ts` — pipeline principal (v17)
 - `supabase/config.toml` — configuración edge functions
 - `src/utils/replicateApi.ts` — cliente frontend (sin cambios)
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — fix stale closure v17
 - `supabase/migrations/20260312204524_create_pet_tattoos_storage_bucket.sql` — bucket Storage
 
 ## Tiempos de ejecución (referencia)

@@ -1,4 +1,4 @@
-// v16 — FLUX 2 Pro input_images[] — ICONO: permanent CDN URL + strong color prompt
+// v17 — Fix: stale closure bug (style always sent as 'dibujo') + exact user prompts for Haiku
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -168,25 +168,24 @@ async function uploadNormalizedPet(base64: string): Promise<string> {
 }
 
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
-const SYSTEM_PROMPT_ICONO = `You are an expert art director. Analyze the pet photo and generate an image generation prompt for a FULL COLOR flat geometric vector illustration — exactly like the style reference image the AI model will see (bold black outlines, solid flat colors, angular/geometric shapes, NO gradients, NO black-and-white).
+const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
 
-CRITICAL: This style is FULL COLOR. You MUST extract the exact fur colors and include them in the prompt.
+Analiza la imagen y extrae lo siguiente:
 
-From the photo, identify:
-1. Animal type and approximate breed.
-2. Fur texture and shape (e.g. wiry/scruffy with angular spiky tips, short smooth, fluffy in blocks).
-3. EXACT fur colors (e.g. dark brown, cream beige, reddish-brown, black muzzle, tan paws).
-4. Most distinctive physical features (e.g. semi-floppy ears, dark muzzle, prominent eyebrows).
-5. Visible accessories as single solid colors (e.g. dark red bandana, blue collar).
+Tipo de animal y raza aproximada.
 
-Fill in this EXACT template (keep in English). Return ONLY the completed prompt text, no introductions:
+Textura del pelo (ej. liso y corto, esponjoso, alambre/scruffy).
 
-A FULL COLOR 'peekaboo' portrait of a [ANIMAL TYPE AND BREED], head and upper chest only, paws resting on a thick solid black horizontal line at the bottom. PURE WHITE BACKGROUND (#FFFFFF).
-STYLE: FULL COLOR flat geometric vector illustration. Extremely thick bold black outlines. Angular spiky shapes for fur. NO gradients, NO shading, NO black-and-white — ONLY solid flat color fills matching the style reference.
-FUR COLORS: [EXACT FUR COLORS — e.g. dark brown body, cream chest, black muzzle and ear tips, tan paws] rendered as flat solid color blocks and angular spike shapes.
-FUR TEXTURE: [FUR TEXTURE AND SHAPE — e.g. wiry scruffy fur with angular spiky tips, geometric blocks].
-COLOR ACCENTS: [ACCESSORY COLORS — e.g. dark red bandana]. Pink tongue. White eye highlights as flat shapes.
-KEY FEATURES: [DISTINCTIVE PHYSICAL FEATURES]. Bold, colorful, graphic, print-ready icon style.`
+Colores principales (ej. café chocolate con marcas cobrizas).
+
+Rasgos distintivos CRÍTICOS y accesorios (ej. ojos azul claro muy llamativos, orejas caídas, collar/paliacate simplificado a un solo color).
+
+Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
+
+A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
+CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
+LIMITED COLOR PALETTE: [COLORES PRINCIPALES DEL PELO]. Solid black for outlines. Pink tongue. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
@@ -285,18 +284,13 @@ async function generateWithFlux2Pro(
 
   if (artStyle === 'dibujo') {
     inputImages = [petUrl, STYLE_REFERENCE_DIBUJO_URL]
-    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.\nGenerate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.\n${haikuPrompt}`
+    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.
+Generate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.
+${haikuPrompt}`
   } else {
     inputImages = [petUrl, STYLE_REFERENCE_ICONO_URL]
-    finalPrompt = `The first image is the pet to recreate. The second image is the EXACT art style reference — follow it strictly.
-CRITICAL STYLE RULES from the reference image:
-- FULL COLOR illustration (NOT black and white, NOT grayscale)
-- Thick bold black outlines on all shapes
-- Angular, geometric, spiky shapes — no smooth curves
-- Flat solid color fills only — NO gradients, NO shading
-- Pure white background
-
-Generate a COLORFUL portrait of the pet from the first image in the exact geometric vector style of the second reference image.
+    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.
+Generate a flat vector illustration portrait of the pet from the first image, using the exact style of the second reference image.
 ${haikuPrompt}`
   }
 

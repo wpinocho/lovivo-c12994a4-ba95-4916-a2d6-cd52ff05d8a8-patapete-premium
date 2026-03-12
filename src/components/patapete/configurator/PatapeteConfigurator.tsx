@@ -66,7 +66,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
       const artUrl = await generateTattooArt(
         compressedBase64,
         pet.name || 'mascota',
-        state.style,
+        styleRef.current,   // ← always the latest style (avoids stale closure)
         (status) => console.log(`[IA] ${status}`)
       )
 
@@ -88,6 +88,11 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   const handleBack = useCallback(() => {
     setState(s => ({ ...s, step: 1 }))
   }, [])
+
+  // Use a ref for style so handleGenerate always reads the latest value
+  // without needing to be recreated on every style change
+  const styleRef = useRef(state.style)
+  styleRef.current = state.style
 
   const finalPreviewRef = useRef<string | null>(null)
 
