@@ -1,13 +1,28 @@
-// v11 — BiRefNet + normalize + Claude Haiku 3 (Anthropic) → optimized prompt → FLUX 2 Pro
+// v12 — Added style reference image for DIBUJO + comprehensive logging per step
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
+// Style reference image for DIBUJO — this guides FLUX toward the correct visual style
+// (bold B&W line art peekaboo portrait)
+const STYLE_REFERENCE_DIBUJO_URL =
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773343362868-fzlwnjfa0z8.webp'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// ─── Helper: fetch any URL → base64 string ───────────────────────────────────
+async function fetchImageAsBase64(url: string): Promise<string> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch image from ${url}: ${res.status} ${res.statusText}`)
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary)
 }
 
 // ─── Shared: poll Replicate until done ────────────────────────────────────────
@@ -28,6 +43,9 @@ async function pollReplicate(predictionId: string, maxSeconds = 90): Promise<any
 
 // ─── STEP 1: BiRefNet background removal ─────────────────────────────────────
 async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
+  const modelVersion = 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7'
+  console.log(`[generate-tattoo] Step 1 INPUT — BiRefNet model: ${modelVersion} | image base64 length: ${imageBase64.length}`)
+
   const response = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
@@ -36,7 +54,7 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
       'Prefer': 'wait=60',
     },
     body: JSON.stringify({
-      version: 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7',
+      version: modelVersion,
       input: {
         image: `data:image/png;base64,${imageBase64}`,
       },
@@ -49,11 +67,13 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
   }
 
   const prediction = await response.json()
+  console.log(`[generate-tattoo] Step 1 — Prediction ID: ${prediction.id} | Status: ${prediction.status}`)
 
   if (prediction.status === 'succeeded') {
     const out = prediction.output
     const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
     if (!url) throw new Error('BiRefNet returned empty output')
+    console.log(`[generate-tattoo] Step 1 OUTPUT — transparent PNG URL: ${url}`)
     return url
   }
 
@@ -62,15 +82,20 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
   const out = result.output
   const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
   if (!url) throw new Error('BiRefNet returned empty output after polling')
+  console.log(`[generate-tattoo] Step 1 OUTPUT (polled) — transparent PNG URL: ${url}`)
   return url
 }
 
 // ─── STEP 2: Smart crop & normalize → 800×800 white canvas ───────────────────
 async function normalizeImage(transparentPngUrl: string): Promise<string> {
+  console.log(`[generate-tattoo] Step 2 INPUT — transparent PNG URL: ${transparentPngUrl}`)
+
   const res = await fetch(transparentPngUrl)
   if (!res.ok) throw new Error(`Failed to download BiRefNet output: ${res.status}`)
   const bytes = new Uint8Array(await res.arrayBuffer())
   const img = await Image.decode(bytes)
+
+  console.log(`[generate-tattoo] Step 2 — decoded image: ${img.width}×${img.height}`)
 
   let minX = img.width + 1, minY = img.height + 1, maxX = 0, maxY = 0
 
@@ -94,6 +119,7 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   const subjectY0 = minY - 1
   const subjectW = maxX - minX + 1
   const subjectH = maxY - minY + 1
+  console.log(`[generate-tattoo] Step 2 — subject bounding box: ${subjectW}×${subjectH} at (${subjectX0}, ${subjectY0})`)
 
   const pad = Math.round(Math.max(subjectW, subjectH) * 0.15)
 
@@ -123,7 +149,9 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   for (let i = 0; i < encoded.length; i++) {
     binary += String.fromCharCode(encoded[i])
   }
-  return btoa(binary)
+  const base64 = btoa(binary)
+  console.log(`[generate-tattoo] Step 2 OUTPUT — normalized 800×800 canvas | base64 length: ${base64.length}`)
+  return base64
 }
 
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
@@ -169,6 +197,33 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   const systemPrompt = style === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
   const t0 = Date.now()
 
+  console.log(`[generate-tattoo] Step 3 INPUT — style: ${style} | system prompt: "${systemPrompt.slice(0, 80)}..." | image base64 length: ${normalizedBase64.length}`)
+
+  const requestBody = {
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/png',
+              data: normalizedBase64,
+            },
+          },
+          {
+            type: 'text',
+            text: 'Analiza esta imagen y genera el prompt según las instrucciones anteriores. Devuelve ÚNICAMENTE el texto del prompt completado, sin introducciones ni explicaciones.',
+          },
+        ],
+      },
+    ],
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -176,30 +231,7 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
       'anthropic-version': '2023-06-01',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/png',
-                data: normalizedBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Analiza esta imagen y genera el prompt según las instrucciones anteriores. Devuelve ÚNICAMENTE el texto del prompt completado, sin introducciones ni explicaciones.',
-            },
-          ],
-        },
-      ],
-    }),
+    body: JSON.stringify(requestBody),
   })
 
   if (!response.ok) {
@@ -211,30 +243,69 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   const text = result?.content?.[0]?.text
   if (!text) throw new Error('Claude Haiku returned empty output')
 
-  console.log(`[generate-tattoo] Step 3 Claude Haiku done in ${Date.now() - t0}ms. Prompt:`, text)
+  const elapsed = Date.now() - t0
+  console.log(`[generate-tattoo] Step 3 OUTPUT — Claude Haiku done in ${elapsed}ms`)
+  console.log(`[generate-tattoo] Step 3 PROMPT GENERATED:\n${text}`)
   return text.trim()
 }
 
 // ─── STEP 4: FLUX 2 Pro → final art ──────────────────────────────────────────
-async function generateWithFlux2Pro(normalizedBase64: string, prompt: string): Promise<string> {
+//
+// Strategy per style:
+//   DIBUJO — use the style reference image as image_prompt (strength 0.25)
+//            so FLUX understands the target visual (bold B&W line art).
+//            Pet-specific features come from the Haiku text prompt.
+//   ICONO  — use the normalized pet photo as image_prompt (strength 0.15)
+//            so FLUX preserves colors and features from the actual pet.
+//
+async function generateWithFlux2Pro(
+  normalizedBase64: string,
+  prompt: string,
+  artStyle: 'dibujo' | 'icono'
+): Promise<string> {
+  let imagePromptDataUri: string
+  let imagePromptStrength: number
+  let imagePromptSource: string
+
+  if (artStyle === 'dibujo') {
+    console.log('[generate-tattoo] Step 4 — DIBUJO mode: fetching style reference image...')
+    const styleBase64 = await fetchImageAsBase64(STYLE_REFERENCE_DIBUJO_URL)
+    imagePromptDataUri = `data:image/webp;base64,${styleBase64}`
+    imagePromptStrength = 0.25
+    imagePromptSource = 'style-reference (B&W line art)'
+  } else {
+    imagePromptDataUri = `data:image/png;base64,${normalizedBase64}`
+    imagePromptStrength = 0.15
+    imagePromptSource = 'normalized pet photo'
+  }
+
+  const fluxInput = {
+    prompt,
+    image_prompt: imagePromptDataUri,
+    image_prompt_strength: imagePromptStrength,
+    output_format: 'webp',
+    output_quality: 95,
+    safety_tolerance: 5,
+    width: 1024,
+    height: 1024,
+  }
+
+  console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro params:`)
+  console.log(`  model: black-forest-labs/flux-2-pro`)
+  console.log(`  style: ${artStyle}`)
+  console.log(`  image_prompt source: ${imagePromptSource}`)
+  console.log(`  image_prompt_strength: ${imagePromptStrength}`)
+  console.log(`  prompt length: ${prompt.length} chars`)
+  console.log(`  width: ${fluxInput.width} | height: ${fluxInput.height}`)
+  console.log(`  output_format: ${fluxInput.output_format}`)
+
   const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${REPLICATE_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      input: {
-        prompt,
-        image_prompt: `data:image/png;base64,${normalizedBase64}`,
-        image_prompt_strength: 0.15,
-        output_format: 'webp',
-        output_quality: 95,
-        safety_tolerance: 5,
-        width: 1024,
-        height: 1024,
-      },
-    }),
+    body: JSON.stringify({ input: fluxInput }),
   })
 
   if (!response.ok) {
@@ -245,11 +316,15 @@ async function generateWithFlux2Pro(normalizedBase64: string, prompt: string): P
   const prediction = await response.json()
   if (!prediction.id) throw new Error('FLUX 2 Pro: no prediction ID')
 
+  console.log(`[generate-tattoo] Step 4 — FLUX prediction ID: ${prediction.id} | polling...`)
+
   // Poll up to 2 minutes
   const result = await pollReplicate(prediction.id, 120)
   const out = result.output
   const url = Array.isArray(out) ? out[0] : out
   if (!url) throw new Error('FLUX 2 Pro returned no image URL')
+
+  console.log(`[generate-tattoo] Step 4 OUTPUT — FLUX 2 Pro art URL: ${url}`)
   return url
 }
 
@@ -265,34 +340,44 @@ serve(async (req) => {
     if (!imageBase64) throw new Error('imageBase64 is required')
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
-    console.log(`[generate-tattoo] Starting pipeline for pet: "${petName || 'unnamed'}" | style: ${artStyle}`)
+
+    console.log(`[generate-tattoo] ═══ PIPELINE START ═══`)
+    console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
     // Step 1: Remove background
-    console.log('[generate-tattoo] Step 1: BiRefNet background removal...')
+    console.log('[generate-tattoo] ─── Step 1: BiRefNet background removal ───')
+    const t1 = Date.now()
     const transparentPngUrl = await removeBackgroundBiRefNet(imageBase64)
-    console.log('[generate-tattoo] Step 1 done:', transparentPngUrl)
+    console.log(`[generate-tattoo] Step 1 done in ${Date.now() - t1}ms`)
 
     // Step 2: Smart crop + normalize
-    console.log('[generate-tattoo] Step 2: Smart crop & normalize...')
+    console.log('[generate-tattoo] ─── Step 2: Smart crop & normalize ───')
+    const t2 = Date.now()
     const normalizedBase64 = await normalizeImage(transparentPngUrl)
-    console.log('[generate-tattoo] Step 2 done: normalized 800×800 PNG')
+    console.log(`[generate-tattoo] Step 2 done in ${Date.now() - t2}ms`)
 
     // Step 3: Claude Haiku → optimized prompt
-    console.log('[generate-tattoo] Step 3: Claude Haiku 3 generating prompt...')
+    console.log('[generate-tattoo] ─── Step 3: Claude Haiku 3 prompt generation ───')
+    const t3 = Date.now()
     const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
-    console.log('[generate-tattoo] Step 3 done: prompt generated')
+    console.log(`[generate-tattoo] Step 3 done in ${Date.now() - t3}ms`)
 
     // Step 4: FLUX 2 Pro → final art
-    console.log('[generate-tattoo] Step 4: FLUX 2 Pro generating art...')
-    const artUrl = await generateWithFlux2Pro(normalizedBase64, optimizedPrompt)
-    console.log('[generate-tattoo] Step 4 done:', artUrl)
+    console.log('[generate-tattoo] ─── Step 4: FLUX 2 Pro generation ───')
+    const t4 = Date.now()
+    const artUrl = await generateWithFlux2Pro(normalizedBase64, optimizedPrompt, artStyle)
+    console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
+
+    const totalMs = Date.now() - t1
+    console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${totalMs}ms ═══`)
+    console.log(`[generate-tattoo] FINAL OUTPUT URL: ${artUrl}`)
 
     return new Response(JSON.stringify({ url: artUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[generate-tattoo] Error:', message)
+    console.error('[generate-tattoo] ═══ ERROR ═══', message)
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
