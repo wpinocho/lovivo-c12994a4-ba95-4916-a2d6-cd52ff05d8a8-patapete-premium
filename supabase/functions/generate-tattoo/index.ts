@@ -1,4 +1,4 @@
-// v9 — BiRefNet + normalize + Llama 3.2 Vision → optimized prompt → FLUX 2 Pro
+// v10 — BiRefNet + normalize + Llama 3.2 Vision (lucataco/ollama-llama3.2-vision-11b) → optimized prompt → FLUX 2 Pro
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
@@ -165,19 +165,20 @@ PRESERVE KEY STRUCTURAL FEATURES: [RASGOS FÍSICOS ESTRUCTURALES Y ACCESORIOS], 
 async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo' | 'icono'): Promise<string> {
   const systemPrompt = style === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
 
-  const response = await fetch('https://api.replicate.com/v1/models/meta/llama-3.2-11b-vision-instruct/predictions', {
+  // Combine system instructions + user task into a single prompt (ollama model doesn't have separate system_prompt field)
+  const fullPrompt = `${systemPrompt}\n\nAnaliza esta imagen y genera el prompt según las instrucciones anteriores. Devuelve ÚNICAMENTE el texto del prompt completado, sin introducciones ni explicaciones.`
+
+  const response = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${REPLICATE_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      version: 'lucataco/ollama-llama3.2-vision-11b:d4e81fc1472556464f1ee5cea4de177b2fe95a6eaadb5f63335df1ba654597af',
       input: {
         image: `data:image/png;base64,${normalizedBase64}`,
-        prompt: 'Analiza esta imagen y genera el prompt según las instrucciones.',
-        system_prompt: systemPrompt,
-        max_tokens: 1024,
-        temperature: 0.3,
+        prompt: fullPrompt,
       },
     }),
   })
@@ -200,8 +201,8 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
 
   if (!prediction.id) throw new Error(`Llama Vision: no prediction ID: ${JSON.stringify(prediction)}`)
 
-  // Poll up to 60s (vision is fast ~5-10s)
-  const result = await pollReplicate(prediction.id, 60)
+  // Poll up to 90s (ollama model can take longer to boot)
+  const result = await pollReplicate(prediction.id, 90)
   const out = result.output
   const text = Array.isArray(out) ? out.join('') : out
   if (!text) throw new Error('Llama Vision returned empty output after polling')

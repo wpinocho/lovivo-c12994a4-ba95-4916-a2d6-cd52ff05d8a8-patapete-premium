@@ -4,7 +4,7 @@
 
 ---
 
-## Flujo actual (v9)
+## Flujo actual (v10)
 
 ```
 User sube foto
@@ -12,7 +12,7 @@ User sube foto
   → generate-tattoo edge function:
       1. BiRefNet (Replicate) → remove background
       2. normalizeImage() → 800×800 white canvas (imagescript)
-      3. Llama 3.2 Vision (meta/llama-3.2-11b-vision-instruct) → genera prompt según style
+      3. lucataco/ollama-llama3.2-vision-11b → genera prompt según style
       4. FLUX 2 Pro (black-forest-labs/flux-2-pro) → arte final
   → mostrar al user
 ```
@@ -38,16 +38,21 @@ User sube foto
 
 ---
 
+## Fix v10 (2025-03-12)
+**Problema**: `meta/llama-3.2-11b-vision-instruct` daba 404 — ese path no existe en Replicate.
+**Solución**: Cambiado a `lucataco/ollama-llama3.2-vision-11b:d4e81fc1472556464f1ee5cea4de177b2fe95a6eaadb5f63335df1ba654597af` via `/v1/predictions` con version hash. El system_prompt se combina en el campo `prompt` ya que este modelo no tiene campo `system_prompt` separado. Timeout extendido a 90s (ollama puede tardar en boot).
+
+---
+
 ## Parámetros clave FLUX 2 Pro
 - `image_prompt`: imagen normalizada (base64 data URI)
-- `image_prompt_strength`: 0.15 (baja influencia de imagen — guiado principalmente por prompt de Claude/Llama)
+- `image_prompt_strength`: 0.15 (baja influencia de imagen — guiado principalmente por prompt de Llama)
 - Modelo: `black-forest-labs/flux-2-pro` vía `/v1/models/{model}/predictions`
 
-## Parámetros Llama 3.2 Vision
-- Modelo: `meta/llama-3.2-11b-vision-instruct` vía Replicate
-- `temperature`: 0.3 (determinístico para prompts consistentes)
-- `max_tokens`: 1024
-- Solo requiere REPLICATE_API_KEY (ya configurado)
+## Parámetros Llama 3.2 Vision (ollama)
+- Modelo: `lucataco/ollama-llama3.2-vision-11b:d4e81fc1472556464f1ee5cea4de177b2fe95a6eaadb5f63335df1ba654597af`
+- Input: `image` (data URI) + `prompt` (system + user instrucciones combinadas)
+- Poll timeout: 90s (puede tardar en boot la primera vez)
 
 ---
 
