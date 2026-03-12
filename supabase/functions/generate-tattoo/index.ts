@@ -1,4 +1,4 @@
-// v14 — FLUX 2 Pro input_images[] (dual-URL) — no composite image needed
+// v15 — FLUX 2 Pro input_images[] (dual-URL) — both styles use style reference image
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -10,6 +10,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const STYLE_REFERENCE_DIBUJO_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png'
+
+const STYLE_REFERENCE_ICONO_URL =
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773350235538-8uqgrzk0xup.webp'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -165,24 +168,23 @@ async function uploadNormalizedPet(base64: string): Promise<string> {
 }
 
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
-const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
+const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt para recrearla en estilo vector flat geométrico, con contornos gruesos negros y colores sólidos planos — exactamente como el estilo de la imagen de referencia de estilo que verá el modelo.
 
-Analiza la imagen y extrae lo siguiente:
+Analiza la imagen y extrae:
 
-Tipo de animal y raza aproximada.
+1. Tipo de animal y raza aproximada.
+2. Textura del pelo y forma (ej. pelo alambre/scruffy con puntas angulares, pelo liso y corto, esponjoso en bloques).
+3. Colores principales exactos del pelaje (ej. café oscuro, beige crema, marrón rojizo).
+4. Rasgos físicos más distintivos (ej. orejas semi-caídas, morro oscuro, cejas marcadas).
+5. Accesorios visibles simplificados a un solo color sólido (ej. paliacate rojo oscuro, collar azul).
 
-Textura del pelo (ej. liso y corto, esponjoso, alambre/scruffy).
+Ahora REEMPLAZA los corchetes en esta plantilla exacta (mantén en inglés). Devuelve ÚNICAMENTE el prompt completado, sin introducciones:
 
-Colores principales (ej. café chocolate con marcas cobrizas).
-
-Rasgos distintivos CRÍTICOS y accesorios (ej. ojos azul claro muy llamativos, orejas caídas, collar/paliacate simplificado a un solo color).
-
-Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
-
-A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
-STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
-CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
-LIMITED COLOR PALETTE: [COLORES PRINCIPALES DEL PELO]. Solid black for outlines. Pink tongue. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
+A 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA], head and upper chest only, paws resting on a thick solid black horizontal line at the bottom. PURE WHITE BACKGROUND (#FFFFFF).
+STYLE: Flat geometric vector illustration with extremely thick, bold black outlines. Angular, spiky shapes for fur — NO smooth curves, NO gradients, NO shading. ONLY flat solid color fills.
+FUR: [TEXTURA Y FORMA DEL PELO], rendered as sharp angular spike shapes and geometric blocks of flat color.
+COLOR PALETTE: [COLORES PRINCIPALES]. Black outlines. Pink tongue. White highlights as flat shapes.
+KEY FEATURES: [RASGOS DISTINTIVOS Y ACCESORIOS simplified to single solid colors]. Bold, graphic, print-ready icon style.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
@@ -268,8 +270,8 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
 // Strategy:
 //   DIBUJO — input_images = [petUrl, styleRefUrl]
 //            Prompt tells FLUX: first image = pet to recreate, second = style to apply
-//   ICONO  — input_images = [petUrl]
-//            Prompt guides colors/style without a style reference
+//   ICONO  — input_images = [petUrl, styleRefIconoUrl]
+//            Prompt tells FLUX: first image = pet to recreate, second = flat vector style to apply
 //
 async function generateWithFlux2Pro(
   petUrl: string,
@@ -283,8 +285,8 @@ async function generateWithFlux2Pro(
     inputImages = [petUrl, STYLE_REFERENCE_DIBUJO_URL]
     finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.\nGenerate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.\n${haikuPrompt}`
   } else {
-    inputImages = [petUrl]
-    finalPrompt = haikuPrompt
+    inputImages = [petUrl, STYLE_REFERENCE_ICONO_URL]
+    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.\nGenerate a portrait of the pet from the first image, applying STRICTLY the flat geometric vector style, bold black outlines, angular fur shapes, and solid color palette shown in the second image.\n${haikuPrompt}`
   }
 
   console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro:`)
