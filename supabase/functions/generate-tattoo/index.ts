@@ -1,12 +1,11 @@
-// v12 — Added style reference image for DIBUJO + comprehensive logging per step
+// v13 — Composite dual-image reference for FLUX (pet LEFT + style RIGHT) + full input/output logging
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
-// Style reference image for DIBUJO — this guides FLUX toward the correct visual style
-// (bold B&W line art peekaboo portrait)
+// Style reference image for DIBUJO — bold B&W line art peekaboo portrait
 const STYLE_REFERENCE_DIBUJO_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773343362868-fzlwnjfa0z8.webp'
 
@@ -197,7 +196,11 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   const systemPrompt = style === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
   const t0 = Date.now()
 
-  console.log(`[generate-tattoo] Step 3 INPUT — style: ${style} | system prompt: "${systemPrompt.slice(0, 80)}..." | image base64 length: ${normalizedBase64.length}`)
+  console.log(`[generate-tattoo] Step 3 INPUT — Claude Haiku:`)
+  console.log(`  style: ${style}`)
+  console.log(`  model: claude-3-haiku-20240307`)
+  console.log(`  image base64 length: ${normalizedBase64.length}`)
+  console.log(`  system prompt (full):\n---\n${systemPrompt}\n---`)
 
   const requestBody = {
     model: 'claude-3-haiku-20240307',
@@ -245,42 +248,88 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
 
   const elapsed = Date.now() - t0
   console.log(`[generate-tattoo] Step 3 OUTPUT — Claude Haiku done in ${elapsed}ms`)
-  console.log(`[generate-tattoo] Step 3 PROMPT GENERATED:\n${text}`)
+  console.log(`[generate-tattoo] Step 3 OUTPUT — prompt generated (full text):\n---\n${text.trim()}\n---`)
   return text.trim()
+}
+
+// ─── STEP 3.5 (DIBUJO only): Composite pet photo (left) + style reference (right) ─
+// FLUX 2 Pro only accepts one image_prompt. We composite both images side-by-side
+// into a single 1600×800 PNG so FLUX can see both references at once.
+async function compositeImages(petBase64: string, styleBase64: string): Promise<string> {
+  console.log(`[generate-tattoo] Step 3.5 INPUT — compositing pet (base64 len: ${petBase64.length}) + style reference (base64 len: ${styleBase64.length})`)
+
+  const petBytes = Uint8Array.from(atob(petBase64), c => c.charCodeAt(0))
+  const styleBytes = Uint8Array.from(atob(styleBase64), c => c.charCodeAt(0))
+
+  const petImg = await Image.decode(petBytes)
+  const styleImg = await Image.decode(styleBytes)
+
+  console.log(`[generate-tattoo] Step 3.5 — decoded pet: ${petImg.width}×${petImg.height} | style: ${styleImg.width}×${styleImg.height}`)
+
+  // Resize both to 800×800
+  petImg.resize(800, 800)
+  styleImg.resize(800, 800)
+
+  // Create 1600×800 white canvas: pet on LEFT, style on RIGHT
+  const canvas = new Image(1600, 800)
+  canvas.fill(0xFFFFFFFF)
+  canvas.composite(petImg, 0, 0)
+  canvas.composite(styleImg, 800, 0)
+
+  const encoded = await canvas.encode()
+  let binary = ''
+  for (let i = 0; i < encoded.length; i++) binary += String.fromCharCode(encoded[i])
+  const compositeBase64 = btoa(binary)
+
+  console.log(`[generate-tattoo] Step 3.5 OUTPUT — composite 1600×800 PNG | base64 len: ${compositeBase64.length}`)
+  return compositeBase64
 }
 
 // ─── STEP 4: FLUX 2 Pro → final art ──────────────────────────────────────────
 //
 // Strategy per style:
-//   DIBUJO — use the style reference image as image_prompt (strength 0.25)
-//            so FLUX understands the target visual (bold B&W line art).
-//            Pet-specific features come from the Haiku text prompt.
-//   ICONO  — use the normalized pet photo as image_prompt (strength 0.15)
-//            so FLUX preserves colors and features from the actual pet.
+//   DIBUJO — composite image_prompt = [pet LEFT | style reference RIGHT] (strength 0.3)
+//            Text prompt explicitly references LEFT (pet to recreate) and RIGHT (target style).
+//            This way FLUX sees both the actual pet AND the desired art style simultaneously.
+//   ICONO  — image_prompt = normalized pet photo alone (strength 0.15)
+//            Text prompt guides colors/style.
 //
 async function generateWithFlux2Pro(
   normalizedBase64: string,
-  prompt: string,
+  haikuPrompt: string,
   artStyle: 'dibujo' | 'icono'
 ): Promise<string> {
   let imagePromptDataUri: string
   let imagePromptStrength: number
   let imagePromptSource: string
+  let finalPrompt: string
 
   if (artStyle === 'dibujo') {
-    console.log('[generate-tattoo] Step 4 — DIBUJO mode: fetching style reference image...')
+    console.log('[generate-tattoo] Step 4 — DIBUJO mode: fetching style reference + compositing...')
     const styleBase64 = await fetchImageAsBase64(STYLE_REFERENCE_DIBUJO_URL)
-    imagePromptDataUri = `data:image/webp;base64,${styleBase64}`
-    imagePromptStrength = 0.25
-    imagePromptSource = 'style-reference (B&W line art)'
+    const compositeBase64 = await compositeImages(normalizedBase64, styleBase64)
+    imagePromptDataUri = `data:image/png;base64,${compositeBase64}`
+    imagePromptStrength = 0.3
+    imagePromptSource = 'composite (pet LEFT + B&W style reference RIGHT)'
+    // Explicit dual-reference prompt
+    finalPrompt = `The reference image is split in two halves: LEFT half shows the pet to recreate, RIGHT half shows the exact visual style to apply. Generate a portrait of the animal from the LEFT image. Apply STRICTLY the visual style, line weight, and artistic technique from the RIGHT image. ${haikuPrompt}`
   } else {
     imagePromptDataUri = `data:image/png;base64,${normalizedBase64}`
     imagePromptStrength = 0.15
-    imagePromptSource = 'normalized pet photo'
+    imagePromptSource = 'normalized pet photo only'
+    finalPrompt = haikuPrompt
   }
 
+  console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro:`)
+  console.log(`  model: black-forest-labs/flux-2-pro`)
+  console.log(`  style: ${artStyle}`)
+  console.log(`  image_prompt source: ${imagePromptSource}`)
+  console.log(`  image_prompt_strength: ${imagePromptStrength}`)
+  console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
+  console.log(`  width: 1024 | height: 1024 | output_format: webp`)
+
   const fluxInput = {
-    prompt,
+    prompt: finalPrompt,
     image_prompt: imagePromptDataUri,
     image_prompt_strength: imagePromptStrength,
     output_format: 'webp',
@@ -289,15 +338,6 @@ async function generateWithFlux2Pro(
     width: 1024,
     height: 1024,
   }
-
-  console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro params:`)
-  console.log(`  model: black-forest-labs/flux-2-pro`)
-  console.log(`  style: ${artStyle}`)
-  console.log(`  image_prompt source: ${imagePromptSource}`)
-  console.log(`  image_prompt_strength: ${imagePromptStrength}`)
-  console.log(`  prompt length: ${prompt.length} chars`)
-  console.log(`  width: ${fluxInput.width} | height: ${fluxInput.height}`)
-  console.log(`  output_format: ${fluxInput.output_format}`)
 
   const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', {
     method: 'POST',
@@ -314,17 +354,16 @@ async function generateWithFlux2Pro(
   }
 
   const prediction = await response.json()
-  if (!prediction.id) throw new Error('FLUX 2 Pro: no prediction ID')
+  if (!prediction.id) throw new Error(`FLUX 2 Pro: no prediction ID. Response: ${JSON.stringify(prediction)}`)
 
-  console.log(`[generate-tattoo] Step 4 — FLUX prediction ID: ${prediction.id} | polling...`)
+  console.log(`[generate-tattoo] Step 4 — FLUX prediction submitted | ID: ${prediction.id} | polling up to 120s...`)
 
-  // Poll up to 2 minutes
   const result = await pollReplicate(prediction.id, 120)
   const out = result.output
   const url = Array.isArray(out) ? out[0] : out
   if (!url) throw new Error('FLUX 2 Pro returned no image URL')
 
-  console.log(`[generate-tattoo] Step 4 OUTPUT — FLUX 2 Pro art URL: ${url}`)
+  console.log(`[generate-tattoo] Step 4 OUTPUT — FLUX 2 Pro result URL: ${url}`)
   return url
 }
 
