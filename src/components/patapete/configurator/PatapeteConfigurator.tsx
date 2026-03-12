@@ -12,7 +12,7 @@ interface PatapeteConfiguratorProps {
 export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   const [state, setState] = useState<ConfiguratorState>({
     step: 1,
-    style: 'tattoo',
+    style: 'dibujo',
     petCount: 1,
     pets: [{ ...DEFAULT_PET }, { ...DEFAULT_PET }, { ...DEFAULT_PET }],
     phrase: '',
@@ -20,6 +20,10 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     isGenerating: false,
     error: null,
   })
+
+  const handleStyleChange = useCallback((style: import('./types').Style) => {
+    setState(s => ({ ...s, style }))
+  }, [])
 
   const handlePetCountChange = useCallback((count: 1 | 2 | 3) => {
     setState(s => ({ ...s, petCount: count }))
@@ -62,6 +66,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
       const artUrl = await generateTattooArt(
         compressedBase64,
         pet.name || 'mascota',
+        state.style,
         (status) => console.log(`[IA] ${status}`)
       )
 
@@ -106,9 +111,11 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
       {state.step === 1 && (
         <StepPets
+          style={state.style}
           petCount={state.petCount}
           pets={state.pets}
           phrase={state.phrase}
+          onStyleChange={handleStyleChange}
           onPetCountChange={handlePetCountChange}
           onPetChange={handlePetChange}
           onPhraseChange={handlePhraseChange}

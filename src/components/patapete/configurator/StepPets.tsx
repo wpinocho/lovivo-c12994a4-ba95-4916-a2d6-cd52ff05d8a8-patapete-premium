@@ -1,16 +1,18 @@
-import { Pet, PRICES } from './types'
+import { Pet, PRICES, Style } from './types'
 import { PhotoPetForm } from './PhotoPetForm'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, PenLine, Palette } from 'lucide-react'
 
 interface StepPetsProps {
+  style: Style
   petCount: 1 | 2 | 3
   pets: Pet[]
   phrase: string
+  onStyleChange: (style: Style) => void
   onPetCountChange: (count: 1 | 2 | 3) => void
   onPetChange: (index: number, updates: Partial<Pet>) => void
   onPhraseChange: (phrase: string) => void
@@ -20,15 +22,15 @@ interface StepPetsProps {
 }
 
 export function StepPets({
-  petCount, pets, phrase,
-  onPetCountChange, onPetChange, onPhraseChange,
+  style, petCount, pets, phrase,
+  onStyleChange, onPetCountChange, onPetChange, onPhraseChange,
   onGenerate, onContinue, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
   const allPhotosUploaded = pets.slice(0, petCount).every(p => !!p.photoFile)
   const canContinue = !isProcessing && allPhotosUploaded
 
-  const price = PRICES['tattoo'][petCount]
+  const price = PRICES[style][petCount]
 
   return (
     <div className="space-y-6">
@@ -53,7 +55,7 @@ export function StepPets({
               Preview en vivo
             </p>
             <CanvasPreview
-              style="tattoo"
+              style={style}
               pets={pets.slice(0, petCount)}
               phrase={phrase}
               onPreviewReady={onPreviewReady}
@@ -68,6 +70,43 @@ export function StepPets({
 
         {/* RIGHT: Form */}
         <div className="space-y-6">
+
+          {/* Style selector — first decision */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">¿Qué estilo prefieres?</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => onStyleChange('dibujo')}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
+                  style === 'dibujo'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/40'
+                )}
+              >
+                <PenLine className={cn('w-6 h-6', style === 'dibujo' ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="font-semibold text-sm text-foreground">Dibujo</span>
+                <span className="text-xs text-muted-foreground text-center leading-snug">
+                  Líneas negras gruesas, estilo sello
+                </span>
+              </button>
+              <button
+                onClick={() => onStyleChange('icono')}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
+                  style === 'icono'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/40'
+                )}
+              >
+                <Palette className={cn('w-6 h-6', style === 'icono' ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="font-semibold text-sm text-foreground">Icono</span>
+                <span className="text-xs text-muted-foreground text-center leading-snug">
+                  Vector colorido, minimalista
+                </span>
+              </button>
+            </div>
+          </div>
 
           {/* Pet count selector */}
           <div className="space-y-2">
@@ -109,7 +148,7 @@ export function StepPets({
           <div className="lg:hidden space-y-1">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
             <CanvasPreview
-              style="tattoo"
+              style={style}
               pets={pets.slice(0, petCount)}
               phrase={phrase}
               onPreviewReady={onPreviewReady}

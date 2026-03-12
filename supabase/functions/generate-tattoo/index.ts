@@ -1,4 +1,4 @@
-// v8 — BiRefNet bg removal + uniform padding crop + FLUX Dev img2img
+// v9 — BiRefNet + normalize + Llama 3.2 Vision → optimized prompt → FLUX 2 Pro
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
@@ -26,16 +26,13 @@ async function pollReplicate(predictionId: string, maxSeconds = 90): Promise<any
 }
 
 // ─── STEP 1: BiRefNet background removal ─────────────────────────────────────
-// Model: men1scus/birefnet (BiRefNet — CAAI AIR 2024) on Replicate
-// Version: f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7
-// Returns a CDN URL to a PNG with transparent background
 async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
   const response = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${REPLICATE_API_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': 'wait=60', // try synchronous first (BiRefNet is fast ~5-15s)
+      'Prefer': 'wait=60',
     },
     body: JSON.stringify({
       version: 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7',
@@ -52,7 +49,6 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
 
   const prediction = await response.json()
 
-  // Synchronous result (Prefer: wait worked)
   if (prediction.status === 'succeeded') {
     const out = prediction.output
     const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
@@ -60,7 +56,6 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
     return url
   }
 
-  // Async — need to poll
   if (!prediction.id) throw new Error(`BiRefNet: no prediction ID in response: ${JSON.stringify(prediction)}`)
   const result = await pollReplicate(prediction.id, 90)
   const out = result.output
@@ -70,15 +65,12 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
 }
 
 // ─── STEP 2: Smart crop & normalize → 800×800 white canvas ───────────────────
-// Downloads the transparent PNG, finds the subject bounding box, expands it with
-// body-framing padding, scales to ~75% of canvas height, and centers on white BG.
 async function normalizeImage(transparentPngUrl: string): Promise<string> {
   const res = await fetch(transparentPngUrl)
   if (!res.ok) throw new Error(`Failed to download BiRefNet output: ${res.status}`)
   const bytes = new Uint8Array(await res.arrayBuffer())
   const img = await Image.decode(bytes)
 
-  // Find bounding box of non-transparent pixels (imagescript is 1-indexed)
   let minX = img.width + 1, minY = img.height + 1, maxX = 0, maxY = 0
 
   for (let y = 1; y <= img.height; y++) {
@@ -97,15 +89,11 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
     throw new Error('No subject found in image (BiRefNet returned empty mask)')
   }
 
-  // Convert to 0-indexed
   const subjectX0 = minX - 1
   const subjectY0 = minY - 1
   const subjectW = maxX - minX + 1
   const subjectH = maxY - minY + 1
 
-  // Uniform padding: 15% of the longest side of the bounding box
-  // No portrait crop — let FLUX handle the composition via prompt
-  // Works for close-ups AND full-body shots without cutting off heads
   const pad = Math.round(Math.max(subjectW, subjectH) * 0.15)
 
   const cropX = Math.max(0, subjectX0 - pad)
@@ -115,7 +103,6 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
 
   img.crop(cropX, cropY, cropW, cropH)
 
-  // Scale by longest side so the subject fills 88% of canvas regardless of orientation
   const targetSize = 800
   const longestSide = Math.max(img.width, img.height)
   const scale  = (targetSize * 0.88) / longestSide
@@ -123,15 +110,13 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   const scaledH = Math.max(1, Math.round(img.height * scale))
   img.resize(scaledW, scaledH)
 
-  // Create 800×800 white canvas and center the pet
   const canvas = new Image(targetSize, targetSize)
-  canvas.fill(0xFFFFFFFF) // white, fully opaque
+  canvas.fill(0xFFFFFFFF)
 
   const offsetX = Math.round((targetSize - scaledW) / 2)
   const offsetY = Math.round((targetSize - scaledH) / 2)
   canvas.composite(img, offsetX, offsetY)
 
-  // Encode to PNG → base64
   const encoded = await canvas.encode()
   let binary = ''
   for (let i = 0; i < encoded.length; i++) {
@@ -140,19 +125,47 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   return btoa(binary)
 }
 
-// ─── STEP 3: FLUX Dev img2img stylization ────────────────────────────────────
-// Uses black-forest-labs/flux-dev via the models API (always latest version)
-const PROMPT = [
-  'Premium pet portrait illustration for a decorative doormat.',
-  'Close-up of head and upper chest ONLY. No full body. No legs. No paws.',
-  'Pure BLACK outlines on solid WHITE background only.',
-  'No color fills. No shading. No gradients. Only crisp black linework.',
-  'Minimalist engraved line art style. High contrast. Product-ready.',
-  'Face fills most of the frame. Premium home decor aesthetic.',
-].join(' ')
+// ─── STEP 3: Llama 3.2 Vision → generate optimized prompt ────────────────────
+const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
 
-async function generateWithFluxDev(normalizedBase64: string): Promise<string> {
-  const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-dev/predictions', {
+Analiza la imagen y extrae lo siguiente:
+
+Tipo de animal y raza aproximada.
+
+Textura del pelo (ej. liso y corto, esponjoso, alambre/scruffy).
+
+Colores principales (ej. café chocolate con marcas cobrizas).
+
+Rasgos distintivos CRÍTICOS y accesorios (ej. ojos azul claro muy llamativos, orejas caídas, collar/paliacate simplificado a un solo color).
+
+Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
+
+A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
+CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
+LIMITED COLOR PALETTE: [COLORES PRINCIPALES DEL PELO]. Solid black for outlines. Pink tongue. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
+
+const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
+
+Analiza la imagen y extrae ÚNICAMENTE información estructural (ignora los colores del pelaje, ya que el diseño será blanco y negro):
+
+Tipo de animal y raza aproximada.
+
+Rasgos físicos estructurales más distintivos (ej. orejas muy grandes y caídas, hocico chato, arrugas profundas, pelo muy rizado en forma de bloques).
+
+Accesorios visibles (ej. lleva un collar grueso o un paliacate).
+
+Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
+
+A standardized 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws on a solid border line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+STYLE: Pure black and white minimalist line art. ONLY black ink on white background. NO grayscale, NO shading, NO fine details.
+CRITICAL: The entire portrait is constructed using ONLY extremely thick, chunky, bold black lines. The drawing lines should be slightly imperfect and heavy, resembling a bold linocut, rubber stamp, or stencil print.
+PRESERVE KEY STRUCTURAL FEATURES: [RASGOS FÍSICOS ESTRUCTURALES Y ACCESORIOS], but strictly abstract and simplify them into this chunky, heavy-line graphic execution. No thin strokes. Stencil-like simplicity ready for coarse material printing.`
+
+async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo' | 'icono'): Promise<string> {
+  const systemPrompt = style === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
+
+  const response = await fetch('https://api.replicate.com/v1/models/meta/llama-3.2-11b-vision-instruct/predictions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${REPLICATE_API_KEY}`,
@@ -160,32 +173,77 @@ async function generateWithFluxDev(normalizedBase64: string): Promise<string> {
     },
     body: JSON.stringify({
       input: {
-        prompt: PROMPT,
         image: `data:image/png;base64,${normalizedBase64}`,
-        prompt_strength: 0.72,  // 72% text → stylize; 28% image → preserve structure
-        num_inference_steps: 30,
-        guidance: 4.0,
-        num_outputs: 1,
+        prompt: 'Analiza esta imagen y genera el prompt según las instrucciones.',
+        system_prompt: systemPrompt,
+        max_tokens: 1024,
+        temperature: 0.3,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`Llama Vision request failed: ${err}`)
+  }
+
+  const prediction = await response.json()
+
+  // Handle synchronous result
+  if (prediction.status === 'succeeded') {
+    const out = prediction.output
+    const text = Array.isArray(out) ? out.join('') : out
+    if (!text) throw new Error('Llama Vision returned empty output')
+    console.log('[generate-tattoo] Vision prompt:', text)
+    return text.trim()
+  }
+
+  if (!prediction.id) throw new Error(`Llama Vision: no prediction ID: ${JSON.stringify(prediction)}`)
+
+  // Poll up to 60s (vision is fast ~5-10s)
+  const result = await pollReplicate(prediction.id, 60)
+  const out = result.output
+  const text = Array.isArray(out) ? out.join('') : out
+  if (!text) throw new Error('Llama Vision returned empty output after polling')
+  console.log('[generate-tattoo] Vision prompt:', text)
+  return text.trim()
+}
+
+// ─── STEP 4: FLUX 2 Pro → final art ──────────────────────────────────────────
+async function generateWithFlux2Pro(normalizedBase64: string, prompt: string): Promise<string> {
+  const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${REPLICATE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      input: {
+        prompt,
+        image_prompt: `data:image/png;base64,${normalizedBase64}`,
+        image_prompt_strength: 0.15,
         output_format: 'webp',
         output_quality: 95,
-        disable_safety_checker: true,
+        safety_tolerance: 5,
+        width: 1024,
+        height: 1024,
       },
     }),
   })
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}))
-    throw new Error(`FLUX Dev error: ${JSON.stringify(err)}`)
+    throw new Error(`FLUX 2 Pro error: ${JSON.stringify(err)}`)
   }
 
   const prediction = await response.json()
-  if (!prediction.id) throw new Error(`FLUX Dev: no prediction ID in response`)
+  if (!prediction.id) throw new Error('FLUX 2 Pro: no prediction ID')
 
   // Poll up to 2 minutes
   const result = await pollReplicate(prediction.id, 120)
   const out = result.output
   const url = Array.isArray(out) ? out[0] : out
-  if (!url) throw new Error('FLUX Dev returned no image URL')
+  if (!url) throw new Error('FLUX 2 Pro returned no image URL')
   return url
 }
 
@@ -196,25 +254,31 @@ serve(async (req) => {
   try {
     if (!REPLICATE_API_KEY) throw new Error('REPLICATE_API_KEY secret not configured')
 
-    const { imageBase64, petName } = await req.json()
+    const { imageBase64, petName, style } = await req.json()
     if (!imageBase64) throw new Error('imageBase64 is required')
 
-    console.log(`[generate-tattoo] Starting pipeline for pet: "${petName || 'unnamed'}"`)
+    const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
+    console.log(`[generate-tattoo] Starting pipeline for pet: "${petName || 'unnamed'}" | style: ${artStyle}`)
 
-    // 1. Remove background
+    // Step 1: Remove background
     console.log('[generate-tattoo] Step 1: BiRefNet background removal...')
     const transparentPngUrl = await removeBackgroundBiRefNet(imageBase64)
     console.log('[generate-tattoo] Step 1 done:', transparentPngUrl)
 
-    // 2. Smart crop + normalize
+    // Step 2: Smart crop + normalize
     console.log('[generate-tattoo] Step 2: Smart crop & normalize...')
     const normalizedBase64 = await normalizeImage(transparentPngUrl)
     console.log('[generate-tattoo] Step 2 done: normalized 800×800 PNG')
 
-    // 3. FLUX Dev stylization
-    console.log('[generate-tattoo] Step 3: FLUX Dev img2img...')
-    const artUrl = await generateWithFluxDev(normalizedBase64)
-    console.log('[generate-tattoo] Step 3 done:', artUrl)
+    // Step 3: Llama Vision → optimized prompt
+    console.log('[generate-tattoo] Step 3: Llama 3.2 Vision generating prompt...')
+    const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
+    console.log('[generate-tattoo] Step 3 done: prompt generated')
+
+    // Step 4: FLUX 2 Pro → final art
+    console.log('[generate-tattoo] Step 4: FLUX 2 Pro generating art...')
+    const artUrl = await generateWithFlux2Pro(normalizedBase64, optimizedPrompt)
+    console.log('[generate-tattoo] Step 4 done:', artUrl)
 
     return new Response(JSON.stringify({ url: artUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

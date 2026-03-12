@@ -2,29 +2,31 @@
  * Calls the Supabase Edge Function 'generate-tattoo' which runs the full pipeline:
  *   1. BiRefNet background removal (Replicate)
  *   2. Smart crop & normalize to 800×800 white canvas (imagescript)
- *   3. FLUX Dev img2img stylization (Replicate)
+ *   3. Llama 3.2 Vision (Replicate) → generates optimized prompt based on style
+ *   4. FLUX 2 Pro img2img stylization (Replicate)
  *
  * Accepts the ORIGINAL compressed image (no browser-side bg removal needed).
  * Uses the USER's own Supabase project (vqmqdhsajdldsraxsqba).
  */
 
 import { userSupabase } from '@/integrations/supabase/client'
+import type { Style } from '@/components/patapete/configurator/types'
 
 export type TattooProgressCallback = (status: string) => void
 
 export async function generateTattooArt(
   imageBase64: string,
   petName: string,
+  style: Style,
   onProgress?: TattooProgressCallback
 ): Promise<string> {
   onProgress?.('Analizando tu mascota...')
 
   try {
-    // Progress hints while the backend works (~35-50s total)
     const progressTimer = simulateProgress(onProgress)
 
     const { data, error } = await userSupabase.functions.invoke('generate-tattoo', {
-      body: { imageBase64, petName },
+      body: { imageBase64, petName, style },
     })
 
     clearInterval(progressTimer)
@@ -53,10 +55,10 @@ export async function generateTattooArt(
 function simulateProgress(onProgress?: TattooProgressCallback): ReturnType<typeof setInterval> {
   const messages = [
     { delay: 0,     text: 'Analizando tu mascota...' },
-    { delay: 5000,  text: 'Recortando fondo con IA...' },
-    { delay: 14000, text: 'Encuadrando y normalizando...' },
-    { delay: 20000, text: 'Creando retrato artístico... (~30s)' },
-    { delay: 40000, text: 'Casi listo...' },
+    { delay: 5000,  text: 'Removiendo fondo con IA...' },
+    { delay: 14000, text: 'Analizando rasgos y generando descripción...' },
+    { delay: 25000, text: 'Creando retrato con FLUX 2 Pro... (~40s)' },
+    { delay: 55000, text: 'Casi listo...' },
   ]
 
   let msgIndex = 0
@@ -64,7 +66,6 @@ function simulateProgress(onProgress?: TattooProgressCallback): ReturnType<typeo
 
   return setInterval(() => {
     const elapsed = Date.now() - start
-    // Advance to the next message if its delay has passed
     while (msgIndex < messages.length - 1 && elapsed >= messages[msgIndex + 1].delay) {
       msgIndex++
     }
