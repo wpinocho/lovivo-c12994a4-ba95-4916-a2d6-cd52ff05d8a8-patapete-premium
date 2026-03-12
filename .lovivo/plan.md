@@ -1,71 +1,73 @@
-# Patapete — Plan de proyecto
+# Patapete — Plan del Proyecto
 
-## Estado actual
-Pipeline AI para generación de tatuajes de mascotas funcionando. Ambos estilos (DIBUJO e ICONO) usan `input_images[]` con imagen de referencia de estilo.
+## Estado Actual
+El configurador de tapetes está funcionando bien. Los dos estilos (DIBUJO e ICONO) generan retratos IA correctamente. El previsualizador canvas ahora tiene coordenadas ajustadas para mostrar el layout correcto.
 
-## Pipeline (v17)
-1. **BiRefNet** — background removal → transparent PNG URL
-2. **Normalize** — smart crop + 800×800 white canvas → PNG base64
-3. **Upload** — sube el pet normalizado a Supabase Storage (bucket `pet-tattoos` en el Supabase del usuario) → URL pública (`pet-tattoos/temp/pet-{timestamp}.png`)
-4. **Claude Haiku 3** — analiza la mascota → prompt descriptivo (prompts diferenciados por estilo)
-5. **FLUX 2 Pro** — genera el arte final via `input_images: [petUrl, styleUrl]` (ambos estilos)
+## Stack Técnico
+- Edge function: `supabase/functions/generate-tattoo/index.ts`
+- Canvas compositor: `src/utils/canvasCompositing.ts`
+- Configurador: `src/components/patapete/configurator/`
+- AI pipeline: BiRefNet (bg removal) → Claude Haiku (prompt) → FLUX 2 Pro (generación)
+- Tiempo total: ~24s (79% es FLUX 2 Pro)
 
-## Bug crítico corregido (v17)
-**Síntoma**: ICONO siempre producía resultado tipo DIBUJO (B&W). Los logs de la edge mostraban `style: dibujo` aunque el frontend tenía "Icono" seleccionado.
+## Decisiones Clave
 
-**Causa raíz**: `handleGenerate` en `PatapeteConfigurator.tsx` usaba `useCallback` con `[state.pets]` como dependency array, OMITIENDO `state.style`. Esto creaba una closure desactualizada que siempre capturaba el valor inicial `'dibujo'`.
+### Estilos de Arte
+- **DIBUJO**: Blanco y negro, estilo sello/grabado, líneas gruesas negras
+- **ICONO**: Vector colorido, flat colors, contornos negros gruesos
 
-**Fix aplicado**: Se usa `styleRef` (useRef) que siempre tiene el valor actual del estilo, y `handleGenerate` lee `styleRef.current` en lugar de `state.style`. Esto evita el stale closure sin necesidad de recrear el callback.
+### Prompts (Claude Haiku)
+- `SYSTEM_PROMPT_DIBUJO`: Analiza mascota → genera retrato BN con línea de patas en borde inferior
+- `SYSTEM_PROMPT_ICONO`: Extrae colores exactos del pelaje → genera retrato vector colorido
 
-```typescript
-// PatapeteConfigurator.tsx
-const styleRef = useRef(state.style)
-styleRef.current = state.style  // siempre actualizado en cada render
-
-const handleGenerate = useCallback(async (petIndex, fileOverride) => {
-  // ...
-  const artUrl = await generateTattooArt(
-    compressedBase64,
-    pet.name || 'mascota',
-    styleRef.current,  // ← siempre el estilo correcto
-    ...
-  )
-}, [state.pets])  // sin necesidad de state.style en deps
+### Canvas Layout (600×600)
+```
+Y_PAW = 415         // línea de patitas (borde superior del tapete ~y=390 en canvas)
+Y_CLIP = 438        // clip del arte hasta aquí (muestra ~23px de patitas)
+Y_PHRASE_BTM = 474  // frase "arriba" dentro del tapete
+PAW_RATIO = 0.76    // la línea de patitas está al 76% desde arriba del arte FLUX
 ```
 
-## Prompts Haiku (v17) — exactos según usuario
+**Slots de mascotas (anclados en Y_PAW):**
+- 1 mascota: s=220px, slot_y = 415 - 220*0.76 = 248
+- 2 mascotas: s=172px, slot_y = 415 - 172*0.76 = 284
+- 3 mascotas: s=142px, slot_y = 415 - 142*0.76 = 307
 
-### SYSTEM_PROMPT_DIBUJO
-Instruye a Claude a extraer solo información estructural (ignora colores), y completar template de blanco y negro, estilo linocut/sello. Output en inglés.
+**Orden de dibujo:**
+1. Rug mockup (fondo)
+2. Arte de mascotas con clip a Y_CLIP (peekaboo: cabeza sobre el tapete, patitas visibles)
+3. Frase (pill oscuro, "arriba" dentro del tapete, en Y_PHRASE_BTM=474)
+4. Nombres de mascotas (bajo la frase, en Y_PHRASE_BTM + 26 si hay frase, o Y_PAW + 52 si no)
 
-### SYSTEM_PROMPT_ICONO
-Instruye a Claude a extraer textura del pelo, colores principales, rasgos distinctivos y accesorios, y completar template de vector plano minimalista con colores sólidos (cell-shaded). Output en inglés.
+## Bugs Resueltos
 
-## Estrategia FLUX (v17)
-- **DIBUJO**: prompt = "first image = pet, second = B&W style reference" + haikuPrompt
-- **ICONO**: prompt = "first image = pet, second = flat vector style reference" + haikuPrompt
-- **Parámetros**: `aspect_ratio: '1:1'`, `resolution: '1 MP'`, `output_format: 'webp'`, `output_quality: 80`, `safety_tolerance: 2`
+### Bug #1 — Estilo siempre "dibujo" (closure desactualizada)
+- `handleGenerate` en `PatapeteConfigurator.tsx` tenía `[state.pets]` en deps array
+- Faltaba `state.style` → siempre capturaba el valor inicial 'dibujo'
+- Solución: usar `styleRef` (useRef) que siempre tiene el valor más reciente
 
-## Storage — dos Supabase
-- **Supabase de Lovivo** (`ptgmltivisbtvmoxwnhd`): bucket `product-images` — aquí viven AMBAS referencias de estilo (URL fija, pública, permanente)
-- **Supabase del usuario** (`vqmqdhsajdldsraxsqba`): bucket `pet-tattoos` — creado en migración `20260312204524`, aquí se suben los pets normalizados temporales
+### Bug #2 — ICONO devolvía resultado tipo DIBUJO
+- URL de referencia estaba en bucket temporal `message-images` (inaccesible para Replicate)
+- `SYSTEM_PROMPT_ICONO` no forzaba extracción de colores
+- Prompt FLUX para ICONO no especificaba "FULL COLOR"
+- Solución: URL permanente en `product-images`, prompts reescritos con énfasis en color
 
-## URLs de referencia
-- Style DIBUJO (PNG): `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png`
-- Style ICONO (WebP): `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono.webp`
-- Pets temp: `pet-tattoos/temp/pet-{timestamp}.png` (en Supabase del usuario, overwrite, público)
+### Bug #3 — Tamaño de mascotas demasiado grande en previsualizador
+- Slots calculados como fracción del canvas total (H*0.58 = 348px para 1 mascota)
+- Frase dibujada en H-18 = 582px (fuera del tapete visible)
+- Solución: slots anclados a Y_PAW con PAW_RATIO, tamaños fijos más pequeños, frase reposicionada
 
-## Archivos clave
-- `supabase/functions/generate-tattoo/index.ts` — pipeline principal (v17)
-- `supabase/config.toml` — configuración edge functions
-- `src/utils/replicateApi.ts` — cliente frontend (sin cambios)
-- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — fix stale closure v17
-- `supabase/migrations/20260312204524_create_pet_tattoos_storage_bucket.sql` — bucket Storage
+## Archivos Clave
+- `src/utils/canvasCompositing.ts` — Lógica de composición del canvas
+- `src/components/patapete/configurator/CanvasPreview.tsx` — Preview en vivo
+- `src/components/patapete/configurator/StepPets.tsx` — Paso de configuración de mascotas
+- `src/components/patapete/configurator/StepSummary.tsx` — Resumen y add to cart
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — Orquestador principal
+- `supabase/functions/generate-tattoo/index.ts` — Edge function de generación IA
 
-## Tiempos de ejecución (referencia)
-- BiRefNet: ~1.5s
-- Crop/normalize: ~350ms
-- Upload Storage: ~700ms
-- Claude Haiku: ~2.7s
-- FLUX 2 Pro: ~19s
-- **Total: ~24s** (todo en el modelo, frontend no añade delay)
+## Variantes del Producto (variant IDs fijos)
+```
+1 mascota: '28fc993c-e638-459b-9a00-08abacdc9f32'
+2 mascotas: '1aee4582-040b-477a-b335-e99446fa76c7'
+3 mascotas: '5f7e007d-b30e-44c8-baa6-5aa03edb23ad'
+```

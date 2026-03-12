@@ -29,6 +29,23 @@ export interface PetCompositeData {
 // New lighter coir mat for clean multiply blend
 const TAPETE_MOCKUP_URL = 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773256082834-gf5g5a3no07.webp'
 
+// ─── Canvas layout constants (600×600 canvas) ─────────────────────────────────
+//
+// The rug mockup is 2048×2048 → scaled 1:1 to fill 600×600 (no cropping).
+// Based on visual inspection, the rug's top edge sits at ~y=390 in canvas coords,
+// and its bottom edge at ~y=545.
+//
+// Peekaboo layout:
+//   • Pets peek ABOVE the rug — their paw line anchors at Y_PAW (top of rug interior)
+//   • Pets are clipped at Y_CLIP (just below the paw line, showing paws but nothing below)
+//   • Phrase rendered ARRIBA inside the rug (just below the paw/clip boundary)
+//   • Names rendered below the phrase, still within the rug
+
+const Y_PAW         = 415   // y where the peekaboo paw-line lands on canvas
+const Y_CLIP        = 438   // clip pet art at this y (shows ~23 px of paws below the line)
+const Y_PHRASE_BTM  = 474   // bottom of phrase text pill (inside rug, "arriba")
+const PAW_RATIO     = 0.76  // paw line sits at ~76 % from the top of FLUX peekaboo output
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image()
@@ -45,22 +62,26 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-// ─── Square slot layout ────────────────────────────────────────────────────────
+// ─── Slot layout ──────────────────────────────────────────────────────────────
 interface PetSlot { x: number; y: number; w: number; h: number }
 
-function getPetSlots(count: number, W: number, H: number): PetSlot[] {
-  const cy = Math.round(H * 0.47) // vertical center — slightly above mid on square canvas
+/**
+ * Returns pet slot positions anchored so that the paw line (PAW_RATIO * h from top)
+ * lands exactly at Y_PAW. Pets will peek above the rug into the brick/door area.
+ */
+function getPetSlots(count: number, W: number, _H: number): PetSlot[] {
+  const slotY = (s: number) => Math.round(Y_PAW - s * PAW_RATIO)
 
   switch (count) {
     case 1: {
-      const s = Math.round(H * 0.58)          // 348 px at H=600 — big portrait
-      return [{ x: Math.round((W - s) / 2), y: Math.round(cy - s / 2), w: s, h: s }]
+      const s = 220
+      return [{ x: Math.round((W - s) / 2), y: slotY(s), w: s, h: s }]
     }
     case 2: {
-      const s   = Math.round(H * 0.44)        // 264 px
-      const gap = Math.round(W * 0.04)        // 24 px
+      const s   = 172
+      const gap = 22
       const startX = Math.round((W - (s * 2 + gap)) / 2)
-      const y = Math.round(cy - s / 2)
+      const y = slotY(s)
       return [
         { x: startX,           y, w: s, h: s },
         { x: startX + s + gap, y, w: s, h: s },
@@ -68,10 +89,10 @@ function getPetSlots(count: number, W: number, H: number): PetSlot[] {
     }
     case 3:
     default: {
-      const s   = Math.round(H * 0.30)        // 180 px
-      const gap = Math.round(W * 0.024)       // 14 px
+      const s   = 142
+      const gap = 14
       const startX = Math.round((W - (s * 3 + gap * 2)) / 2)
-      const y = Math.round(cy - s / 2)
+      const y = slotY(s)
       return [
         { x: startX,               y, w: s, h: s },
         { x: startX + s + gap,     y, w: s, h: s },
@@ -85,13 +106,16 @@ function getPetSlots(count: number, W: number, H: number): PetSlot[] {
 /**
  * Renders a tapete preview with pet images composited onto the rug mockup.
  *
- * Three rendering modes per pet:
- *   isDemo=true       → circular clip, 0.45 opacity (placeholder)
- *   isGenerated=true  → rectangular slot + multiply blend (white bg disappears, lines "tattoo" rug)
- *   otherwise         → rectangular slot, source-over, 0.75 opacity (raw photo in transit)
+ * Layout (top→bottom in the 600×600 canvas):
+ *   1. Rug mockup background (full canvas)
+ *   2. Pet portraits — peekaboo style, heads above the rug, clipped at Y_CLIP
+ *   3. Phrase text — inside the rug, just below the paw line ("arriba")
+ *   4. Pet name labels — inside the rug, below the phrase
  *
- * The canvas is 600×600 (square). The rug mockup is drawn with object-cover
- * (center-cropped to fill) so there are no letterbox gaps.
+ * Three rendering modes per pet:
+ *   isDemo=true       → circular clip, 0.45 opacity (placeholder, no peekaboo clip)
+ *   isGenerated=true  → clip to Y_CLIP + multiply blend (white bg disappears onto rug)
+ *   otherwise         → clip to Y_CLIP + 0.72 opacity (raw photo in transit)
  */
 export async function compositeRug(
   pets: PetCompositeData[],
@@ -106,7 +130,7 @@ export async function compositeRug(
   canvas.height = H
   const ctx = canvas.getContext('2d')!
 
-  // 1. Draw rug mockup — object-cover (center crop to fill square)
+  // ── 1. Draw rug mockup ─────────────────────────────────────────────────────
   try {
     const tapete = await loadImage(mockupUrl)
     const scale  = Math.max(W / tapete.naturalWidth, H / tapete.naturalHeight)
@@ -114,7 +138,6 @@ export async function compositeRug(
     const th     = tapete.naturalHeight * scale
     ctx.drawImage(tapete, (W - tw) / 2, (H - th) / 2, tw, th)
   } catch {
-    // Fallback: warm gradient if image fails
     const grad = ctx.createLinearGradient(0, 0, W, H)
     grad.addColorStop(0, '#c8a46e')
     grad.addColorStop(1, '#a07840')
@@ -122,9 +145,9 @@ export async function compositeRug(
     ctx.fillRect(0, 0, W, H)
   }
 
-  // 2. Draw each pet
   const slots = getPetSlots(pets.length, W, H)
 
+  // ── 2. First pass: pet images (no names yet) ───────────────────────────────
   for (let i = 0; i < pets.length; i++) {
     const pet  = pets[i]
     const slot = slots[i]
@@ -137,14 +160,13 @@ export async function compositeRug(
       ctx.save()
 
       if (pet.isDemo) {
-        // ── Placeholder: circular clip, muted opacity ──────────────────────
+        // ── Placeholder: circular clip, muted ─────────────────────────────
         const cx     = x + w / 2
         const cy     = y + h / 2
         const radius = Math.min(w, h) / 2
 
         ctx.globalAlpha = 0.45
 
-        // Dashed ring
         ctx.beginPath()
         ctx.arc(cx, cy, radius + 3, 0, Math.PI * 2)
         ctx.strokeStyle = 'rgba(210, 170, 120, 0.4)'
@@ -153,7 +175,6 @@ export async function compositeRug(
         ctx.stroke()
         ctx.setLineDash([])
 
-        // Circular clip
         ctx.beginPath()
         ctx.arc(cx, cy, radius, 0, Math.PI * 2)
         ctx.clip()
@@ -164,63 +185,80 @@ export async function compositeRug(
         const pad = radius * 0.08
         ctx.drawImage(img, cx - radius + pad, cy - radius + pad, (radius - pad) * 2, (radius - pad) * 2)
 
-      } else if (pet.isGenerated) {
-        // ── AI-generated art: pure multiply blend ─────────────────────────
-        // Light rug × white art background = rug texture (white is invisible)
-        // Light rug × black lines ≈ dark (lines "tattoo" the mat)
-        // No pre-tint or stroke needed — the light mat handles it natively
-        ctx.globalCompositeOperation = 'multiply'
-        ctx.drawImage(img, x, y, w, h)
-
       } else {
-        // ── Original photo (uploading / processing): show normally ─────────
-        ctx.globalAlpha = 0.72
-        ctx.drawImage(img, x, y, w, h)
+        // ── Peekaboo: clip to Y_CLIP (head above rug, paws visible, nothing below) ──
+        const clipH = Math.min(h, Math.max(10, Y_CLIP - y))
+        ctx.beginPath()
+        ctx.rect(x, y, w, clipH)
+        ctx.clip()
+
+        if (pet.isGenerated) {
+          // Multiply blend: white bg disappears, dark lines "tattoo" the rug texture
+          ctx.globalCompositeOperation = 'multiply'
+          ctx.drawImage(img, x, y, w, h)
+        } else {
+          // Raw upload: show semi-transparent while AI processes
+          ctx.globalAlpha = 0.72
+          ctx.drawImage(img, x, y, w, h)
+        }
       }
 
       ctx.restore()
-
-      // Pet name label below the slot
-      if (pet.name?.trim()) {
-        const fontSize = Math.max(11, Math.round(Math.min(w, h) * 0.12))
-        ctx.save()
-        ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans', sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'top'
-        const labelX = x + w / 2
-        const labelY = y + h + 8
-        const textW  = ctx.measureText(pet.name).width
-        const pillH  = fontSize * 1.4
-        const pillPad = 8
-
-        ctx.fillStyle = 'rgba(0,0,0,0.40)'
-        fillRoundRect(ctx, labelX - textW / 2 - pillPad, labelY, textW + pillPad * 2, pillH, 4)
-
-        ctx.fillStyle = '#f5e1c3'
-        ctx.fillText(pet.name, labelX, labelY + 2)
-        ctx.restore()
-      }
     } catch {
       // Skip pet if image fails to load
     }
   }
 
-  // 3. Phrase text at the bottom of the rug
+  // ── 3. Phrase — inside rug, ARRIBA (just below the paw line) ──────────────
   if (phrase?.trim()) {
     const text     = `"${phrase.trim()}"`
-    const fontSize = Math.max(14, Math.min(22, W / text.length * 1.1))
+    const fontSize = Math.max(13, Math.min(20, W / text.length * 1.0))
     ctx.save()
-    ctx.font = `italic ${fontSize}px 'Playfair Display', serif`
-    ctx.textAlign    = 'center'
-    ctx.textBaseline = 'bottom'
-    const textY = H - 18
+    ctx.font          = `italic ${fontSize}px 'Playfair Display', serif`
+    ctx.textAlign     = 'center'
+    ctx.textBaseline  = 'bottom'
     const textW = ctx.measureText(text).width
 
+    // Pill background
     ctx.fillStyle = 'rgba(0,0,0,0.45)'
-    fillRoundRect(ctx, W / 2 - textW / 2 - 14, textY - fontSize - 4, textW + 28, fontSize + 10, 6)
+    fillRoundRect(
+      ctx,
+      W / 2 - textW / 2 - 14,
+      Y_PHRASE_BTM - fontSize - 4,
+      textW + 28,
+      fontSize + 10,
+      6
+    )
 
     ctx.fillStyle = '#f5e1c3'
-    ctx.fillText(text, W / 2, textY)
+    ctx.fillText(text, W / 2, Y_PHRASE_BTM)
+    ctx.restore()
+  }
+
+  // ── 4. Second pass: pet name labels (below phrase, inside rug) ─────────────
+  // Position names below the phrase if present, or just below the paw clip if not.
+  const yNames = phrase?.trim() ? Y_PHRASE_BTM + 26 : Y_PAW + 52
+
+  for (let i = 0; i < pets.length; i++) {
+    const pet  = pets[i]
+    const slot = slots[i]
+    if (!pet?.name?.trim()) continue
+
+    const fontSize = Math.max(11, Math.round(Math.min(slot.w, slot.h) * 0.10))
+    ctx.save()
+    ctx.font          = `bold ${fontSize}px 'Plus Jakarta Sans', sans-serif`
+    ctx.textAlign     = 'center'
+    ctx.textBaseline  = 'top'
+    const labelX = slot.x + slot.w / 2
+    const textW  = ctx.measureText(pet.name).width
+    const pillH  = fontSize * 1.4
+    const pillPad = 8
+
+    ctx.fillStyle = 'rgba(0,0,0,0.40)'
+    fillRoundRect(ctx, labelX - textW / 2 - pillPad, yNames, textW + pillPad * 2, pillH, 4)
+
+    ctx.fillStyle = '#f5e1c3'
+    ctx.fillText(pet.name, labelX, yNames + 2)
     ctx.restore()
   }
 
