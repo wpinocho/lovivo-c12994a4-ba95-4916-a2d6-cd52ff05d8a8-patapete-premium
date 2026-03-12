@@ -154,12 +154,12 @@ async function uploadNormalizedPet(base64: string): Promise<string> {
   console.log(`[generate-tattoo] Step 2.5 INPUT — uploading normalized pet to Storage: ${filename}`)
 
   const { error } = await supabase.storage
-    .from('product-images')
+    .from('pet-tattoos')
     .upload(filename, bytes, { contentType: 'image/png', upsert: true })
 
   if (error) throw new Error(`Storage upload failed: ${error.message}`)
 
-  const { data } = supabase.storage.from('product-images').getPublicUrl(filename)
+  const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
   console.log(`[generate-tattoo] Step 2.5 OUTPUT — pet URL: ${data.publicUrl}`)
   return data.publicUrl
 }
