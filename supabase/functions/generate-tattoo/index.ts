@@ -1,11 +1,13 @@
-// v13 — Composite dual-image reference for FLUX (pet LEFT + style RIGHT) + full input/output logging
+// v14 — FLUX 2 Pro input_images[] (dual-URL) — no composite image needed
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
+const SUPABASE_URL       = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-// Style reference image for DIBUJO — bold B&W line art peekaboo portrait (PNG, imagescript-compatible)
 const STYLE_REFERENCE_DIBUJO_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png'
 
@@ -14,17 +16,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// ─── Helper: fetch any URL → base64 string ───────────────────────────────────
-async function fetchImageAsBase64(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Failed to fetch image from ${url}: ${res.status} ${res.statusText}`)
-  const bytes = new Uint8Array(await res.arrayBuffer())
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-  return btoa(binary)
-}
-
-// ─── Shared: poll Replicate until done ────────────────────────────────────────
+// ─── Helper: poll Replicate until done ───────────────────────────────────────
 async function pollReplicate(predictionId: string, maxSeconds = 90): Promise<any> {
   const interval = 1500
   const maxAttempts = Math.ceil((maxSeconds * 1000) / interval)
@@ -153,6 +145,25 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   return base64
 }
 
+// ─── STEP 2.5: Upload normalized pet image to Supabase Storage → public URL ──
+async function uploadNormalizedPet(base64: string): Promise<string> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+  const filename = `temp/pet-${Date.now()}.png`
+
+  console.log(`[generate-tattoo] Step 2.5 INPUT — uploading normalized pet to Storage: ${filename}`)
+
+  const { error } = await supabase.storage
+    .from('product-images')
+    .upload(filename, bytes, { contentType: 'image/png', upsert: true })
+
+  if (error) throw new Error(`Storage upload failed: ${error.message}`)
+
+  const { data } = supabase.storage.from('product-images').getPublicUrl(filename)
+  console.log(`[generate-tattoo] Step 2.5 OUTPUT — pet URL: ${data.publicUrl}`)
+  return data.publicUrl
+}
+
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
 const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
 
@@ -252,91 +263,45 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   return text.trim()
 }
 
-// ─── STEP 3.5 (DIBUJO only): Composite pet photo (left) + style reference (right) ─
-// FLUX 2 Pro only accepts one image_prompt. We composite both images side-by-side
-// into a single 1600×800 PNG so FLUX can see both references at once.
-async function compositeImages(petBase64: string, styleBase64: string): Promise<string> {
-  console.log(`[generate-tattoo] Step 3.5 INPUT — compositing pet (base64 len: ${petBase64.length}) + style reference (base64 len: ${styleBase64.length})`)
-
-  const petBytes = Uint8Array.from(atob(petBase64), c => c.charCodeAt(0))
-  const styleBytes = Uint8Array.from(atob(styleBase64), c => c.charCodeAt(0))
-
-  const petImg = await Image.decode(petBytes)
-  const styleImg = await Image.decode(styleBytes)
-
-  console.log(`[generate-tattoo] Step 3.5 — decoded pet: ${petImg.width}×${petImg.height} | style: ${styleImg.width}×${styleImg.height}`)
-
-  // Resize both to 800×800
-  petImg.resize(800, 800)
-  styleImg.resize(800, 800)
-
-  // Create 1600×800 white canvas: pet on LEFT, style on RIGHT
-  const canvas = new Image(1600, 800)
-  canvas.fill(0xFFFFFFFF)
-  canvas.composite(petImg, 0, 0)
-  canvas.composite(styleImg, 800, 0)
-
-  const encoded = await canvas.encode()
-  let binary = ''
-  for (let i = 0; i < encoded.length; i++) binary += String.fromCharCode(encoded[i])
-  const compositeBase64 = btoa(binary)
-
-  console.log(`[generate-tattoo] Step 3.5 OUTPUT — composite 1600×800 PNG | base64 len: ${compositeBase64.length}`)
-  return compositeBase64
-}
-
-// ─── STEP 4: FLUX 2 Pro → final art ──────────────────────────────────────────
+// ─── STEP 4: FLUX 2 Pro → final art via input_images[] ───────────────────────
 //
-// Strategy per style:
-//   DIBUJO — composite image_prompt = [pet LEFT | style reference RIGHT] (strength 0.3)
-//            Text prompt explicitly references LEFT (pet to recreate) and RIGHT (target style).
-//            This way FLUX sees both the actual pet AND the desired art style simultaneously.
-//   ICONO  — image_prompt = normalized pet photo alone (strength 0.15)
-//            Text prompt guides colors/style.
+// Strategy:
+//   DIBUJO — input_images = [petUrl, styleRefUrl]
+//            Prompt tells FLUX: first image = pet to recreate, second = style to apply
+//   ICONO  — input_images = [petUrl]
+//            Prompt guides colors/style without a style reference
 //
 async function generateWithFlux2Pro(
-  normalizedBase64: string,
+  petUrl: string,
   haikuPrompt: string,
   artStyle: 'dibujo' | 'icono'
 ): Promise<string> {
-  let imagePromptDataUri: string
-  let imagePromptStrength: number
-  let imagePromptSource: string
+  let inputImages: string[]
   let finalPrompt: string
 
   if (artStyle === 'dibujo') {
-    console.log('[generate-tattoo] Step 4 — DIBUJO mode: fetching style reference + compositing...')
-    const styleBase64 = await fetchImageAsBase64(STYLE_REFERENCE_DIBUJO_URL)
-    const compositeBase64 = await compositeImages(normalizedBase64, styleBase64)
-    imagePromptDataUri = `data:image/png;base64,${compositeBase64}`
-    imagePromptStrength = 0.3
-    imagePromptSource = 'composite (pet LEFT + B&W style reference RIGHT)'
-    // Explicit dual-reference prompt
-    finalPrompt = `The reference image is split in two halves: LEFT half shows the pet to recreate, RIGHT half shows the exact visual style to apply. Generate a portrait of the animal from the LEFT image. Apply STRICTLY the visual style, line weight, and artistic technique from the RIGHT image. ${haikuPrompt}`
+    inputImages = [petUrl, STYLE_REFERENCE_DIBUJO_URL]
+    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.\nGenerate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.\n${haikuPrompt}`
   } else {
-    imagePromptDataUri = `data:image/png;base64,${normalizedBase64}`
-    imagePromptStrength = 0.15
-    imagePromptSource = 'normalized pet photo only'
+    inputImages = [petUrl]
     finalPrompt = haikuPrompt
   }
 
   console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro:`)
   console.log(`  model: black-forest-labs/flux-2-pro`)
   console.log(`  style: ${artStyle}`)
-  console.log(`  image_prompt source: ${imagePromptSource}`)
-  console.log(`  image_prompt_strength: ${imagePromptStrength}`)
+  console.log(`  input_images: ${JSON.stringify(inputImages)}`)
+  console.log(`  aspect_ratio: 1:1 | resolution: 1 MP | output_format: webp`)
   console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
-  console.log(`  width: 1024 | height: 1024 | output_format: webp`)
 
   const fluxInput = {
     prompt: finalPrompt,
-    image_prompt: imagePromptDataUri,
-    image_prompt_strength: imagePromptStrength,
+    input_images: inputImages,
+    aspect_ratio: '1:1',
+    resolution: '1 MP',
     output_format: 'webp',
-    output_quality: 95,
-    safety_tolerance: 5,
-    width: 1024,
-    height: 1024,
+    output_quality: 80,
+    safety_tolerance: 2,
   }
 
   const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', {
@@ -395,6 +360,12 @@ serve(async (req) => {
     const normalizedBase64 = await normalizeImage(transparentPngUrl)
     console.log(`[generate-tattoo] Step 2 done in ${Date.now() - t2}ms`)
 
+    // Step 2.5: Upload normalized pet to Storage → public URL
+    console.log('[generate-tattoo] ─── Step 2.5: Upload pet to Supabase Storage ───')
+    const t25 = Date.now()
+    const petUrl = await uploadNormalizedPet(normalizedBase64)
+    console.log(`[generate-tattoo] Step 2.5 done in ${Date.now() - t25}ms`)
+
     // Step 3: Claude Haiku → optimized prompt
     console.log('[generate-tattoo] ─── Step 3: Claude Haiku 3 prompt generation ───')
     const t3 = Date.now()
@@ -404,7 +375,7 @@ serve(async (req) => {
     // Step 4: FLUX 2 Pro → final art
     console.log('[generate-tattoo] ─── Step 4: FLUX 2 Pro generation ───')
     const t4 = Date.now()
-    const artUrl = await generateWithFlux2Pro(normalizedBase64, optimizedPrompt, artStyle)
+    const artUrl = await generateWithFlux2Pro(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
     const totalMs = Date.now() - t1
