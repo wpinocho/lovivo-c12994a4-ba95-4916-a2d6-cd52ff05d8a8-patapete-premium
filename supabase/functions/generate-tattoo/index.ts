@@ -5,9 +5,9 @@ import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
-// Style reference image for DIBUJO — bold B&W line art peekaboo portrait
+// Style reference image for DIBUJO — bold B&W line art peekaboo portrait (PNG, imagescript-compatible)
 const STYLE_REFERENCE_DIBUJO_URL =
-  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773343362868-fzlwnjfa0z8.webp'
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
