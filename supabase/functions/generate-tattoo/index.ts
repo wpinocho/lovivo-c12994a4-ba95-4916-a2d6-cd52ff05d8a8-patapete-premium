@@ -1,4 +1,4 @@
-// v15 — FLUX 2 Pro input_images[] (dual-URL) — both styles use style reference image
+// v16 — FLUX 2 Pro input_images[] — ICONO: permanent CDN URL + strong color prompt
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -12,7 +12,7 @@ const STYLE_REFERENCE_DIBUJO_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png'
 
 const STYLE_REFERENCE_ICONO_URL =
-  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773350235538-8uqgrzk0xup.webp'
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono.webp'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -168,23 +168,25 @@ async function uploadNormalizedPet(base64: string): Promise<string> {
 }
 
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
-const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt para recrearla en estilo vector flat geométrico, con contornos gruesos negros y colores sólidos planos — exactamente como el estilo de la imagen de referencia de estilo que verá el modelo.
+const SYSTEM_PROMPT_ICONO = `You are an expert art director. Analyze the pet photo and generate an image generation prompt for a FULL COLOR flat geometric vector illustration — exactly like the style reference image the AI model will see (bold black outlines, solid flat colors, angular/geometric shapes, NO gradients, NO black-and-white).
 
-Analiza la imagen y extrae:
+CRITICAL: This style is FULL COLOR. You MUST extract the exact fur colors and include them in the prompt.
 
-1. Tipo de animal y raza aproximada.
-2. Textura del pelo y forma (ej. pelo alambre/scruffy con puntas angulares, pelo liso y corto, esponjoso en bloques).
-3. Colores principales exactos del pelaje (ej. café oscuro, beige crema, marrón rojizo).
-4. Rasgos físicos más distintivos (ej. orejas semi-caídas, morro oscuro, cejas marcadas).
-5. Accesorios visibles simplificados a un solo color sólido (ej. paliacate rojo oscuro, collar azul).
+From the photo, identify:
+1. Animal type and approximate breed.
+2. Fur texture and shape (e.g. wiry/scruffy with angular spiky tips, short smooth, fluffy in blocks).
+3. EXACT fur colors (e.g. dark brown, cream beige, reddish-brown, black muzzle, tan paws).
+4. Most distinctive physical features (e.g. semi-floppy ears, dark muzzle, prominent eyebrows).
+5. Visible accessories as single solid colors (e.g. dark red bandana, blue collar).
 
-Ahora REEMPLAZA los corchetes en esta plantilla exacta (mantén en inglés). Devuelve ÚNICAMENTE el prompt completado, sin introducciones:
+Fill in this EXACT template (keep in English). Return ONLY the completed prompt text, no introductions:
 
-A 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA], head and upper chest only, paws resting on a thick solid black horizontal line at the bottom. PURE WHITE BACKGROUND (#FFFFFF).
-STYLE: Flat geometric vector illustration with extremely thick, bold black outlines. Angular, spiky shapes for fur — NO smooth curves, NO gradients, NO shading. ONLY flat solid color fills.
-FUR: [TEXTURA Y FORMA DEL PELO], rendered as sharp angular spike shapes and geometric blocks of flat color.
-COLOR PALETTE: [COLORES PRINCIPALES]. Black outlines. Pink tongue. White highlights as flat shapes.
-KEY FEATURES: [RASGOS DISTINTIVOS Y ACCESORIOS simplified to single solid colors]. Bold, graphic, print-ready icon style.`
+A FULL COLOR 'peekaboo' portrait of a [ANIMAL TYPE AND BREED], head and upper chest only, paws resting on a thick solid black horizontal line at the bottom. PURE WHITE BACKGROUND (#FFFFFF).
+STYLE: FULL COLOR flat geometric vector illustration. Extremely thick bold black outlines. Angular spiky shapes for fur. NO gradients, NO shading, NO black-and-white — ONLY solid flat color fills matching the style reference.
+FUR COLORS: [EXACT FUR COLORS — e.g. dark brown body, cream chest, black muzzle and ear tips, tan paws] rendered as flat solid color blocks and angular spike shapes.
+FUR TEXTURE: [FUR TEXTURE AND SHAPE — e.g. wiry scruffy fur with angular spiky tips, geometric blocks].
+COLOR ACCENTS: [ACCESSORY COLORS — e.g. dark red bandana]. Pink tongue. White eye highlights as flat shapes.
+KEY FEATURES: [DISTINCTIVE PHYSICAL FEATURES]. Bold, colorful, graphic, print-ready icon style.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
@@ -286,7 +288,16 @@ async function generateWithFlux2Pro(
     finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.\nGenerate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.\n${haikuPrompt}`
   } else {
     inputImages = [petUrl, STYLE_REFERENCE_ICONO_URL]
-    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.\nGenerate a portrait of the pet from the first image, applying STRICTLY the flat geometric vector style, bold black outlines, angular fur shapes, and solid color palette shown in the second image.\n${haikuPrompt}`
+    finalPrompt = `The first image is the pet to recreate. The second image is the EXACT art style reference — follow it strictly.
+CRITICAL STYLE RULES from the reference image:
+- FULL COLOR illustration (NOT black and white, NOT grayscale)
+- Thick bold black outlines on all shapes
+- Angular, geometric, spiky shapes — no smooth curves
+- Flat solid color fills only — NO gradients, NO shading
+- Pure white background
+
+Generate a COLORFUL portrait of the pet from the first image in the exact geometric vector style of the second reference image.
+${haikuPrompt}`
   }
 
   console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro:`)
