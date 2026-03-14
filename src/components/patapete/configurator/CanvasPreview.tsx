@@ -5,9 +5,9 @@ import { Loader2 } from 'lucide-react'
 
 // Demo images: pre-generated pet illustrations shown before user uploads their photo.
 const DEMO_IMAGES = [
-  '/demo/pet-demo-1.webp',
-  '/demo/pet-demo-2.webp',
-  '/demo/pet-demo-3.webp',
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773506866318-25g4wpclpbo.webp',
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773506866318-25g4wpclpbo.webp',
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773506866318-25g4wpclpbo.webp',
 ]
 
 interface CanvasPreviewProps {
@@ -37,17 +37,17 @@ export function CanvasPreview({ style, pets, phrase, onPreviewReady }: CanvasPre
         // Build petData: ONLY use AI-generated art as the real image.
         // Raw photoPreviewUrl is intentionally NOT used here — the canvas must only
         // show the AI result or the demo placeholder, never the raw uploaded photo.
+        const anyReal = pets.some(p => !!p.generatedArtUrl)
+
         const petData: PetCompositeData[] = pets.map((pet, i) => {
           const artUrl = pet.generatedArtUrl  // null until AI pipeline completes
           return {
             imageUrl: artUrl || DEMO_IMAGES[i % DEMO_IMAGES.length],
             name: pet.name,
-            isDemo: !artUrl,
-            isGenerated: !!artUrl,
+            isDemo: false,     // never use circular placeholder — always peekaboo style
+            isGenerated: true, // demo images have white bg → multiply blend onto rug
           }
         })
-
-        const anyReal = petData.some(p => !p.isDemo)
 
         const dataUrl = await compositeRug(petData, phrase)
 
