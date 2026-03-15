@@ -225,6 +225,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
       {state.step === 2 && (
         <StepSummary
+          style={state.style}
           petCount={state.petCount}
           pets={state.pets}
           phrase={state.phrase}

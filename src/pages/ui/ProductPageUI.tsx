@@ -24,6 +24,8 @@ import { VolumeBadge } from "@/components/ui/VolumeBadge"
 import { BOGOLabel } from "@/components/ui/BOGOLabel"
 import { intervalLabel } from "@/lib/subscription-utils"
 import { PatapeteConfigurator } from "@/components/patapete/configurator/PatapeteConfigurator"
+import { ProductSocialProof } from "@/components/patapete/ProductSocialProof"
+import { ProductFAQ } from "@/components/patapete/ProductFAQ"
 
 const PATAPETE_SLUG = 'tapete-personalizado-patapete'
 
@@ -128,8 +130,10 @@ export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
   if (logic.product?.slug === PATAPETE_SLUG) {
     return (
       <EcommerceTemplate>
-        <div className="max-w-4xl mx-auto px-2 sm:px-0">
+        <div className="max-w-4xl mx-auto px-2 sm:px-0 space-y-10">
+          <ProductSocialProof />
           <PatapeteConfigurator product={logic.product} />
+          <ProductFAQ />
         </div>
       </EcommerceTemplate>
     )
