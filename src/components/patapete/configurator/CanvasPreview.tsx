@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
+import { removeWhiteBackground } from '@/utils/imagePreprocessing'
 
-// Border Terrier peekaboo demo — white background, multiply-blends onto rug texture
+// Border Terrier peekaboo demo — white background removed in browser, clean composite
 const DEMO_PET_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773506866318-25g4wpclpbo.webp'
 
@@ -62,6 +63,24 @@ interface CanvasPreviewProps {
 export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasPreviewProps) {
   const count = Math.min(Math.max(pets.length, 1), 3) as PetCount
   const layout = LAYOUTS[count]
+
+  // Cache of processed transparent URLs keyed by original URL
+  const [transparentUrls, setTransparentUrls] = useState<Record<string, string>>({})
+  const processingRef = useRef<Set<string>>(new Set())
+
+  // Collect all image URLs needed this render
+  const imgUrls = pets.map((pet) => pet.generatedArtUrl || DEMO_PET_URL)
+
+  useEffect(() => {
+    imgUrls.forEach((url) => {
+      if (transparentUrls[url] || processingRef.current.has(url)) return
+      processingRef.current.add(url)
+      removeWhiteBackground(url).then((transparentUrl) => {
+        setTransparentUrls((prev) => ({ ...prev, [url]: transparentUrl }))
+      })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imgUrls.join('|')])
 
   // Background canvas → still needed for StepSummary's finalPreviewDataUrl
   const petKey = pets.map(p => `${p.generatedArtUrl || ''}:${p.name}`).join('|')
@@ -150,12 +169,11 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
                 {pet.name?.trim() || DEFAULT_NAMES[i]}
               </span>
 
-              {/* Pet illustration — multiply blend removes white background onto rug */}
+              {/* Pet illustration — transparent PNG composited over the rug */}
               <img
-                src={imgUrl}
+                src={transparentUrls[imgUrl] || imgUrl}
                 alt={pet.name || `Mascota ${i + 1}`}
                 className="w-full h-auto block select-none"
-                style={{ mixBlendMode: 'multiply' }}
                 crossOrigin="anonymous"
                 draggable={false}
               />

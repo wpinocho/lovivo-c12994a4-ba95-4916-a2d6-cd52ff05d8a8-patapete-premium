@@ -1,3 +1,5 @@
+import { removeWhiteBackground } from './imagePreprocessing'
+
 /** Cross-browser rounded rect helper */
 function fillRoundRect(
   ctx: CanvasRenderingContext2D,
@@ -22,7 +24,7 @@ export interface PetCompositeData {
   name?: string
   /** No photo uploaded yet — renders a placeholder demo illustration */
   isDemo?: boolean
-  /** AI-generated art (white background) — uses multiply blend to "tattoo" onto rug */
+  /** AI-generated art (white background) — background removed, composited cleanly */
   isGenerated?: boolean
 }
 
@@ -154,53 +156,29 @@ export async function compositeRug(
     if (!pet?.imageUrl) continue
 
     try {
-      const img = await loadImage(pet.imageUrl)
+      // Remove white background so the art composites cleanly (simulates sublimation)
+      const drawUrl = (pet.isGenerated || pet.isDemo)
+        ? await removeWhiteBackground(pet.imageUrl)
+        : pet.imageUrl
+
+      const img = await loadImage(drawUrl)
       const { x, y, w, h } = slot
 
       ctx.save()
 
-      if (pet.isDemo) {
-        // ── Placeholder: circular clip, muted ─────────────────────────────
-        const cx     = x + w / 2
-        const cy     = y + h / 2
-        const radius = Math.min(w, h) / 2
+      // ── Peekaboo: clip to Y_CLIP (head above rug, paws visible, nothing below) ──
+      const clipH = Math.min(h, Math.max(10, Y_CLIP - y))
+      ctx.beginPath()
+      ctx.rect(x, y, w, clipH)
+      ctx.clip()
 
-        ctx.globalAlpha = 0.45
-
-        ctx.beginPath()
-        ctx.arc(cx, cy, radius + 3, 0, Math.PI * 2)
-        ctx.strokeStyle = 'rgba(210, 170, 120, 0.4)'
-        ctx.lineWidth = 2
-        ctx.setLineDash([6, 4])
-        ctx.stroke()
-        ctx.setLineDash([])
-
-        ctx.beginPath()
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2)
-        ctx.clip()
-
-        ctx.fillStyle = 'rgba(245, 225, 195, 0.85)'
-        ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2)
-
-        const pad = radius * 0.08
-        ctx.drawImage(img, cx - radius + pad, cy - radius + pad, (radius - pad) * 2, (radius - pad) * 2)
-
+      if (pet.isGenerated || pet.isDemo) {
+        // Transparent PNG → composite cleanly over rug (no blend mode needed)
+        ctx.drawImage(img, x, y, w, h)
       } else {
-        // ── Peekaboo: clip to Y_CLIP (head above rug, paws visible, nothing below) ──
-        const clipH = Math.min(h, Math.max(10, Y_CLIP - y))
-        ctx.beginPath()
-        ctx.rect(x, y, w, clipH)
-        ctx.clip()
-
-        if (pet.isGenerated) {
-          // Multiply blend: white bg disappears, dark lines "tattoo" the rug texture
-          ctx.globalCompositeOperation = 'multiply'
-          ctx.drawImage(img, x, y, w, h)
-        } else {
-          // Raw upload: show semi-transparent while AI processes
-          ctx.globalAlpha = 0.72
-          ctx.drawImage(img, x, y, w, h)
-        }
+        // Raw upload in transit: show semi-transparent while AI processes
+        ctx.globalAlpha = 0.72
+        ctx.drawImage(img, x, y, w, h)
       }
 
       ctx.restore()
