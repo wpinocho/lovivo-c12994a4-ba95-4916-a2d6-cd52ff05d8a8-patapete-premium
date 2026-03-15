@@ -16,6 +16,7 @@ export interface ConfiguratorState {
   petCount: 1 | 2 | 3
   pets: Pet[]
   phrase: string
+  phrase2: string
   finalPreviewDataUrl: string | null
   isGenerating: boolean
   error: string | null

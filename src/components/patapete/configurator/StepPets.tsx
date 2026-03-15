@@ -12,18 +12,20 @@ interface StepPetsProps {
   petCount: 1 | 2 | 3
   pets: Pet[]
   phrase: string
+  phrase2: string
   onStyleChange: (style: Style) => void
   onPetCountChange: (count: 1 | 2 | 3) => void
   onPetChange: (index: number, updates: Partial<Pet>) => void
   onPhraseChange: (phrase: string) => void
+  onPhrase2Change: (phrase2: string) => void
   onGenerate: (petIndex: number, file: File) => void
   onContinue: () => void
   onPreviewReady: (dataUrl: string) => void
 }
 
 export function StepPets({
-  style, petCount, pets, phrase,
-  onStyleChange, onPetCountChange, onPetChange, onPhraseChange,
+  style, petCount, pets, phrase, phrase2,
+  onStyleChange, onPetCountChange, onPetChange, onPhraseChange, onPhrase2Change,
   onGenerate, onContinue, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
@@ -58,6 +60,7 @@ export function StepPets({
               style={style}
               pets={pets.slice(0, petCount)}
               phrase={phrase}
+              phrase2={phrase2}
               onPreviewReady={onPreviewReady}
             />
           </div>
@@ -151,26 +154,45 @@ export function StepPets({
               style={style}
               pets={pets.slice(0, petCount)}
               phrase={phrase}
+              phrase2={phrase2}
               onPreviewReady={onPreviewReady}
             />
           </div>
 
-          {/* Phrase input */}
-          <div className="space-y-1.5">
-            <Label htmlFor="phrase" className="text-sm font-semibold">
-              Texto para el tapete <span className="font-normal text-muted-foreground">(opcional)</span>
-            </Label>
-            <Input
-              id="phrase"
-              placeholder='Ej: "Bienvenido a casa de Max", "Hogar dulce hogar"...'
-              value={phrase}
-              onChange={e => onPhraseChange(e.target.value)}
-              maxLength={40}
-              className="rounded-xl"
-            />
-            {phrase && (
-              <p className="text-xs text-muted-foreground">{40 - phrase.length} caracteres restantes</p>
-            )}
+          {/* Phrase inputs */}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="phrase" className="text-sm font-semibold">
+                Texto superior <span className="font-normal text-muted-foreground">(encima de la mascota, opcional)</span>
+              </Label>
+              <Input
+                id="phrase"
+                placeholder='Ej: "Bienvenido a casa de Max"'
+                value={phrase}
+                onChange={e => onPhraseChange(e.target.value)}
+                maxLength={40}
+                className="rounded-xl"
+              />
+              {phrase && (
+                <p className="text-xs text-muted-foreground">{40 - phrase.length} caracteres restantes</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="phrase2" className="text-sm font-semibold">
+                Texto inferior <span className="font-normal text-muted-foreground">(debajo de la mascota, opcional)</span>
+              </Label>
+              <Input
+                id="phrase2"
+                placeholder='Ej: "Luna y Max también viven aquí..."'
+                value={phrase2}
+                onChange={e => onPhrase2Change(e.target.value)}
+                maxLength={40}
+                className="rounded-xl"
+              />
+              {phrase2 && (
+                <p className="text-xs text-muted-foreground">{40 - phrase2.length} caracteres restantes</p>
+              )}
+            </div>
           </div>
 
           {/* Continue button */}

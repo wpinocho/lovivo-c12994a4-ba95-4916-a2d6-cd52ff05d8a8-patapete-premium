@@ -4,11 +4,16 @@
 Tienda de tapetes personalizados con IA. El configurador permite subir fotos de mascotas, generar retratos con IA (FLUX via Replicate), y previsualizar el resultado.
 
 ## Recent Changes
-- **Previsualizador reescrito** (sesión actual): Reemplazado canvas approach por CSS puro + Container Queries
-  - `CanvasPreview.tsx`: ahora usa HTML/CSS con posicionamiento en % (Figma-derived), cqw para textos, mix-blend-mode: multiply para imágenes
-  - `index.css`: agregada clase `.tapete-preview` con `container-type: inline-size` para habilitar cqw
-  - Eliminado badge "Ejemplo · Sube tu foto para ver tu mascota"
-  - Canvas sigue corriendo en background solo para `onPreviewReady` (StepSummary)
+- **phrase2 agregado**: Segunda frase (texto inferior, debajo de los perritos) — campo nuevo en todo el flujo
+  - `types.ts`: `phrase2: string` en `ConfiguratorState`
+  - `PatapeteConfigurator.tsx`: estado + handler `handlePhrase2Change`
+  - `StepPets.tsx`: 2 inputs: "Texto superior" y "Texto inferior"
+  - `CanvasPreview.tsx`: renderiza `phrase2` en `top: 74%` con Playfair italic
+  - `StepSummary.tsx`: muestra phrase2 en resumen del pedido + lo guarda en localStorage
+- **Fuentes reducidas** para evitar solapamiento entre frase y nombre:
+  - `phrase`: 5.76cqw → 3.5cqw
+  - `name`: 4.88cqw → 3.0cqw
+  - `phrase2`: 3.5cqw
 
 ## Architecture
 
@@ -22,8 +27,9 @@ Tienda de tapetes personalizados con IA. El configurador permite subir fotos de 
 Coordinates from Figma (2048×2048 frame), all in % of square container:
 
 **Texts:**
-- `texto-top` (phrase): top=34.71%, font-size=5.76cqw
-- `nombre-perro` (per pet): font-size=4.88cqw, positioned via `translateY(-100% - 3px)` above each pet wrapper
+- `texto-top` (phrase): top=34.71%, font-size=3.5cqw
+- `nombre-perro` (per pet): font-size=3.0cqw, positioned via `translateY(-100% - 4px)` above each pet wrapper
+- `texto-bottom` (phrase2): top=74%, font-size=3.5cqw
 
 **Pet positions:**
 - 1 mascota: width=27.39%, left=36.32%, top=45.26%
@@ -38,3 +44,4 @@ Coordinates from Figma (2048×2048 frame), all in % of square container:
 - El mockup del tapete es `TAPETE_URL` en `CanvasPreview.tsx` — imagen 2048×2048 en Supabase
 - Demo pet: Border Terrier peekaboo vector (blanco bg → multiply blend sobre rug texture)
 - Las fuentes Playfair Display y Plus Jakarta Sans están cargadas en index.css via Google Fonts
+- `StepSummary.tsx` usaba `PRICES['tattoo']` (bug) → corregido a `PRICES['dibujo']`

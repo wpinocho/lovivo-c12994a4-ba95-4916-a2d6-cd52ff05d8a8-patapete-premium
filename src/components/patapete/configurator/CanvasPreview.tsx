@@ -36,10 +36,12 @@ const LAYOUTS: Record<PetCount, { pets: { left: string }[]; petWidth: string; pe
   },
 }
 
-// cqw font sizes from Figma (1 cqw = 1% of container inline-size)
+// cqw font sizes — reduced so phrase + name don't overlap
+// (Playfair Display has tall ascenders, use conservative values)
 const FONT = {
-  phrase: '5.76cqw',   // ~118px on 2048px frame
-  name: '4.88cqw',     // ~100px on 2048px frame
+  phrase: '3.5cqw',   // top phrase — above pets
+  name: '3.0cqw',     // pet name — floats just above each illustration
+  phrase2: '3.5cqw',  // bottom phrase — below pets
 }
 
 // Dark brown ink — readable on the coir rug texture
@@ -49,10 +51,11 @@ interface CanvasPreviewProps {
   style: Style
   pets: Pet[]
   phrase: string
+  phrase2?: string
   onPreviewReady?: (dataUrl: string) => void
 }
 
-export function CanvasPreview({ pets, phrase, onPreviewReady }: CanvasPreviewProps) {
+export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasPreviewProps) {
   const count = Math.min(Math.max(pets.length, 1), 3) as PetCount
   const layout = LAYOUTS[count]
 
@@ -126,7 +129,7 @@ export function CanvasPreview({ pets, phrase, onPreviewReady }: CanvasPreviewPro
                 style={{
                   // top:0 + translateY(-100%) = bottom of name aligns with top of wrapper
                   top: 0,
-                  transform: 'translateY(calc(-100% - 3px))',
+                  transform: 'translateY(calc(-100% - 4px))',
                   fontSize: FONT.name,
                   fontFamily: '"Plus Jakarta Sans", sans-serif',
                   color: INK,
@@ -149,6 +152,25 @@ export function CanvasPreview({ pets, phrase, onPreviewReady }: CanvasPreviewPro
           </div>
         )
       })}
+
+      {/* ── Phrase 2 — bottom area of rug (below pets) ─────────────────── */}
+      {phrase2?.trim() && (
+        <p
+          className="absolute w-full text-center pointer-events-none"
+          style={{
+            top: '74%',
+            fontSize: FONT.phrase2,
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontStyle: 'italic',
+            fontWeight: 700,
+            color: INK,
+            padding: '0 8%',
+            lineHeight: 1.2,
+          }}
+        >
+          {phrase2}
+        </p>
+      )}
     </div>
   )
 }

@@ -16,18 +16,19 @@ interface StepSummaryProps {
   petCount: 1 | 2 | 3
   pets: Pet[]
   phrase: string
+  phrase2: string
   product: any
   finalPreviewDataUrl: string | null
   onBack: () => void
 }
 
 export function StepSummary({
-  petCount, pets, phrase, product, finalPreviewDataUrl, onBack
+  petCount, pets, phrase, phrase2, product, finalPreviewDataUrl, onBack
 }: StepSummaryProps) {
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
 
-  const price = PRICES['tattoo'][petCount]
+  const price = PRICES['dibujo'][petCount]
   const variantId = VARIANT_IDS[petCount]
   const variant = product?.variants?.find((v: any) => v.id === variantId)
 
@@ -43,6 +44,7 @@ export function StepSummary({
         ...(p.photoPreviewUrl && !p.generatedArtUrl ? { photoUrl: p.photoPreviewUrl } : {}),
       })),
       phrase,
+      phrase2,
       previewDataUrl: finalPreviewDataUrl,
       timestamp: new Date().toISOString(),
     }
@@ -65,9 +67,10 @@ export function StepSummary({
         {/* Preview */}
         <div className="space-y-2">
           <CanvasPreview
-            style="tattoo"
+            style="dibujo"
             pets={activePets}
             phrase={phrase}
+            phrase2={phrase2}
           />
           <p className="text-xs text-center text-muted-foreground">
             * Preview orientativo. El diseño final puede variar ligeramente.
@@ -96,8 +99,14 @@ export function StepSummary({
               ))}
               {phrase && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Texto</span>
+                  <span className="text-muted-foreground">Texto superior</span>
                   <span className="font-medium text-foreground italic">"{phrase}"</span>
+                </div>
+              )}
+              {phrase2 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Texto inferior</span>
+                  <span className="font-medium text-foreground italic">"{phrase2}"</span>
                 </div>
               )}
             </div>

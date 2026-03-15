@@ -16,6 +16,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     petCount: 1,
     pets: [{ ...DEFAULT_PET }, { ...DEFAULT_PET }, { ...DEFAULT_PET }],
     phrase: '',
+    phrase2: '',
     finalPreviewDataUrl: null,
     isGenerating: false,
     error: null,
@@ -39,6 +40,10 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
   const handlePhraseChange = useCallback((phrase: string) => {
     setState(s => ({ ...s, phrase }))
+  }, [])
+
+  const handlePhrase2Change = useCallback((phrase2: string) => {
+    setState(s => ({ ...s, phrase2 }))
   }, [])
 
   // Accept an optional file override so we can auto-generate right after upload
@@ -120,10 +125,12 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           petCount={state.petCount}
           pets={state.pets}
           phrase={state.phrase}
+          phrase2={state.phrase2}
           onStyleChange={handleStyleChange}
           onPetCountChange={handlePetCountChange}
           onPetChange={handlePetChange}
           onPhraseChange={handlePhraseChange}
+          onPhrase2Change={handlePhrase2Change}
           onGenerate={handleGenerate}
           onContinue={handleContinueToSummary}
           onPreviewReady={handlePreviewReady}
@@ -135,6 +142,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           petCount={state.petCount}
           pets={state.pets}
           phrase={state.phrase}
+          phrase2={state.phrase2}
           product={product}
           finalPreviewDataUrl={state.finalPreviewDataUrl}
           onBack={handleBack}
