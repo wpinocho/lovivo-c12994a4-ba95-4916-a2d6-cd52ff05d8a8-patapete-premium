@@ -43,7 +43,7 @@ export const PatapeteHero = () => {
             className="text-xl md:text-2xl text-white mb-9 max-w-xl leading-relaxed font-light"
             style={{ textShadow: '0 1px 6px rgba(0,0,0,0.55)' }}
           >
-            Sube su foto. La IA crea su retrato artístico. Ve cómo queda en tu tapete <strong className="font-semibold">antes de comprarlo.</strong>
+            Sube su foto. Ve cómo queda en tu tapete <strong className="font-semibold">antes de comprarlo</strong> — hecho especialmente para ti.
           </p>
 
           {/* CTAs */}

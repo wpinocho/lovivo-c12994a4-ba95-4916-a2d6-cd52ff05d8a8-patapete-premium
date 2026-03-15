@@ -2,7 +2,7 @@ import { EcommerceTemplate } from '@/templates/EcommerceTemplate'
 import { PatapeteHero } from '@/components/patapete/PatapeteHero'
 import { PatapeteTrustStrip } from '@/components/patapete/PatapeteTrustStrip'
 import { PatapeteHowItWorks } from '@/components/patapete/PatapeteHowItWorks'
-import { PatapeteStyles } from '@/components/patapete/PatapeteStyles'
+import { PatapeteTestimonials } from '@/components/patapete/PatapeteTestimonials'
 import { PatapeteTransformation } from '@/components/patapete/PatapeteTransformation'
 import { PatapeteGallery } from '@/components/patapete/PatapeteGallery'
 import { PatapeteBenefits } from '@/components/patapete/PatapeteBenefits'
@@ -34,8 +34,8 @@ export const IndexUI = ({ logic: _logic }: IndexUIProps) => {
       {/* 3. Cómo funciona */}
       <PatapeteHowItWorks />
 
-      {/* 4. Los 3 estilos */}
-      <PatapeteStyles />
+      {/* 4. Testimonios de clientes */}
+      <PatapeteTestimonials />
 
       {/* 5. Transformación / Before-After */}
       <PatapeteTransformation />

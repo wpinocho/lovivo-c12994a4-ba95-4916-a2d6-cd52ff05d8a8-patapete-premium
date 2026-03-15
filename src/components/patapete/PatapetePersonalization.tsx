@@ -10,8 +10,8 @@ const features = [
   },
   {
     icon: Palette,
-    title: 'La IA crea el retrato artístico',
-    desc: 'Nuestra IA transforma la foto en un hermoso retrato estilo tatuaje fino. Resultado único e irrepetible.',
+    title: 'Su retrato artístico, hecho para ti',
+    desc: 'Cada diseño es completamente único. Trazos estilo tatuaje fino que se ven increíbles sobre fibra de coco natural.',
   },
   {
     icon: Type,

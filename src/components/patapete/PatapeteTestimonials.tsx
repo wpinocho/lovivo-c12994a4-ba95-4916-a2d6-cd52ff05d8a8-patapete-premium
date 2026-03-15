@@ -1,0 +1,120 @@
+import { Star } from 'lucide-react'
+
+const testimonials = [
+  {
+    name: 'María G.',
+    city: 'Ciudad de México',
+    petName: 'Luna',
+    petType: 'Golden Retriever · 4 años',
+    rating: 5,
+    text: 'Nunca imaginé que un tapete pudiera hacerme llorar de emoción. El de mi Luna quedó perfectamente igual a ella — la cara, la expresión, todo. Mis visitas siempre preguntan dónde lo compré.',
+    avatarInitials: 'MG',
+  },
+  {
+    name: 'Rodrigo M.',
+    city: 'Guadalajara',
+    petName: 'Canelo',
+    petType: 'Labrador · 6 años',
+    rating: 5,
+    text: 'Lo pedí como regalo para mi mamá y no pudo creer que fuera real. Dijo que era "el regalo más bonito que le habían dado". Canelo ya tiene su trono en la entrada de la casa.',
+    avatarInitials: 'RM',
+  },
+  {
+    name: 'Sofía V.',
+    city: 'Monterrey',
+    petName: 'Mochi, Nala y Churro',
+    petType: '3 Frenchies',
+    rating: 5,
+    text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas — la calidad de la fibra de coco y el detalle del diseño son increíbles. Ya quiero uno para el cuarto.',
+    avatarInitials: 'SV',
+  },
+  {
+    name: 'Carlos B.',
+    city: 'Puebla',
+    petName: 'Brody',
+    petType: 'Dálmata · Siempre en el corazón',
+    rating: 5,
+    text: 'Mi perro falleció hace unos meses. Este tapete se convirtió en la forma más bonita de tenerlo siempre en casa. Cada vez que llego, lo primero que veo es su retrato. Gracias, Patapete.',
+    avatarInitials: 'CB',
+  },
+]
+
+const StarRating = ({ rating }: { rating: number }) => (
+  <div className="flex gap-0.5" aria-label={`${rating} estrellas de 5`}>
+    {Array.from({ length: 5 }).map((_, i) => (
+      <Star
+        key={i}
+        className={`w-4 h-4 ${i < rating ? 'fill-primary text-primary' : 'text-border'}`}
+      />
+    ))}
+  </div>
+)
+
+export const PatapeteTestimonials = () => {
+  return (
+    <section id="testimonios" className="section-padding texture-section">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold text-primary tracking-widest uppercase mb-3">
+            Reseñas reales
+          </p>
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-4">
+            Lo que dicen quienes ya tienen el suyo
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            Más de 500 tapetes entregados. Estas son algunas de sus historias.
+          </p>
+
+          {/* Aggregate rating */}
+          <div className="inline-flex items-center gap-3 mt-6 bg-card border border-border/60 rounded-2xl px-5 py-3 shadow-warm">
+            <div className="flex gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className="w-5 h-5 fill-primary text-primary" />
+              ))}
+            </div>
+            <div className="text-left">
+              <span className="font-bold text-foreground text-lg">4.9</span>
+              <span className="text-muted-foreground text-sm ml-1.5">de 5 · 500+ reseñas</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Testimonials grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {testimonials.map((t) => (
+            <article
+              key={t.name}
+              className="card-premium p-6 flex flex-col gap-4 hover:-translate-y-1 transition-transform duration-300"
+            >
+              {/* Stars */}
+              <StarRating rating={t.rating} />
+
+              {/* Quote */}
+              <blockquote className="text-sm text-foreground leading-relaxed flex-1">
+                &ldquo;{t.text}&rdquo;
+              </blockquote>
+
+              {/* Pet name tag */}
+              <div className="inline-flex items-center gap-1.5 self-start bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
+                🐾 {t.petName}
+              </div>
+
+              {/* Author */}
+              <div className="flex items-center gap-3 pt-1 border-t border-border/50">
+                {/* Placeholder avatar — user will add photos later */}
+                <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-primary">{t.avatarInitials}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground leading-none">{t.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.city}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

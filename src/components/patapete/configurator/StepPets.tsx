@@ -41,11 +41,11 @@ export function StepPets({
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full border border-primary/20">
           <Sparkles className="w-3.5 h-3.5" />
-          Retrato IA · Arte único para tu tapete
+          Solo para tu mascota · Diseño exclusivo
         </div>
         <h2 className="text-2xl font-bold text-foreground">Diseña tu tapete</h2>
         <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-          Sube la foto de tu mascota y la IA creará su retrato artístico al instante.
+          Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
         </p>
       </div>
 

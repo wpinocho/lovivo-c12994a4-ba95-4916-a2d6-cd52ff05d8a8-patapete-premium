@@ -12,8 +12,8 @@ const steps = [
   {
     number: '02',
     icon: Palette,
-    title: 'La IA crea el retrato',
-    desc: 'En segundos, nuestra IA transforma su foto en un hermoso retrato artístico estilo tatuaje fino.',
+    title: 'Tu mascota, convertida en arte',
+    desc: 'En segundos verás su retrato artístico único, con trazos estilo tatuaje fino listos para plasmarse en tu tapete.',
   },
   {
     number: '03',

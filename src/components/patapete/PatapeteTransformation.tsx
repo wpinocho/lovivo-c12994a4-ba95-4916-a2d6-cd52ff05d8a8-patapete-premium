@@ -26,7 +26,7 @@ export const PatapeteTransformation = () => {
             <div className="flex items-center gap-4 mb-8">
               {[
                 { label: 'Tu foto', color: 'bg-muted' },
-                { label: 'Arte IA', color: 'bg-primary/15' },
+                { label: 'Retrato único', color: 'bg-primary/15' },
                 { label: 'Tu tapete', color: 'bg-primary/25' },
               ].map((item, i) => (
                 <div key={item.label} className="flex items-center gap-4">
@@ -60,7 +60,7 @@ export const PatapeteTransformation = () => {
                   decoding="async"
                 />
                 <div className="flex justify-between mt-4 px-2">
-                  {['Tu foto', 'Arte IA', 'Tu tapete'].map((label) => (
+                  {['Tu foto', 'Retrato único', 'Tu tapete'].map((label) => (
                     <div key={label} className="text-center">
                       <span className="text-xs font-medium text-muted-foreground">{label}</span>
                     </div>
