@@ -9,7 +9,7 @@ interface PhotoPetFormProps {
   petIndex: number
   pet: Pet
   onChange: (updates: Partial<Pet>) => void
-  onGenerate: (file: File) => void
+  onGenerate: (file?: File) => void
 }
 
 export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFormProps) {
@@ -37,7 +37,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
   const isProcessing = pet.isProcessingBg || pet.isGeneratingArt
   const hasResult = !!pet.generatedArtUrl
   // Has photo but no result and not currently processing = generation failed or reset
-  const canRetry = !!pet.photoFile && !hasResult && !isProcessing
+  const canRetry = (!!pet.photoFile || !!pet.photoBase64) && !hasResult && !isProcessing
 
   const statusMessage = pet.isProcessingBg
     ? 'Preparando imagen...'
@@ -133,7 +133,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
       {/* Retry button when generation failed */}
       {canRetry && (
         <button
-          onClick={() => pet.photoFile && onGenerate(pet.photoFile)}
+          onClick={() => onGenerate(pet.photoFile ?? undefined)}
           className="w-full flex items-center justify-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors py-2 border border-primary/30 rounded-xl hover:bg-primary/5"
         >
           <RefreshCw className="w-4 h-4" />

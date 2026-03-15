@@ -18,7 +18,7 @@ interface StepPetsProps {
   onPetChange: (index: number, updates: Partial<Pet>) => void
   onPhraseChange: (phrase: string) => void
   onPhrase2Change: (phrase2: string) => void
-  onGenerate: (petIndex: number, file: File) => void
+  onGenerate: (petIndex: number, file?: File) => void
   onContinue: () => void
   onPreviewReady: (dataUrl: string) => void
 }
@@ -29,7 +29,9 @@ export function StepPets({
   onGenerate, onContinue, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
-  const allPhotosUploaded = pets.slice(0, petCount).every(p => !!p.photoFile)
+  const allPhotosUploaded = pets.slice(0, petCount).every(
+    p => !!p.photoFile || !!p.photoBase64 || !!p.generatedArtUrl
+  )
   const canContinue = !isProcessing && allPhotosUploaded
 
   const price = PRICES[style][petCount]
@@ -142,7 +144,7 @@ export function StepPets({
                 petIndex={i}
                 pet={pets[i]}
                 onChange={updates => onPetChange(i, updates)}
-                onGenerate={file => onGenerate(i, file)}
+                onGenerate={file => onGenerate(i, file ?? undefined)}
               />
             </div>
           ))}

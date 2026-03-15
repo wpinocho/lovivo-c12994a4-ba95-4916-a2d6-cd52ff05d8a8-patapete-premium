@@ -1,15 +1,86 @@
-import { useState, useCallback, useRef } from 'react'
-import { ConfiguratorState, DEFAULT_PET, Pet } from './types'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
 import { StepPets } from './StepPets'
 import { StepSummary } from './StepSummary'
 import { compressAndResizeImage } from '@/utils/imagePreprocessing'
 import { generateTattooArt } from '@/utils/replicateApi'
 
+// ─── localStorage persistence ─────────────────────────────────────────────────
+const STORAGE_KEY = 'patapete_v1'
+
+interface PersistedPet {
+  name: string
+  photoBase64: string | null
+  generatedArtUrl: string | null
+}
+
+interface PersistedState {
+  style: Style
+  petCount: 1 | 2 | 3
+  phrase: string
+  phrase2: string
+  pets: PersistedPet[]
+}
+
+function loadFromStorage(): Partial<ConfiguratorState> | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const saved: PersistedState = JSON.parse(raw)
+    const pets = Array.from({ length: 3 }, (_, i) => {
+      const p = saved.pets?.[i]
+      if (!p) return { ...DEFAULT_PET }
+      return {
+        ...DEFAULT_PET,
+        name: p.name || '',
+        photoBase64: p.photoBase64 || null,
+        // Reconstruct a data-URL for display from the stored base64
+        photoPreviewUrl: p.photoBase64
+          ? `data:image/png;base64,${p.photoBase64}`
+          : null,
+        generatedArtUrl: p.generatedArtUrl || null,
+      }
+    })
+    return {
+      style: saved.style || 'dibujo',
+      petCount: saved.petCount || 1,
+      phrase: saved.phrase || '',
+      phrase2: saved.phrase2 || '',
+      step: 1, // always start at step 1 on reload
+      pets,
+    }
+  } catch {
+    return null
+  }
+}
+
+function saveToStorage(state: ConfiguratorState) {
+  try {
+    const persisted: PersistedState = {
+      style: state.style,
+      petCount: state.petCount,
+      phrase: state.phrase,
+      phrase2: state.phrase2,
+      pets: state.pets.map(p => ({
+        name: p.name,
+        photoBase64: p.photoBase64 || null,
+        generatedArtUrl: p.generatedArtUrl || null,
+      })),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
+  } catch {
+    // localStorage may be full — silently ignore
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 interface PatapeteConfiguratorProps {
   product: any
 }
 
 export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
+  const saved = loadFromStorage()
+
   const [state, setState] = useState<ConfiguratorState>({
     step: 1,
     style: 'dibujo',
@@ -20,7 +91,13 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     finalPreviewDataUrl: null,
     isGenerating: false,
     error: null,
+    ...(saved || {}),
   })
+
+  // Persist state to localStorage on every change
+  useEffect(() => {
+    saveToStorage(state)
+  }, [state])
 
   const handleStyleChange = useCallback((style: import('./types').Style) => {
     setState(s => ({ ...s, style }))
@@ -46,12 +123,14 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     setState(s => ({ ...s, phrase2 }))
   }, [])
 
-  // Accept an optional file override so we can auto-generate right after upload
-  // (React state may not have updated yet when we call this)
+  // Accept an optional file override so we can auto-generate right after upload.
+  // Also handles retry after refresh (file = undefined, photoBase64 available in state).
   const handleGenerate = useCallback(async (petIndex: number, fileOverride?: File) => {
     const pet = state.pets[petIndex]
     const fileToUse = fileOverride ?? pet.photoFile
-    if (!fileToUse) return
+
+    // Need at least a file or a stored base64 to proceed
+    if (!fileToUse && !pet.photoBase64) return
 
     const updatePet = (updates: Partial<Pet>) => {
       setState(s => {
@@ -62,16 +141,24 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     }
 
     try {
-      // Step 1: Compress image client-side (max 1024×1024, PNG)
-      updatePet({ isProcessingBg: true, isGeneratingArt: false, generatedArtUrl: null })
-      const compressedBase64 = await compressAndResizeImage(fileToUse)
-      updatePet({ isProcessingBg: false, isGeneratingArt: true })
+      let compressedBase64: string
 
-      // Step 2: Full backend pipeline (BiRefNet → smart crop → FLUX Dev)
+      if (fileToUse) {
+        // Fresh upload: compress client-side and store base64 for persistence
+        updatePet({ isProcessingBg: true, isGeneratingArt: false, generatedArtUrl: null })
+        compressedBase64 = await compressAndResizeImage(fileToUse)
+        updatePet({ isProcessingBg: false, isGeneratingArt: true, photoBase64: compressedBase64 })
+      } else {
+        // Retry after refresh: reuse stored base64 (skip re-compression)
+        compressedBase64 = pet.photoBase64!
+        updatePet({ isGeneratingArt: true, generatedArtUrl: null })
+      }
+
+      // Full backend pipeline (BiRefNet → smart crop → FLUX 2 Pro)
       const artUrl = await generateTattooArt(
         compressedBase64,
         pet.name || 'mascota',
-        styleRef.current,   // ← always the latest style (avoids stale closure)
+        styleRef.current,
         (status) => console.log(`[IA] ${status}`)
       )
 
@@ -95,7 +182,6 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   }, [])
 
   // Use a ref for style so handleGenerate always reads the latest value
-  // without needing to be recreated on every style change
   const styleRef = useRef(state.style)
   styleRef.current = state.style
 

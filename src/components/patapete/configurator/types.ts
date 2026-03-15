@@ -3,6 +3,7 @@ export type Style = 'dibujo' | 'icono'
 export interface Pet {
   photoFile: File | null
   photoPreviewUrl: string | null
+  photoBase64: string | null       // compressed base64 (no data-URL prefix) — persisted to localStorage
   processedImageUrl: string | null
   generatedArtUrl: string | null
   isProcessingBg: boolean
@@ -25,6 +26,7 @@ export interface ConfiguratorState {
 export const DEFAULT_PET: Pet = {
   photoFile: null,
   photoPreviewUrl: null,
+  photoBase64: null,
   processedImageUrl: null,
   generatedArtUrl: null,
   isProcessingBg: false,

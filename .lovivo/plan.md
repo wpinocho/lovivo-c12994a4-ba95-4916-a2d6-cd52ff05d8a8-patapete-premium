@@ -9,12 +9,21 @@ Tienda de tapetes personalizados con mascotas. El configurador tiene:
 
 ## Cambios Recientes
 
+### Persistencia del configurador (localStorage)
+- **`types.ts`**: `Pet` ahora tiene `photoBase64: string | null` (base64 comprimida sin prefijo data-URL)
+- **`PatapeteConfigurator.tsx`**: `loadFromStorage()` / `saveToStorage()` con key `patapete_v1`
+  - Se carga en `useState` init, se guarda con `useEffect` en cada cambio de estado
+  - En `handleGenerate`: si hay `fileToUse` comprime y guarda `photoBase64`; si no (retry tras refresh) usa `pet.photoBase64` directamente
+  - Al restaurar: `photoPreviewUrl = data:image/png;base64,${photoBase64}`
+- **`StepPets.tsx`**: `onGenerate(petIndex, file?)` ahora file es opcional; `allPhotosUploaded` también acepta `photoBase64` o `generatedArtUrl`
+- **`PhotoPetForm.tsx`**: `onGenerate(file?)` opcional; `canRetry` también true cuando hay `photoBase64`
+
 ### Demo images por estilo e índice de mascota
 - **`CanvasPreview.tsx`**: `DEMO_URLS: Record<Style, string[]>` con 3 URLs por estilo (una por slot de mascota)
   - `dibujo[0]` = terrier con bandana (sketch B&W)
   - `dibujo[1]` = French Bulldog sketch B&W
   - `dibujo[2]` = Chihuahua sketch B&W
-  - `icono[0]` = terrier con bandana colorido (peekaboo style) ← URL corregida (1773603073733-szmqd98fvsm.webp)
+  - `icono[0]` = terrier café con bandana colorido (peekaboo style) ← URL corregida (1773603726943-gm6jlczzsfv.webp)
   - `icono[1]` = Chihuahua colorido
   - `icono[2]` = French Bulldog colorido
 
