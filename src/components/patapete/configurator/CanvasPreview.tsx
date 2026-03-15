@@ -11,7 +11,7 @@ const DEMO_URLS: Record<Style, string[]> = {
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-hxsvvcjo85m.webp',
   ],
   icono: [
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601800207-vy6t0angu7.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773603073733-szmqd98fvsm.webp',
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ssazvmuwl7.webp',
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-2q1ktqjly0v.webp',
   ],

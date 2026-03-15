@@ -14,9 +14,9 @@ Tienda de tapetes personalizados con mascotas. El configurador tiene:
   - `dibujo[0]` = terrier con bandana (sketch B&W)
   - `dibujo[1]` = French Bulldog sketch B&W
   - `dibujo[2]` = Chihuahua sketch B&W
-  - `icono[0]` = terrier con bandana (color/icono style) ← corregido
+  - `icono[0]` = terrier con bandana colorido (peekaboo style) ← URL corregida (1773603073733-szmqd98fvsm.webp)
   - `icono[1]` = Chihuahua colorido
-  - `icono[2]` = French Bulldog colorido (fallback)
+  - `icono[2]` = French Bulldog colorido
 
 ### Estilo por default
 - `PatapeteConfigurator.tsx`: `style: 'dibujo'` es el default
