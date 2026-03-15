@@ -10,21 +10,19 @@ Tienda de tapetes personalizados con mascotas. El configurador tiene:
 ## Cambios Recientes
 
 ### Demo images por estilo e índice de mascota
-- **`CanvasPreview.tsx`**: reemplazada la constante `DEMO_PET_URL` única por un objeto `DEMO_URLS: Record<Style, string[]>` con 3 URLs por estilo (una por slot de mascota)
+- **`CanvasPreview.tsx`**: `DEMO_URLS: Record<Style, string[]>` con 3 URLs por estilo (una por slot de mascota)
   - `dibujo[0]` = terrier con bandana (sketch B&W)
   - `dibujo[1]` = French Bulldog sketch B&W
   - `dibujo[2]` = Chihuahua sketch B&W
-  - `icono[0]` = French Bulldog colorido
+  - `icono[0]` = terrier con bandana (color/icono style) ← corregido
   - `icono[1]` = Chihuahua colorido
   - `icono[2]` = French Bulldog colorido (fallback)
-- El prop `style` ahora se destructura correctamente (antes se ignoraba)
-- **`StepPets.tsx`**: botones de estilo reordenados → Icono izquierda, Dibujo derecha
 
 ### Estilo por default
-- `PatapeteConfigurator.tsx`: `style: 'dibujo'` ya era el default (sin cambios)
+- `PatapeteConfigurator.tsx`: `style: 'dibujo'` es el default
 
 ### Renderizado de mascotas: sin multiply, fondo blanco removido en browser
-- **`imagePreprocessing.ts`**: `removeWhiteBackground(url, threshold=238, fadeZone=25)` — remueve píxeles blancos vía canvas pixel manipulation
+- **`imagePreprocessing.ts`**: `removeWhiteBackground(url, threshold=238, fadeZone=25)`
 - **`CanvasPreview.tsx`**: imágenes NO se muestran hasta que el procesamiento termina (sin flash blanco)
 - **`canvasCompositing.ts`**: mismo approach para el export final
 
