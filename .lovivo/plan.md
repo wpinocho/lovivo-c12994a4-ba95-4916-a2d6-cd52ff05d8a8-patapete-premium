@@ -1,62 +1,24 @@
-# Patapete — Plan de Desarrollo
+# Patapete — Plan del Proyecto
 
-## Estado Actual
-Tienda de tapetes personalizados con mascotas. El configurador tiene:
-- **PhotoPetForm.tsx** — form principal con upload de foto y personalización de texto
-- **CanvasPreview.tsx** — preview en tiempo real con HTML + CSS
-- **canvasCompositing.ts** — export final en canvas (StepSummary)
-- **generate-tattoo/index.ts** — Edge Function: pipeline de 4 pasos (BiRefNet → normalize → Claude Haiku → FLUX 2 Pro)
+## Estado actual
+Tienda de tapetes personalizados con IA para mascotas. El configurador multi-step está funcional con persistencia en localStorage.
 
-## Cambios Recientes
+## Cambios recientes
+- **Logo real implementado:** `/public/logo.webp` — pata de coco textured marrón/beige con fondo transparente
+  - `BrandLogoLeft.tsx` ahora usa `<img src="/logo.webp" />` en lugar del SVG genérico
+  - `index.html` favicon actualizado a `/logo.webp` (con apple-touch-icon también)
+- **Persistencia del configurador:** `localStorage` key `patapete_v1` guarda estilo, mascotas, fotos (base64), generatedArtUrl y frases
+- **Configurador PatapeteConfigurator:** multi-step con estilos Dibujo/Icono, soporte para 1-3 mascotas
 
-### Persistencia del configurador (localStorage)
-- **`types.ts`**: `Pet` ahora tiene `photoBase64: string | null` (base64 comprimida sin prefijo data-URL)
-- **`PatapeteConfigurator.tsx`**: `loadFromStorage()` / `saveToStorage()` con key `patapete_v1`
-  - Se carga en `useState` init, se guarda con `useEffect` en cada cambio de estado
-  - En `handleGenerate`: si hay `fileToUse` comprime y guarda `photoBase64`; si no (retry tras refresh) usa `pet.photoBase64` directamente
-  - Al restaurar: `photoPreviewUrl = data:image/png;base64,${photoBase64}`
-- **`StepPets.tsx`**: `onGenerate(petIndex, file?)` ahora file es opcional; `allPhotosUploaded` también acepta `photoBase64` o `generatedArtUrl`
-- **`PhotoPetForm.tsx`**: `onGenerate(file?)` opcional; `canRetry` también true cuando hay `photoBase64`
+## User Preferences
+- Idioma: Español
+- Estilo: Dibujo a la derecha (default), Icono a la izquierda
+- Logo: imagen real de pata de fibra de coco (marrón/beige)
 
-### Demo images por estilo e índice de mascota
-- **`CanvasPreview.tsx`**: `DEMO_URLS: Record<Style, string[]>` con 3 URLs por estilo (una por slot de mascota)
-  - `dibujo[0]` = terrier con bandana (sketch B&W)
-  - `dibujo[1]` = French Bulldog sketch B&W
-  - `dibujo[2]` = Chihuahua sketch B&W
-  - `icono[0]` = terrier café con bandana colorido (peekaboo style) ← URL corregida (1773603726943-gm6jlczzsfv.webp)
-  - `icono[1]` = Chihuahua colorido
-  - `icono[2]` = French Bulldog colorido
-
-### Estilo por default
-- `PatapeteConfigurator.tsx`: `style: 'dibujo'` es el default
-
-### Renderizado de mascotas: sin multiply, fondo blanco removido en browser
-- **`imagePreprocessing.ts`**: `removeWhiteBackground(url, threshold=238, fadeZone=25)`
-- **`CanvasPreview.tsx`**: imágenes NO se muestran hasta que el procesamiento termina (sin flash blanco)
-- **`canvasCompositing.ts`**: mismo approach para el export final
-
-## Preferencias del Usuario
-- Textos en negro puro `#000000`, fontWeight 800
-- Tapete es el protagonista, sin cortes en su diseño
-- Preview escalado al 112% para llenar el frame
-- El preview debe simular bien la sublimación (imagen nítida, no absorbida por textura)
-- Dibujo es el estilo preferido y default
-
-## Textos Default del Preview
-- Frase superior: "Aquí manda"
-- Nombres: Max / Luna / Coco (según índice)
-- Frase inferior: "No toques... ya sabemos que estás aquí"
-
-## Edge Function: generate-tattoo (v17)
-Pipeline de 4 pasos en Supabase Edge Function:
-1. **BiRefNet** — remove background (Replicate)
-2. **Normalize** — smart crop + 800×800 white canvas (imagescript)
-3. **Upload** — pet URL a Supabase Storage bucket `pet-tattoos`
-4. **Claude Haiku 3** — genera prompt optimizado con visión (sistema por estilo)
-5. **FLUX 2 Pro** — genera arte final con input_images (pet + style ref)
-
-Secrets requeridos: `REPLICATE_API_KEY`, `ANTHROPIC_API_KEY`
-
-## Estilos disponibles
-- **dibujo** — negro puro sobre blanco, estilo sello/linocut (DEFAULT)
-- **icono** — vector plano con colores, estilo peekaboo minimalista
+## Archivos clave
+- `src/components/BrandLogoLeft.tsx` — logo en header y footer
+- `src/templates/EcommerceTemplate.tsx` — layout principal
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — configurador principal
+- `src/components/patapete/configurator/StepPets.tsx` — paso de mascotas
+- `src/components/patapete/configurator/types.ts` — tipos compartidos
+- `public/logo.webp` — logo oficial Patapete
