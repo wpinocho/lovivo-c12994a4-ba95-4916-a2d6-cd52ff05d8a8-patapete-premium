@@ -37,8 +37,9 @@ export function StepPets({
   const price = PRICES[style][petCount]
 
   return (
-    <div className="space-y-6">
-      {/* Product page header — título, rating, precio */}
+    <div className="space-y-4">
+
+      {/* ── Product header — title, rating, price (static, always on top) ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-1">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -67,31 +68,44 @@ export function StepPets({
         </div>
       </div>
 
-      {/* Desktop: 2-column layout */}
-      <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 lg:gap-8 gap-6">
+      {/* ── Main layout: 2-col sticky on desktop, single col on mobile ── */}
+      {/*    lg:items-start is REQUIRED for sticky to work in a grid     */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
 
-        {/* LEFT: Canvas preview */}
-        <div className="space-y-3">
-          <div className="hidden lg:block">
-            <CanvasPreview
-              style={style}
-              pets={pets.slice(0, petCount)}
-              phrase={phrase}
-              phrase2={phrase2}
-              onPreviewReady={onPreviewReady}
-            />
-          </div>
-          <div className="hidden lg:flex flex-wrap gap-2 text-xs text-muted-foreground">
+        {/* ── LEFT: sticky preview — desktop only ── */}
+        <div className="hidden lg:block sticky top-20">
+          <CanvasPreview
+            style={style}
+            pets={pets.slice(0, petCount)}
+            phrase={phrase}
+            phrase2={phrase2}
+            onPreviewReady={onPreviewReady}
+          />
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-3">
             <span className="bg-muted rounded-lg px-2 py-1">🇲🇽 Hecho en México</span>
             <span className="bg-muted rounded-lg px-2 py-1">📦 Envío a todo el país</span>
             <span className="bg-muted rounded-lg px-2 py-1">⭐ Garantía de satisfacción</span>
           </div>
         </div>
 
-        {/* RIGHT: Form */}
+        {/* ── RIGHT: form (mobile: full-width, desktop: right col) ── */}
         <div className="space-y-6">
 
-          {/* Style selector — first decision */}
+          {/* MOBILE: sticky preview — first thing visible, sticks on scroll */}
+          <div className="lg:hidden sticky top-16 z-10 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm">
+            {/* Constrain width so it doesn't take the full screen height */}
+            <div className="mx-auto max-w-[75%]">
+              <CanvasPreview
+                style={style}
+                pets={pets.slice(0, petCount)}
+                phrase={phrase}
+                phrase2={phrase2}
+                onPreviewReady={onPreviewReady}
+              />
+            </div>
+          </div>
+
+          {/* Style selector */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">¿Qué estilo prefieres?</Label>
             <div className="grid grid-cols-2 gap-3">
@@ -163,17 +177,6 @@ export function StepPets({
               />
             </div>
           ))}
-
-          {/* Mobile: Canvas preview */}
-          <div className="lg:hidden">
-            <CanvasPreview
-              style={style}
-              pets={pets.slice(0, petCount)}
-              phrase={phrase}
-              phrase2={phrase2}
-              onPreviewReady={onPreviewReady}
-            />
-          </div>
 
           {/* Phrase inputs */}
           <div className="space-y-3">

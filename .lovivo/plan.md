@@ -15,14 +15,20 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 - Español en toda la UI
 
 ## Recent Changes
+- **Sticky preview layout:**
+  - `StepPets.tsx`: Reestructurado con sticky preview.
+    - **Desktop:** Grid `lg:grid-cols-2 lg:items-start`. Left column tiene `sticky top-20` con CanvasPreview. Right column tiene el form completo y scrollea normalmente. Se libera al llegar a los testimonios (sticky para cuando el grid-container sale del viewport).
+    - **Mobile:** CanvasPreview aparece PRIMERO (arriba del form) con `sticky top-16 z-10`, máximo 75% de ancho centrado. Form options scrollean debajo. También se libera al llegar a "Lo que dicen nuestros clientes".
+  - Eliminado `flex-col-reverse` y el CanvasPreview duplicado de mobile dentro del form.
+
 - **Rediseño de página de producto (Patapete):**
-  - `StepPets.tsx`: Header rediseñado como página de producto real — h1 con título, star rating (4.9), precio dinámico arriba a la derecha, descripción. Eliminados: badge "Sparkles", h2 "Diseña tu tapete", label "Preview en vivo", label mobile "Preview"
-  - `ProductPageUI.tsx`: Reestructurado orden — configurador PRIMERO (above the fold), testimonios + FAQ DEBAJO del fold. Layout: max-w-5xl, separación de 20 unidades entre secciones
+  - `StepPets.tsx`: Header rediseñado como página de producto real — h1 con título, star rating (4.9), precio dinámico arriba a la derecha, descripción.
+  - `ProductPageUI.tsx`: Reestructurado — configurador PRIMERO, testimonios + FAQ DEBAJO del fold. Layout: max-w-5xl.
 
 - **Componentes nuevos creados:**
-  - `ProductSocialProof.tsx` — stats bar + 3 review cards (ahora colocado debajo del configurador)
+  - `ProductSocialProof.tsx` — stats bar + 3 review cards
   - `ProductFAQ.tsx` — 6 preguntas frecuentes con Accordion
-  - `StepSummary.tsx` — resumen con garantía Patapete prominente, specs del producto (60×40, fibra de coco, 5-7 días), timeline "¿Qué pasa después de ordenar?"
+  - `StepSummary.tsx` — resumen con garantía Patapete prominente, specs del producto, timeline post-compra
 
 ## Known Issues
 - Reviews de Carlos M. y Sara P. no tienen foto de tapete (solo Ana T. tiene imagen real del tapete)
@@ -36,3 +42,4 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 - Variant IDs hardcoded en StepSummary.tsx para 1/2/3 mascotas
 - Precios: $649 (1 mascota), $799 (2), $949 (3) — mismo precio para ambos estilos
 - Customization data guardada en localStorage con key `patapete_order_${Date.now()}`
+- Navbar height estimada: ~64px mobile / ~80px desktop (top-16 / top-20 para sticky)
