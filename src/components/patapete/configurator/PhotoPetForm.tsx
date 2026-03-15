@@ -148,7 +148,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
         </Label>
         <Input
           id={`pet-name-${petIndex}`}
-          placeholder="Ej: Max, Luna, Mochi..."
+          placeholder={(['Max', 'Luna', 'Coco'])[petIndex] || 'Max'}
           value={pet.name}
           onChange={e => onChange({ name: e.target.value })}
           maxLength={20}

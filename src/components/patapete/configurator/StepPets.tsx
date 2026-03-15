@@ -167,7 +167,7 @@ export function StepPets({
               </Label>
               <Input
                 id="phrase"
-                placeholder='Ej: "Bienvenido a casa de Max"'
+                placeholder='Aquí manda'
                 value={phrase}
                 onChange={e => onPhraseChange(e.target.value)}
                 maxLength={40}
@@ -183,7 +183,7 @@ export function StepPets({
               </Label>
               <Input
                 id="phrase2"
-                placeholder='Ej: "Luna y Max también viven aquí..."'
+                placeholder='No toques... ya sabemos que estás aquí'
                 value={phrase2}
                 onChange={e => onPhrase2Change(e.target.value)}
                 maxLength={40}

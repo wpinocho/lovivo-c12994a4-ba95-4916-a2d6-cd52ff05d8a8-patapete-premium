@@ -4,15 +4,22 @@
 Tienda de tapetes personalizados con IA. El configurador permite subir fotos de mascotas, generar retratos con IA (FLUX via Replicate), y previsualizar el resultado.
 
 ## Recent Changes
-- **phrase2 agregado**: Segunda frase (texto inferior, debajo de los perritos) — campo nuevo en todo el flujo
+- **Defaults en preview**: Cuando los campos están vacíos, el preview muestra valores por defecto (no pre-rellena los inputs):
+  - Texto superior default: "Aquí manda"
+  - Texto inferior default: "No toques... ya sabemos que estás aquí"
+  - Nombre mascota 1: "Max", 2: "Luna", 3: "Coco"
+  - Los inputs usan `placeholder` con estos valores (no `value`)
+- **Color tinta = negro puro** `#000000` (antes era marrón `#3d1f08`)
+- **Todos los textos bold** (fontWeight: 700 en todos los elementos del preview)
+- **phrase2 agregado**: Segunda frase (texto inferior, debajo de los perritos)
   - `types.ts`: `phrase2: string` en `ConfiguratorState`
   - `PatapeteConfigurator.tsx`: estado + handler `handlePhrase2Change`
   - `StepPets.tsx`: 2 inputs: "Texto superior" y "Texto inferior"
   - `CanvasPreview.tsx`: renderiza `phrase2` en `top: 74%` con Playfair italic
   - `StepSummary.tsx`: muestra phrase2 en resumen del pedido + lo guarda en localStorage
 - **Fuentes reducidas** para evitar solapamiento entre frase y nombre:
-  - `phrase`: 5.76cqw → 3.5cqw
-  - `name`: 4.88cqw → 3.0cqw
+  - `phrase`: 3.5cqw
+  - `name`: 3.0cqw
   - `phrase2`: 3.5cqw
 
 ## Architecture
@@ -20,7 +27,7 @@ Tienda de tapetes personalizados con IA. El configurador permite subir fotos de 
 ### Frontend
 - `src/components/patapete/configurator/CanvasPreview.tsx` — **CSS-based** preview (% positions + cqw text)
 - `src/utils/canvasCompositing.ts` — Canvas compositing: still used for `onPreviewReady` dataUrl (StepSummary)
-- `src/components/patapete/configurator/PhotoPetForm.tsx` — Upload form per pet
+- `src/components/patapete/configurator/PhotoPetForm.tsx` — Upload form per pet (placeholder dinámico por índice)
 - `src/components/patapete/configurator/types.ts` — Pet/Style types
 
 ### CSS Preview Layout (container-relative %)

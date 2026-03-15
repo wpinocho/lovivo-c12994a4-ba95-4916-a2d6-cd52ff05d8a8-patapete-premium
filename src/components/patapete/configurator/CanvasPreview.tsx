@@ -44,8 +44,13 @@ const FONT = {
   phrase2: '3.5cqw',  // bottom phrase — below pets
 }
 
-// Dark brown ink — readable on the coir rug texture
-const INK = '#3d1f08'
+// Default texts shown in preview when user hasn't typed anything
+const DEFAULT_PHRASE  = 'Aquí manda'
+const DEFAULT_PHRASE2 = 'No toques... ya sabemos que estás aquí'
+const DEFAULT_NAMES   = ['Max', 'Luna', 'Coco']
+
+// Pure black ink
+const INK = '#000000'
 
 interface CanvasPreviewProps {
   style: Style
@@ -88,23 +93,21 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
       />
 
       {/* ── Phrase — top area of rug surface (34.71%) ──────────────────── */}
-      {phrase?.trim() && (
-        <p
-          className="absolute w-full text-center pointer-events-none"
-          style={{
-            top: '34.71%',
-            fontSize: FONT.phrase,
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontStyle: 'italic',
-            fontWeight: 700,
-            color: INK,
-            padding: '0 8%',
-            lineHeight: 1.1,
-          }}
-        >
-          {phrase}
-        </p>
-      )}
+      <p
+        className="absolute w-full text-center pointer-events-none"
+        style={{
+          top: '34.71%',
+          fontSize: FONT.phrase,
+          fontFamily: '"Playfair Display", Georgia, serif',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          color: INK,
+          padding: '0 8%',
+          lineHeight: 1.1,
+        }}
+      >
+        {phrase?.trim() || DEFAULT_PHRASE}
+      </p>
 
       {/* ── Pet illustrations ───────────────────────────────────────────── */}
       {layout.pets.map((petLayout, i) => {
@@ -123,22 +126,21 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
             }}
           >
             {/* Name floats above the pet illustration */}
-            {pet.name?.trim() && (
-              <span
-                className="absolute w-full text-center font-bold pointer-events-none"
-                style={{
-                  // top:0 + translateY(-100%) = bottom of name aligns with top of wrapper
-                  top: 0,
-                  transform: 'translateY(calc(-100% - 4px))',
-                  fontSize: FONT.name,
-                  fontFamily: '"Plus Jakarta Sans", sans-serif',
-                  color: INK,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {pet.name}
-              </span>
-            )}
+            <span
+              className="absolute w-full text-center font-bold pointer-events-none"
+              style={{
+                // top:0 + translateY(-100%) = bottom of name aligns with top of wrapper
+                top: 0,
+                transform: 'translateY(calc(-100% - 4px))',
+                fontSize: FONT.name,
+                fontFamily: '"Plus Jakarta Sans", sans-serif',
+                fontWeight: 700,
+                color: INK,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {pet.name?.trim() || DEFAULT_NAMES[i]}
+            </span>
 
             {/* Pet illustration — multiply blend removes white background onto rug */}
             <img
@@ -154,23 +156,21 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
       })}
 
       {/* ── Phrase 2 — bottom area of rug (below pets) ─────────────────── */}
-      {phrase2?.trim() && (
-        <p
-          className="absolute w-full text-center pointer-events-none"
-          style={{
-            top: '74%',
-            fontSize: FONT.phrase2,
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontStyle: 'italic',
-            fontWeight: 700,
-            color: INK,
-            padding: '0 8%',
-            lineHeight: 1.2,
-          }}
-        >
-          {phrase2}
-        </p>
-      )}
+      <p
+        className="absolute w-full text-center pointer-events-none"
+        style={{
+          top: '74%',
+          fontSize: FONT.phrase2,
+          fontFamily: '"Playfair Display", Georgia, serif',
+          fontStyle: 'italic',
+          fontWeight: 700,
+          color: INK,
+          padding: '0 8%',
+          lineHeight: 1.2,
+        }}
+      >
+        {phrase2?.trim() || DEFAULT_PHRASE2}
+      </p>
     </div>
   )
 }
