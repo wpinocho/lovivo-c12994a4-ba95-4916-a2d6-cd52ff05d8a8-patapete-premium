@@ -9,29 +9,31 @@ Tienda de tapetes personalizados con mascotas. El configurador tiene:
 
 ## Cambios Recientes
 
-### Renderizado de mascotas: sin multiply, fondo blanco removido en browser
-- **`imagePreprocessing.ts`**: nueva función `removeWhiteBackground(url, threshold=238, fadeZone=25)` — remueve píxeles blancos/casi-blancos vía canvas pixel manipulation, sin backend. Preserva todo el fur/colores (min channel < 213 = opaco, >238 = transparente, fade suave en el medio).
-- **`CanvasPreview.tsx`**: 
-  - Cache de URLs procesadas en `transparentUrls` state + `processingRef` para no re-procesar
-  - Procesa cada URL de mascota (demo o generada) con `removeWhiteBackground` 
-  - Usa `transparentUrls[imgUrl] || imgUrl` como src del `<img>`
-  - **Eliminado** `mixBlendMode: 'multiply'` del elemento img
-- **`canvasCompositing.ts`**:
-  - Importa `removeWhiteBackground`
-  - Para `isGenerated` y `isDemo`: procesa URL antes de dibujar, sin multiply blend
-  - Resultado: simula sublimación real — imagen nítida encima del tapete
+### Demo images por estilo e índice de mascota
+- **`CanvasPreview.tsx`**: reemplazada la constante `DEMO_PET_URL` única por un objeto `DEMO_URLS: Record<Style, string[]>` con 3 URLs por estilo (una por slot de mascota)
+  - `dibujo[0]` = terrier con bandana (sketch B&W)
+  - `dibujo[1]` = French Bulldog sketch B&W
+  - `dibujo[2]` = Chihuahua sketch B&W
+  - `icono[0]` = French Bulldog colorido
+  - `icono[1]` = Chihuahua colorido
+  - `icono[2]` = French Bulldog colorido (fallback)
+- El prop `style` ahora se destructura correctamente (antes se ignoraba)
+- **`StepPets.tsx`**: botones de estilo reordenados → Icono izquierda, Dibujo derecha
 
-### Por qué este approach:
-- Las imágenes de FLUX ya tienen fondo `#FFFFFF` puro → fácil de remover
-- El demo Border Terrier también tiene fondo blanco
-- `multiply` fusionaba los medios tonos con la textura del yute → imagen borrosa
-- PNG transparente compositeado encima = se ve como sublimación real (impresa sobre el tapete)
+### Estilo por default
+- `PatapeteConfigurator.tsx`: `style: 'dibujo'` ya era el default (sin cambios)
+
+### Renderizado de mascotas: sin multiply, fondo blanco removido en browser
+- **`imagePreprocessing.ts`**: `removeWhiteBackground(url, threshold=238, fadeZone=25)` — remueve píxeles blancos vía canvas pixel manipulation
+- **`CanvasPreview.tsx`**: imágenes NO se muestran hasta que el procesamiento termina (sin flash blanco)
+- **`canvasCompositing.ts`**: mismo approach para el export final
 
 ## Preferencias del Usuario
 - Textos en negro puro `#000000`, fontWeight 800
 - Tapete es el protagonista, sin cortes en su diseño
 - Preview escalado al 112% para llenar el frame
 - El preview debe simular bien la sublimación (imagen nítida, no absorbida por textura)
+- Dibujo es el estilo preferido y default
 
 ## Textos Default del Preview
 - Frase superior: "Aquí manda"
@@ -49,5 +51,5 @@ Pipeline de 4 pasos en Supabase Edge Function:
 Secrets requeridos: `REPLICATE_API_KEY`, `ANTHROPIC_API_KEY`
 
 ## Estilos disponibles
-- **dibujo** — negro puro sobre blanco, estilo sello/linocut
+- **dibujo** — negro puro sobre blanco, estilo sello/linocut (DEFAULT)
 - **icono** — vector plano con colores, estilo peekaboo minimalista

@@ -3,9 +3,19 @@ import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
 import { removeWhiteBackground } from '@/utils/imagePreprocessing'
 
-// Border Terrier peekaboo demo — white background removed in browser, clean composite
-const DEMO_PET_URL =
-  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773506866318-25g4wpclpbo.webp'
+// Demo images per style and pet index (0-based)
+const DEMO_URLS: Record<Style, string[]> = {
+  dibujo: [
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-arwx7s0sczr.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ubs0fcngr3.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-hxsvvcjo85m.webp',
+  ],
+  icono: [
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-2q1ktqjly0v.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ssazvmuwl7.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-2q1ktqjly0v.webp',
+  ],
+}
 
 // Lighter coir rug mockup (2048×2048)
 const TAPETE_URL =
@@ -60,7 +70,7 @@ interface CanvasPreviewProps {
   onPreviewReady?: (dataUrl: string) => void
 }
 
-export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasPreviewProps) {
+export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: CanvasPreviewProps) {
   const count = Math.min(Math.max(pets.length, 1), 3) as PetCount
   const layout = LAYOUTS[count]
 
@@ -69,7 +79,7 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
   const processingRef = useRef<Set<string>>(new Set())
 
   // Collect all image URLs needed this render
-  const imgUrls = pets.map((pet) => pet.generatedArtUrl || DEMO_PET_URL)
+  const imgUrls = pets.map((pet, i) => pet.generatedArtUrl || DEMO_URLS[style][i])
 
   useEffect(() => {
     imgUrls.forEach((url) => {
@@ -87,8 +97,8 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
 
   useEffect(() => {
     if (!onPreviewReady) return
-    const petData: PetCompositeData[] = pets.map(pet => ({
-      imageUrl: pet.generatedArtUrl || DEMO_PET_URL,
+    const petData: PetCompositeData[] = pets.map((pet, i) => ({
+      imageUrl: pet.generatedArtUrl || DEMO_URLS[style][i],
       name: pet.name,
       isGenerated: true,
     }))
@@ -140,7 +150,7 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
         {layout.pets.map((petLayout, i) => {
           const pet = pets[i]
           if (!pet) return null
-          const imgUrl = pet.generatedArtUrl || DEMO_PET_URL
+          const imgUrl = pet.generatedArtUrl || DEMO_URLS[style][i]
 
           return (
             <div

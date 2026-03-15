@@ -79,21 +79,6 @@ export function StepPets({
             <Label className="text-sm font-semibold">¿Qué estilo prefieres?</Label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => onStyleChange('dibujo')}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
-                  style === 'dibujo'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/40'
-                )}
-              >
-                <PenLine className={cn('w-6 h-6', style === 'dibujo' ? 'text-primary' : 'text-muted-foreground')} />
-                <span className="font-semibold text-sm text-foreground">Dibujo</span>
-                <span className="text-xs text-muted-foreground text-center leading-snug">
-                  Líneas negras gruesas, estilo sello
-                </span>
-              </button>
-              <button
                 onClick={() => onStyleChange('icono')}
                 className={cn(
                   'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
@@ -106,6 +91,21 @@ export function StepPets({
                 <span className="font-semibold text-sm text-foreground">Icono</span>
                 <span className="text-xs text-muted-foreground text-center leading-snug">
                   Vector colorido, minimalista
+                </span>
+              </button>
+              <button
+                onClick={() => onStyleChange('dibujo')}
+                className={cn(
+                  'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
+                  style === 'dibujo'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/40'
+                )}
+              >
+                <PenLine className={cn('w-6 h-6', style === 'dibujo' ? 'text-primary' : 'text-muted-foreground')} />
+                <span className="font-semibold text-sm text-foreground">Dibujo</span>
+                <span className="text-xs text-muted-foreground text-center leading-snug">
+                  Líneas negras gruesas, estilo sello
                 </span>
               </button>
             </div>
