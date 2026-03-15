@@ -169,14 +169,15 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
                 {pet.name?.trim() || DEFAULT_NAMES[i]}
               </span>
 
-              {/* Pet illustration — transparent PNG composited over the rug */}
-              <img
-                src={transparentUrls[imgUrl] || imgUrl}
-                alt={pet.name || `Mascota ${i + 1}`}
-                className="w-full h-auto block select-none"
-                crossOrigin="anonymous"
-                draggable={false}
-              />
+              {/* Pet illustration — only render once background removal is done (no white flash) */}
+              {transparentUrls[imgUrl] && (
+                <img
+                  src={transparentUrls[imgUrl]}
+                  alt={pet.name || `Mascota ${i + 1}`}
+                  className="w-full h-auto block select-none"
+                  draggable={false}
+                />
+              )}
             </div>
           )
         })}
