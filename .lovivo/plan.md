@@ -1,39 +1,70 @@
-# Patapete — Plan del Proyecto
+# Plan: CRO — Página de Producto Patapete
+
+## Objetivo
+Aumentar el conversion rate de la página de producto del tapete personalizado.
+La página de producto es el `PatapeteConfigurator` (StepPets + StepSummary), no la genérica de Lovivo.
 
 ## Estado actual
-Tienda de tapetes personalizados para mascotas. El configurador multi-step está funcional con persistencia en localStorage. Messaging actualizado para enfocarse en la mascota, no en la IA.
+- `StepPets`: configurador principal (estilo, mascotas, fotos, frases)
+- `StepSummary`: resumen + botón agregar al carrito
+- Hay trust badges básicos (4 íconos emoji)
+- No hay urgencia, no hay FAQ, no hay social proof IN-PAGE, no hay garantía prominente
+- No hay info de producto (tamaño, material, cuidado)
 
-## Cambios recientes
-- **Messaging / Copy:** Eliminadas todas las referencias a "IA" como diferenciador principal en toda la landing:
-  - `PatapeteHero.tsx`: subheadline humanizada — "Sube su foto. Ve cómo queda en tu tapete antes de comprarlo — hecho especialmente para ti."
-  - `PatapeteHowItWorks.tsx`: Paso 02 → "Tu mascota, convertida en arte" (antes: "La IA crea el retrato")
-  - `PatapeteGallery.tsx`: etiquetas sin "· Retrato IA" (ahora solo nombre + n° mascotas)
-  - `PatapetePersonalization.tsx`: feature card → "Su retrato artístico, hecho para ti"
-  - `PatapeteTransformation.tsx`: pasos → "Retrato único" (antes: "Arte IA")
-  - `StepPets.tsx` (configurador): badge → "Solo para tu mascota · Diseño exclusivo"; párrafo → "ve cómo queda en tu tapete antes de pedirlo"
-- **Nueva sección testimonios:** `PatapeteTestimonials.tsx` reemplaza `PatapeteStyles.tsx`
-  - 4 testimonios con nombre, ciudad, mascota, texto emocional, estrellas
-  - Avatares con iniciales (placeholder — usuario proveerá fotos después)
-  - Rating agregado: 4.9 · 500+ reseñas
-- **Logo real implementado:** `/public/logo.webp` — pata de coco textured marrón/beige
-- **Persistencia del configurador:** `localStorage` key `patapete_v1`
+## Hallazgos de investigación CRO
+Basado en estudios 2024-2026:
+- **Social proof en contexto** = +3-4x conversión (reviews IN-PAGE, no solo en landing)
+- **Sticky CTA / urgencia** = +8-15% lift
+- **FAQ inline** = reduce objeciones sin salir de la página
+- **Garantía prominente** = reduce miedo al comprar algo custom
+- **Especificaciones claras** (tamaño, material) = quita la duda más grande en tapetes
+- **Progress bar** en configurador = reduce abandono mid-flow
 
-## Pendiente
-- Usuario proveerá fotos reales de tapetes para la galería (`PatapeteGallery`) y testimonios
-- Cuando lleguen las fotos: agregar al `PatapeteTestimonials` y reemplazar placeholder avatars
+## Cambios a implementar
 
-## User Preferences
-- Idioma: Español
-- Diferenciador: tapete a la medida con TU mascota — la IA es el cómo, no el qué
-- No queremos marketing de IA, queremos marketing emocional de mascotas
-- Estilo visual: premium, cálido, cercano
+### 1. Nuevo componente: `PatapeteProductFAQ.tsx`
+Acordeón con las 6 preguntas más comunes:
+- ¿A qué tamaño llega el tapete?
+- ¿De qué material está hecho?
+- ¿Cuánto tarda en llegar?
+- ¿Qué pasa si no me gusta el diseño?
+- ¿Qué tipo de foto necesito subir?
+- ¿Puedo poner texto en el tapete?
 
-## Archivos clave
-- `src/components/BrandLogoLeft.tsx` — logo en header y footer
-- `src/templates/EcommerceTemplate.tsx` — layout principal
-- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — configurador principal
-- `src/components/patapete/configurator/StepPets.tsx` — paso de mascotas
-- `src/components/patapete/configurator/types.ts` — tipos compartidos
-- `src/components/patapete/PatapeteTestimonials.tsx` — sección de testimonios (nueva)
-- `src/pages/ui/IndexUI.tsx` — estructura de la homepage
-- `public/logo.webp` — logo oficial Patapete
+### 2. Nuevo componente: `PatapeteSocialProofBar.tsx`
+Barra discreta con:
+- Conteo: "🐾 +500 tapetes entregados"
+- Rating: "⭐ 4.9/5 de satisfacción"
+- Social: "👀 12 personas configurando ahora"
+- 2 mini-reviews en horizontal (excerpt corto + nombre)
+
+### 3. Mejorar `StepSummary.tsx`
+- Garantía prominente con tarjeta verde: "Si el diseño no te gusta, lo rehacemos sin costo. Sin preguntas."
+- Urgencia sutil: "Producción artesanal · Entrega en 5-7 días hábiles"
+- Especificaciones del producto: sección con icono + texto: Tamaño 60x40cm, Fibra de coco natural, Lavable con agua fría
+- Mejorar el botón CTA: agregar micro-texto debajo "✓ Personalización guardada · Pago 100% seguro"
+- Después de "agregado": botón prominente "Ir al carrito →" en verde
+
+### 4. Mejorar `StepPets.tsx`
+- Progress steps visualization: "Paso 1 de 2 · Configura tu tapete" con indicador visual simple
+- Mini social proof inline: pequeño texto debajo del título: "Únete a +500 dueños que ya tienen el suyo"
+
+### 5. Integrar todo en `PatapeteConfigurator.tsx`
+- Mostrar `PatapeteSocialProofBar` encima del configurador (step 1 only)
+- Mostrar `PatapeteProductFAQ` debajo del configurador (siempre)
+
+## Archivos a modificar
+- `src/components/patapete/configurator/StepSummary.tsx`: garantía prominente, urgencia, specs, mejor post-add CTA
+- `src/components/patapete/configurator/StepPets.tsx`: progress indicator, mini social proof texto
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx`: integrar nuevos componentes
+
+## Archivos a crear
+- `src/components/patapete/PatapeteProductFAQ.tsx`: acordeón FAQ
+- `src/components/patapete/PatapeteSocialProofBar.tsx`: barra social proof
+
+## Notas técnicas
+- El FAQ usa Radix Accordion (ya disponible en el proyecto)
+- No usar imágenes hardcodeadas — el usuario las proveerá después
+- Mantener el estilo visual existente (rounded-2xl, colores primary, card-premium)
+- La garantía usa el color green-50/green-200 ya usado en el success state del StepSummary
+- "12 personas viendo" puede ser un número estático (no requiere backend)
