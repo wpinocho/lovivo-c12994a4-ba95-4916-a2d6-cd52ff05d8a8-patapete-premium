@@ -8,6 +8,11 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Tapete previsualizador — enables cqw (container query width) units for text */
+.tapete-preview {
+  container-type: inline-size;
+}
+
 /* ============================================
    PATAPETE DESIGN SYSTEM
    All colors are HSL. Warm, premium, DTC.

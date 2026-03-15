@@ -1,33 +1,40 @@
 # Patapete — Plan de Desarrollo
 
 ## Current State
-Tienda de tapetes personalizados con IA. El configurador permite subir fotos de mascotas, generar retratos con IA (FLUX via Replicate), y previsualizar el resultado en un canvas con mockup de tapete.
+Tienda de tapetes personalizados con IA. El configurador permite subir fotos de mascotas, generar retratos con IA (FLUX via Replicate), y previsualizar el resultado.
 
 ## Recent Changes
-- **Demo image actualizada**: La imagen de placeholder en el previsualizador ahora usa el Border Terrier vector peekaboo (imagen de alta calidad subida por el usuario). URL: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773506866318-25g4wpclpbo.webp`
-- **Renderizado demo mejorado**: Eliminado el estilo circular/opaco para demos. Ahora todas las imágenes (demo y generadas) usan el mismo blend peekaboo con multiply (fondo blanco desaparece sobre textura del tapete).
-- **Canvas layout corregido** (sesión anterior): Slots de tamaño fijo (220/172/142px para 1/2/3 mascotas), ancla en Y_PAW=415, frase dentro del tapete en Y_PHRASE_BTM=474, nombres debajo de la frase.
+- **Previsualizador reescrito** (sesión actual): Reemplazado canvas approach por CSS puro + Container Queries
+  - `CanvasPreview.tsx`: ahora usa HTML/CSS con posicionamiento en % (Figma-derived), cqw para textos, mix-blend-mode: multiply para imágenes
+  - `index.css`: agregada clase `.tapete-preview` con `container-type: inline-size` para habilitar cqw
+  - Eliminado badge "Ejemplo · Sube tu foto para ver tu mascota"
+  - Canvas sigue corriendo en background solo para `onPreviewReady` (StepSummary)
 
 ## Architecture
 
 ### Frontend
-- `src/components/patapete/configurator/CanvasPreview.tsx` — Preview canvas, DEMO_IMAGES, rendering logic
-- `src/utils/canvasCompositing.ts` — Canvas compositing: slots, peekaboo layout, phrase/names
+- `src/components/patapete/configurator/CanvasPreview.tsx` — **CSS-based** preview (% positions + cqw text)
+- `src/utils/canvasCompositing.ts` — Canvas compositing: still used for `onPreviewReady` dataUrl (StepSummary)
 - `src/components/patapete/configurator/PhotoPetForm.tsx` — Upload form per pet
 - `src/components/patapete/configurator/types.ts` — Pet/Style types
 
-### Canvas Layout (600×600)
-- Y_PAW = 415 (línea de patitas, borde superior del tapete)
-- Y_CLIP = 438 (recorte del arte peekaboo, muestra ~23px de patitas)
-- Y_PHRASE_BTM = 474 (frase dentro del tapete)
-- PAW_RATIO = 0.76
-- Tamaños: 1 mascota=220px, 2=172px, 3=142px
+### CSS Preview Layout (container-relative %)
+Coordinates from Figma (2048×2048 frame), all in % of square container:
+
+**Texts:**
+- `texto-top` (phrase): top=34.71%, font-size=5.76cqw
+- `nombre-perro` (per pet): font-size=4.88cqw, positioned via `translateY(-100% - 3px)` above each pet wrapper
+
+**Pet positions:**
+- 1 mascota: width=27.39%, left=36.32%, top=45.26%
+- 2 mascotas: width=27.39%, top=45.26%, left=[18.06%, 52.29%]
+- 3 mascotas: width=20.55%, top=49.21%, left=[15.28%, 39.30%, 63.81%]
 
 ### Backend (Edge Function)
 - `supabase/functions/generate-tattoo/index.ts` — Replicate API (FLUX) + Claude Haiku para análisis
 - Estilos: `dibujo` (blanco/negro, estilo sello/grabado) e `icono` (vector colorido plano)
 
 ## Known Issues / Notes
-- El mockup del tapete es `TAPETE_MOCKUP_URL` en `canvasCompositing.ts` — imagen 2048×2048 en Supabase
-- El `isGenerated: true` se aplica siempre (incluso a demos) para que el multiply blend funcione correctamente con fondos blancos
-- El badge "Ejemplo · Sube tu foto..." se controla vía `hasRealImage` que usa `pets.some(p => !!p.generatedArtUrl)`
+- El mockup del tapete es `TAPETE_URL` en `CanvasPreview.tsx` — imagen 2048×2048 en Supabase
+- Demo pet: Border Terrier peekaboo vector (blanco bg → multiply blend sobre rug texture)
+- Las fuentes Playfair Display y Plus Jakarta Sans están cargadas en index.css via Google Fonts
