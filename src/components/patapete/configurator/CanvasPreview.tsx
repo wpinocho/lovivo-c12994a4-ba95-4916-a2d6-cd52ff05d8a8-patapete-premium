@@ -40,7 +40,7 @@ const LAYOUTS: Record<PetCount, { pets: { left: string }[]; petWidth: string; pe
 const FONT = {
   phrase: '5.5cqw',   // top phrase — above pets
   name: '4.5cqw',     // pet name — floats just above each illustration
-  phrase2: '5.5cqw',  // bottom phrase — below pets
+  phrase2: '4.2cqw',  // bottom phrase — below pets
 }
 
 // Default texts shown in preview when user hasn't typed anything
@@ -138,7 +138,8 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
                 className="absolute w-full text-center pointer-events-none"
                 style={{
                   top: 0,
-                  transform: 'translateY(calc(-100% - 4px))',
+                  transform: 'translateY(calc(-100% + 14px))',
+                  paddingBottom: '0px',
                   fontSize: FONT.name,
                   fontFamily: '"Plus Jakarta Sans", sans-serif',
                   fontWeight: 800,
