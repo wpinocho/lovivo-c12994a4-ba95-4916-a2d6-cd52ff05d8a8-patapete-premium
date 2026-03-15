@@ -130,10 +130,20 @@ export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
   if (logic.product?.slug === PATAPETE_SLUG) {
     return (
       <EcommerceTemplate>
-        <div className="max-w-4xl mx-auto px-2 sm:px-0 space-y-10">
-          <ProductSocialProof />
+        <div className="max-w-5xl mx-auto px-2 sm:px-0">
+          {/* Configurador — lo primero que ve el usuario */}
           <PatapeteConfigurator product={logic.product} />
-          <ProductFAQ />
+
+          {/* Testimonios — debajo del fold */}
+          <div className="mt-20 space-y-6">
+            <h2 className="text-xl font-bold text-foreground text-center">Lo que dicen nuestros clientes</h2>
+            <ProductSocialProof />
+          </div>
+
+          {/* FAQ */}
+          <div className="mt-12">
+            <ProductFAQ />
+          </div>
         </div>
       </EcommerceTemplate>
     )

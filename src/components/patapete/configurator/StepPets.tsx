@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { Sparkles, PenLine, Palette } from 'lucide-react'
+import { PenLine, Palette, Star } from 'lucide-react'
 
 interface StepPetsProps {
   style: Style
@@ -38,15 +38,33 @@ export function StepPets({
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-semibold px-3 py-1 rounded-full border border-primary/20">
-          <Sparkles className="w-3.5 h-3.5" />
-          Solo para tu mascota · Diseño exclusivo
+      {/* Product page header — título, rating, precio */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-1">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex">
+              {[0,1,2,3,4].map(i => (
+                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <span className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">4.9</span>{' '}· +500 tapetes entregados
+            </span>
+          </div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+            Tapete personalizado con tu mascota
+          </h1>
+          <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
+            Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
+          </p>
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Diseña tu tapete</h2>
-        <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-          Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
-        </p>
+        <div className="sm:text-right shrink-0">
+          <div className="text-3xl font-bold text-foreground">
+            ${price.toLocaleString('es-MX')}
+            <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Hecho a pedido en México</p>
+        </div>
       </div>
 
       {/* Desktop: 2-column layout */}
@@ -55,9 +73,6 @@ export function StepPets({
         {/* LEFT: Canvas preview */}
         <div className="space-y-3">
           <div className="hidden lg:block">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Preview en vivo
-            </p>
             <CanvasPreview
               style={style}
               pets={pets.slice(0, petCount)}
@@ -150,8 +165,7 @@ export function StepPets({
           ))}
 
           {/* Mobile: Canvas preview */}
-          <div className="lg:hidden space-y-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
+          <div className="lg:hidden">
             <CanvasPreview
               style={style}
               pets={pets.slice(0, petCount)}
