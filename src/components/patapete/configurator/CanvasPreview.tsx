@@ -36,12 +36,11 @@ const LAYOUTS: Record<PetCount, { pets: { left: string }[]; petWidth: string; pe
   },
 }
 
-// cqw font sizes — reduced so phrase + name don't overlap
-// (Playfair Display has tall ascenders, use conservative values)
+// cqw font sizes — scaled up for better readability on the rug
 const FONT = {
-  phrase: '3.5cqw',   // top phrase — above pets
-  name: '3.0cqw',     // pet name — floats just above each illustration
-  phrase2: '3.5cqw',  // bottom phrase — below pets
+  phrase: '5.5cqw',   // top phrase — above pets
+  name: '4.5cqw',     // pet name — floats just above each illustration
+  phrase2: '5.5cqw',  // bottom phrase — below pets
 }
 
 // Default texts shown in preview when user hasn't typed anything
@@ -83,94 +82,103 @@ export function CanvasPreview({ pets, phrase, phrase2, onPreviewReady }: CanvasP
     // so cqw units scale with the container width, not the viewport.
     <div className="tapete-preview relative w-full aspect-square rounded-2xl overflow-hidden border border-border shadow-inner">
 
-      {/* ── Rug background ─────────────────────────────────────────────── */}
-      <img
-        src={TAPETE_URL}
-        alt="Tapete personalizado Patapete"
-        className="absolute inset-0 w-full h-full object-cover select-none"
-        crossOrigin="anonymous"
-        draggable={false}
-      />
-
-      {/* ── Phrase — top area of rug surface (34.71%) ──────────────────── */}
-      <p
-        className="absolute w-full text-center pointer-events-none"
+      {/* ── Scaled content wrapper — zooms in 12% so rug fills more of the frame ── */}
+      <div
         style={{
-          top: '34.71%',
-          fontSize: FONT.phrase,
-          fontFamily: '"Playfair Display", Georgia, serif',
-          fontStyle: 'italic',
-          fontWeight: 700,
-          color: INK,
-          padding: '0 8%',
-          lineHeight: 1.1,
+          position: 'absolute',
+          inset: 0,
+          transform: 'scale(1.12)',
+          transformOrigin: 'center center',
         }}
       >
-        {phrase?.trim() || DEFAULT_PHRASE}
-      </p>
+        {/* ── Rug background ─────────────────────────────────────────────── */}
+        <img
+          src={TAPETE_URL}
+          alt="Tapete personalizado Patapete"
+          className="absolute inset-0 w-full h-full object-cover select-none"
+          crossOrigin="anonymous"
+          draggable={false}
+        />
 
-      {/* ── Pet illustrations ───────────────────────────────────────────── */}
-      {layout.pets.map((petLayout, i) => {
-        const pet = pets[i]
-        if (!pet) return null
-        const imgUrl = pet.generatedArtUrl || DEMO_PET_URL
+        {/* ── Phrase — top area of rug surface (34.71%) ──────────────────── */}
+        <p
+          className="absolute w-full text-center pointer-events-none"
+          style={{
+            top: '34.71%',
+            fontSize: FONT.phrase,
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontStyle: 'italic',
+            fontWeight: 800,
+            color: INK,
+            padding: '0 8%',
+            lineHeight: 1.1,
+          }}
+        >
+          {phrase?.trim() || DEFAULT_PHRASE}
+        </p>
 
-        return (
-          <div
-            key={i}
-            className="absolute"
-            style={{
-              width: layout.petWidth,
-              top: layout.petTop,
-              left: petLayout.left,
-            }}
-          >
-            {/* Name floats above the pet illustration */}
-            <span
-              className="absolute w-full text-center font-bold pointer-events-none"
+        {/* ── Pet illustrations ───────────────────────────────────────────── */}
+        {layout.pets.map((petLayout, i) => {
+          const pet = pets[i]
+          if (!pet) return null
+          const imgUrl = pet.generatedArtUrl || DEMO_PET_URL
+
+          return (
+            <div
+              key={i}
+              className="absolute"
               style={{
-                // top:0 + translateY(-100%) = bottom of name aligns with top of wrapper
-                top: 0,
-                transform: 'translateY(calc(-100% - 4px))',
-                fontSize: FONT.name,
-                fontFamily: '"Plus Jakarta Sans", sans-serif',
-                fontWeight: 700,
-                color: INK,
-                whiteSpace: 'nowrap',
+                width: layout.petWidth,
+                top: layout.petTop,
+                left: petLayout.left,
               }}
             >
-              {pet.name?.trim() || DEFAULT_NAMES[i]}
-            </span>
+              {/* Name floats above the pet illustration */}
+              <span
+                className="absolute w-full text-center pointer-events-none"
+                style={{
+                  top: 0,
+                  transform: 'translateY(calc(-100% - 4px))',
+                  fontSize: FONT.name,
+                  fontFamily: '"Plus Jakarta Sans", sans-serif',
+                  fontWeight: 800,
+                  color: INK,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {pet.name?.trim() || DEFAULT_NAMES[i]}
+              </span>
 
-            {/* Pet illustration — multiply blend removes white background onto rug */}
-            <img
-              src={imgUrl}
-              alt={pet.name || `Mascota ${i + 1}`}
-              className="w-full h-auto block select-none"
-              style={{ mixBlendMode: 'multiply' }}
-              crossOrigin="anonymous"
-              draggable={false}
-            />
-          </div>
-        )
-      })}
+              {/* Pet illustration — multiply blend removes white background onto rug */}
+              <img
+                src={imgUrl}
+                alt={pet.name || `Mascota ${i + 1}`}
+                className="w-full h-auto block select-none"
+                style={{ mixBlendMode: 'multiply' }}
+                crossOrigin="anonymous"
+                draggable={false}
+              />
+            </div>
+          )
+        })}
 
-      {/* ── Phrase 2 — bottom area of rug (below pets) ─────────────────── */}
-      <p
-        className="absolute w-full text-center pointer-events-none"
-        style={{
-          top: '74%',
-          fontSize: FONT.phrase2,
-          fontFamily: '"Playfair Display", Georgia, serif',
-          fontStyle: 'italic',
-          fontWeight: 700,
-          color: INK,
-          padding: '0 8%',
-          lineHeight: 1.2,
-        }}
-      >
-        {phrase2?.trim() || DEFAULT_PHRASE2}
-      </p>
+        {/* ── Phrase 2 — bottom area of rug (below pets) ─────────────────── */}
+        <p
+          className="absolute w-full text-center pointer-events-none"
+          style={{
+            top: '74%',
+            fontSize: FONT.phrase2,
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontStyle: 'italic',
+            fontWeight: 800,
+            color: INK,
+            padding: '0 8%',
+            lineHeight: 1.2,
+          }}
+        >
+          {phrase2?.trim() || DEFAULT_PHRASE2}
+        </p>
+      </div>
     </div>
   )
 }

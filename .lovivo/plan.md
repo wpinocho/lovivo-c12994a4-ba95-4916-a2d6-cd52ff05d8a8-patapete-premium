@@ -4,23 +4,21 @@
 Tienda de tapetes personalizados con IA. El configurador permite subir fotos de mascotas, generar retratos con IA (FLUX via Replicate), y previsualizar el resultado.
 
 ## Recent Changes
+- **Zoom del preview +12%**: Todo el contenido del preview está envuelto en un div con `transform: scale(1.12)` para que el tapete llene más el frame. La imagen de fondo se recorta un poco en los bordes pero el diseño del tapete se ve completo.
+- **Fuentes más grandes**: phrase/phrase2: 5.5cqw, name: 4.5cqw (antes 3.5/3.0)
+- **fontWeight: 800** en todos los textos del preview (antes 700)
 - **Defaults en preview**: Cuando los campos están vacíos, el preview muestra valores por defecto (no pre-rellena los inputs):
   - Texto superior default: "Aquí manda"
   - Texto inferior default: "No toques... ya sabemos que estás aquí"
   - Nombre mascota 1: "Max", 2: "Luna", 3: "Coco"
   - Los inputs usan `placeholder` con estos valores (no `value`)
-- **Color tinta = negro puro** `#000000` (antes era marrón `#3d1f08`)
-- **Todos los textos bold** (fontWeight: 700 en todos los elementos del preview)
+- **Color tinta = negro puro** `#000000`
 - **phrase2 agregado**: Segunda frase (texto inferior, debajo de los perritos)
   - `types.ts`: `phrase2: string` en `ConfiguratorState`
   - `PatapeteConfigurator.tsx`: estado + handler `handlePhrase2Change`
   - `StepPets.tsx`: 2 inputs: "Texto superior" y "Texto inferior"
   - `CanvasPreview.tsx`: renderiza `phrase2` en `top: 74%` con Playfair italic
   - `StepSummary.tsx`: muestra phrase2 en resumen del pedido + lo guarda en localStorage
-- **Fuentes reducidas** para evitar solapamiento entre frase y nombre:
-  - `phrase`: 3.5cqw
-  - `name`: 3.0cqw
-  - `phrase2`: 3.5cqw
 
 ## Architecture
 
@@ -34,9 +32,11 @@ Tienda de tapetes personalizados con IA. El configurador permite subir fotos de 
 Coordinates from Figma (2048×2048 frame), all in % of square container:
 
 **Texts:**
-- `texto-top` (phrase): top=34.71%, font-size=3.5cqw
-- `nombre-perro` (per pet): font-size=3.0cqw, positioned via `translateY(-100% - 4px)` above each pet wrapper
-- `texto-bottom` (phrase2): top=74%, font-size=3.5cqw
+- `texto-top` (phrase): top=34.71%, font-size=5.5cqw, weight=800
+- `nombre-perro` (per pet): font-size=4.5cqw, weight=800, positioned via `translateY(-100% - 4px)` above each pet wrapper
+- `texto-bottom` (phrase2): top=74%, font-size=5.5cqw, weight=800
+
+**Zoom wrapper:** `transform: scale(1.12)` on inner div, outer container has `overflow-hidden`
 
 **Pet positions:**
 - 1 mascota: width=27.39%, left=36.32%, top=45.26%
