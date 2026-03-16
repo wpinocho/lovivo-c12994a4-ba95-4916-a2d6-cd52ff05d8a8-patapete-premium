@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { Pet, PRICES, Style } from './types'
 import { PhotoPetForm } from './PhotoPetForm'
@@ -52,10 +52,58 @@ export function StepPets({
   onGenerate, onContinue, onOrderNow, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
-  const allPhotosUploaded = pets.slice(0, petCount).every(
-    p => !!p.photoFile || !!p.photoBase64 || !!p.generatedArtUrl
-  )
-  const canContinue = !isProcessing && allPhotosUploaded
+
+  // ── Validation state ──
+  const [fieldErrors, setFieldErrors] = useState<{
+    [petIndex: number]: { photo?: string; name?: string }
+  }>({})
+  const petRefs = useRef<(HTMLDivElement | null)[]>([null, null, null])
+
+  function validateAndProceed(action: 'order' | 'continue') {
+    if (isProcessing) return
+    const errors: typeof fieldErrors = {}
+    let firstErrorIndex = -1
+    for (let i = 0; i < petCount; i++) {
+      const pet = pets[i]
+      const hasPhoto = !!pet.photoFile || !!pet.photoBase64 || !!pet.generatedArtUrl
+      const hasName = !!pet.name?.trim()
+      if (!hasPhoto || !hasName) {
+        errors[i] = {}
+        if (!hasPhoto) errors[i].photo = 'Sube la foto de tu mascota para continuar'
+        if (!hasName) errors[i].name = 'Escribe el nombre de tu mascota'
+        if (firstErrorIndex === -1) firstErrorIndex = i
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      if (firstErrorIndex >= 0 && petRefs.current[firstErrorIndex]) {
+        petRefs.current[firstErrorIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      return
+    }
+    setFieldErrors({})
+    if (action === 'order') onOrderNow()
+    else onContinue()
+  }
+
+  // Wrapper for onPetChange that clears errors when the user fixes a field
+  function handlePetChange(index: number, updates: Partial<typeof pets[0]>) {
+    onPetChange(index, updates)
+    if (fieldErrors[index]) {
+      const updated = { ...fieldErrors[index] }
+      const hasPhotoUpdate = 'photoFile' in updates || 'photoBase64' in updates || 'generatedArtUrl' in updates
+      const hasNameUpdate = 'name' in updates
+      if (hasPhotoUpdate) delete updated.photo
+      if (hasNameUpdate) delete updated.name
+      if (Object.keys(updated).length === 0) {
+        const newErrors = { ...fieldErrors }
+        delete newErrors[index]
+        setFieldErrors(newErrors)
+      } else {
+        setFieldErrors({ ...fieldErrors, [index]: updated })
+      }
+    }
+  }
 
   const price = PRICES[style][petCount]
   const deliveryRange = useMemo(() => getDeliveryRange(), [])
@@ -69,11 +117,7 @@ export function StepPets({
   // Track when the inline CTA button is in viewport
   const { ref: ctaRef, inView: ctaInView } = useInView({ threshold: 0.5 })
 
-  const ctaLabel = isProcessing
-    ? 'Generando tu retrato...'
-    : canContinue
-      ? `Ver resumen — $${price.toLocaleString('es-MX')} MXN →`
-      : 'Ver resumen →'
+  const ctaLabel = isProcessing ? 'Generando tu retrato...' : `Ver resumen — $${price.toLocaleString('es-MX')} MXN →`
 
   return (
     <div className="space-y-4">
@@ -216,15 +260,22 @@ export function StepPets({
 
           {/* Per-pet forms */}
           {Array.from({ length: petCount }).map((_, i) => (
-            <div key={i} className={cn(
-              'rounded-2xl border border-border p-4',
-              petCount > 1 && 'bg-muted/30'
-            )}>
+            <div
+              key={i}
+              ref={el => { petRefs.current[i] = el }}
+              className={cn(
+                'rounded-2xl border p-4 transition-colors',
+                fieldErrors[i] ? 'border-destructive/50 bg-destructive/5' : 'border-border',
+                petCount > 1 && !fieldErrors[i] && 'bg-muted/30'
+              )}
+            >
               <PhotoPetForm
                 petIndex={i}
                 pet={pets[i]}
-                onChange={updates => onPetChange(i, updates)}
+                onChange={updates => handlePetChange(i, updates)}
                 onGenerate={file => onGenerate(i, file ?? undefined)}
+                photoError={fieldErrors[i]?.photo}
+                nameError={fieldErrors[i]?.name}
               />
             </div>
           ))}
@@ -269,8 +320,8 @@ export function StepPets({
           <div className="space-y-3" ref={ctaRef}>
             {/* Primary CTA */}
             <Button
-              onClick={onOrderNow}
-              disabled={!canContinue}
+              onClick={() => validateAndProceed('order')}
+              disabled={isProcessing}
               className="w-full rounded-xl"
               size="lg"
             >
@@ -281,8 +332,8 @@ export function StepPets({
 
             {/* Secondary CTA */}
             <Button
-              onClick={onContinue}
-              disabled={!canContinue}
+              onClick={() => validateAndProceed('continue')}
+              disabled={isProcessing}
               variant="outline"
               className="w-full rounded-xl"
               size="lg"
@@ -304,17 +355,13 @@ export function StepPets({
               ))}
             </div>
 
-            {!allPhotosUploaded && (
-              <p className="text-xs text-center text-muted-foreground">
-                Sube la foto de {petCount === 1 ? 'tu mascota' : 'todas tus mascotas'} para continuar
-              </p>
-            )}
+
           </div>
         </div>
       </div>
 
-      {/* ── Sticky CTA bar — only when canContinue and button is out of view ── */}
-      {canContinue && (
+      {/* ── Sticky CTA bar — appears when CTA button is out of view ── */}
+      {!isProcessing && (
         <div
           className={cn(
             'fixed bottom-0 left-0 right-0 z-50 bg-background/97 backdrop-blur-md border-t shadow-lg transition-all duration-300 ease-out pb-[env(safe-area-inset-bottom)]',
@@ -339,7 +386,7 @@ export function StepPets({
                 <span className="text-xs font-normal text-muted-foreground ml-1">MXN</span>
               </span>
               <Button
-                onClick={onContinue}
+                onClick={() => validateAndProceed('continue')}
                 size="default"
                 variant="outline"
                 className="rounded-xl font-semibold px-4 hidden sm:flex"
@@ -347,7 +394,7 @@ export function StepPets({
                 Ver tapete
               </Button>
               <Button
-                onClick={onOrderNow}
+                onClick={() => validateAndProceed('order')}
                 size="default"
                 className="rounded-xl font-semibold px-5"
               >

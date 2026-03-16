@@ -10,9 +10,11 @@ interface PhotoPetFormProps {
   pet: Pet
   onChange: (updates: Partial<Pet>) => void
   onGenerate: (file?: File) => void
+  photoError?: string
+  nameError?: string
 }
 
-export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFormProps) {
+export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, photoError, nameError }: PhotoPetFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +38,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
 
   const isProcessing = pet.isProcessingBg || pet.isGeneratingArt
   const hasResult = !!pet.generatedArtUrl
-  // Has photo but no result and not currently processing = generation failed or reset
+  // Only retry when there's a photo, no result yet, and NOT currently processing
   const canRetry = (!!pet.photoFile || !!pet.photoBase64) && !hasResult && !isProcessing
 
   const statusMessage = pet.isProcessingBg
@@ -63,23 +65,33 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
 
       {/* Upload zone or preview */}
       {!pet.photoPreviewUrl ? (
-        <div
-          onDrop={handleDrop}
-          onDragOver={e => e.preventDefault()}
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-border rounded-2xl p-8 flex flex-col items-center gap-3 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-all group"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <Upload className="w-6 h-6 text-primary" />
+        <>
+          <div
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'border-2 border-dashed rounded-2xl p-8 flex flex-col items-center gap-3 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-all group',
+              photoError ? 'border-destructive bg-destructive/5' : 'border-border'
+            )}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <Upload className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-center">
+              <p className="font-semibold text-sm text-foreground">Sube la foto de tu mascota</p>
+              <p className="text-xs text-muted-foreground mt-1">Arrastra aquí o haz clic · JPG, PNG, WEBP</p>
+            </div>
+            <p className="text-xs text-muted-foreground text-center bg-muted/60 px-3 py-1.5 rounded-xl">
+              💡 Foto bien iluminada, carita visible, fondo simple
+            </p>
           </div>
-          <div className="text-center">
-            <p className="font-semibold text-sm text-foreground">Sube la foto de tu mascota</p>
-            <p className="text-xs text-muted-foreground mt-1">Arrastra aquí o haz clic · JPG, PNG, WEBP</p>
-          </div>
-          <p className="text-xs text-muted-foreground text-center bg-muted/60 px-3 py-1.5 rounded-xl">
-            💡 Foto bien iluminada, carita visible, fondo simple
-          </p>
-        </div>
+          {photoError && (
+            <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+              <span>⚠️</span> {photoError}
+            </p>
+          )}
+        </>
       ) : (
         <div className="relative">
           <div className={cn(
@@ -144,7 +156,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
       {/* Pet name */}
       <div className="space-y-1.5">
         <Label htmlFor={`pet-name-${petIndex}`} className="text-sm font-medium text-foreground">
-          Nombre de tu mascota <span className="font-normal text-muted-foreground">(opcional)</span>
+          Nombre de tu mascota
         </Label>
         <Input
           id={`pet-name-${petIndex}`}
@@ -152,8 +164,13 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
           value={pet.name}
           onChange={e => onChange({ name: e.target.value })}
           maxLength={20}
-          className="rounded-xl"
+          className={cn('rounded-xl', nameError && 'border-destructive focus-visible:ring-destructive')}
         />
+        {nameError && (
+          <p className="text-xs text-destructive flex items-center gap-1">
+            <span>⚠️</span> {nameError}
+          </p>
+        )}
       </div>
     </div>
   )
