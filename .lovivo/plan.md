@@ -15,10 +15,11 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 - Español en toda la UI
 
 ## Recent Changes
-- **Logo y favicon actualizados:**
-  - `public/logo.webp` — pata woven café (200×149, sin fondo) — usada en navbar
-  - `public/favicon.png` — versión 64×64 para pestaña del navegador
-  - `index.html` — favicon apunta a `/favicon.png`, meta title/description actualizados con copy de Patapete
+- **Logo y favicon actualizados (versión definitiva):**
+  - `public/logo.webp` — patita tejida de coco café, fondo transparente, 578x432 original → guardada en repo
+  - `public/favicon.png` — misma patita, 64x47px PNG con transparencia
+  - `index.html` — favicon → `/favicon.png`, apple-touch-icon → `/logo.webp`, meta title/description de Patapete
+  - `BrandLogoLeft.tsx` — ya usa `src="/logo.webp"` con width/height 36
 
 - **Sticky preview layout:**
   - `StepPets.tsx`: Reestructurado con sticky preview.
