@@ -187,7 +187,7 @@ Rasgos distintivos CRÍTICOS y accesorios (ej. oreja izquierda caída, mancha bl
 
 Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
 
-A charming flat 2D cartoon illustration 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws playfully resting on a solid black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+A charming flat 2D cartoon illustration 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws playfully resting on a single thin black horizontal stroke line at the bottom edge. CRITICAL: the line is ONE pixel-thin stroke only — NO filled black panel, NO solid block, NO thick bar, NO black area below the line. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
 STYLE: Flat colorful vector cartoon illustration. Bold clean outlines, solid color fills with minimal cel-shading. Like a professional sticker design or mobile app character icon. NO sketchy lines, NO crosshatching, NO pencil texture, NO painterly brushstrokes, NO photorealism.
 FUR & COLORS: [TEXTURA Y LONGITUD DEL PELO]. [COLORES PRINCIPALES Y DISTRIBUCIÓN]. Use vibrant, saturated colors. Simple gradient or cel-shade highlights only.
 EXPRESSION & FEATURES: [EXPRESIÓN FACIAL EXACTA]. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Clean shapes, print-ready for sublimation.`
@@ -204,7 +204,7 @@ Accesorios visibles (ej. lleva un collar grueso o un paliacate).
 
 Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
 
-A standardized 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws on a solid border line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+A standardized 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws resting on a single thin black horizontal stroke line at the bottom edge. CRITICAL: the line is ONE thin stroke only — NO filled black panel, NO solid block below the line. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
 STYLE: Pure black and white minimalist line art. ONLY black ink on white background. NO grayscale, NO shading, NO fine details.
 CRITICAL: The entire portrait is constructed using ONLY extremely thick, chunky, bold black lines. The drawing lines should be slightly imperfect and heavy, resembling a bold linocut, rubber stamp, or stencil print.
 PRESERVE KEY STRUCTURAL FEATURES: [RASGOS FÍSICOS ESTRUCTURALES Y ACCESORIOS], but strictly abstract and simplify them into this chunky, heavy-line graphic execution. No thin strokes. Stencil-like simplicity ready for coarse material printing.`

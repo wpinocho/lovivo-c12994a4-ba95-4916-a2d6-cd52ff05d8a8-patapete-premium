@@ -19,9 +19,9 @@ Tienda de tapetes personalizados con mascotas. Pipeline de generación de arte e
 - `replicateApi.ts` — llama a la edge function `generate-tattoo`
 
 ## Demo Images (public/demos/)
-- `icono-0.webp` — Border Terrier con pañoleta (fondo transparente)
-- `icono-1.webp` — Chihuahua con collar (fondo transparente)
-- `icono-2.webp` — French Bulldog (fondo transparente)
+- `icono-0.webp` — mascota default 1 (fondo transparente, proporcionadas por usuario)
+- `icono-1.webp` — mascota default 2 (fondo transparente, proporcionadas por usuario)
+- `icono-2.webp` — mascota default 3 (fondo transparente, proporcionadas por usuario)
 - Usados para estilos `icono` y `dibujo` como placeholder
 
 ## Simplificaciones recientes
@@ -30,3 +30,7 @@ Tienda de tapetes personalizados con mascotas. Pipeline de generación de arte e
 - **Eliminado**: distinción generated vs demo images para procesamiento
 - Las imágenes se renderizan directamente — sin delays, sin flash de fondo blanco
 - Demos actualizados con imágenes reales transparentes del usuario
+
+## Prompt Fix (icono + dibujo)
+- **Problema**: FLUX interpretaba `solid black horizontal line` como un bloque/panel negro relleno abajo del perro → rembg no podía quitarlo bien
+- **Fix aplicado**: cambiado a `single thin black horizontal stroke line` + instrucción explícita `NO filled black panel, NO solid block below the line` en ambos prompts (icono y dibujo)
