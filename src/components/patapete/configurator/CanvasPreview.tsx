@@ -1,14 +1,11 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect } from 'react'
 import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
-import { removeWhiteBackground } from '@/utils/imagePreprocessing'
 
-// Demo images per style and pet index (0-based)
-// ✅ All stored in repo /public/demos/ — same origin, no CORS issues, never expire
-// ⚠️ dibujo: pending user images — using icono as placeholder until replaced
+// Demo images per style — stored in repo /public/demos/ with transparent background
 const DEMO_URLS: Record<Style, string[]> = {
   dibujo: [
-    '/demos/icono-0.webp',  // ⏳ TEMP: replace with real dibujo images when provided
+    '/demos/icono-0.webp',
     '/demos/icono-1.webp',
     '/demos/icono-2.webp',
   ],
@@ -23,11 +20,6 @@ const DEMO_URLS: Record<Style, string[]> = {
 const TAPETE_URL = '/tapete-mockup.webp'
 
 // ── Layout config — all values are % of the square container ─────────────────
-// Coordinates converted from Figma (2048×2048 frame).
-// petTop   = top of the pet wrapper (head of dog)
-// petWidth = width of the pet wrapper (height is auto, image-driven)
-// left     = horizontal offset for each pet slot
-// ─────────────────────────────────────────────────────────────────────────────
 type PetCount = 1 | 2 | 3
 
 const LAYOUTS: Record<PetCount, { pets: { left: string }[]; petWidth: string; petTop: string }> = {
@@ -74,34 +66,6 @@ interface CanvasPreviewProps {
 export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: CanvasPreviewProps) {
   const count = Math.min(Math.max(pets.length, 1), 3) as PetCount
   const layout = LAYOUTS[count]
-
-  // Cache of processed transparent URLs keyed by original URL
-  const [transparentUrls, setTransparentUrls] = useState<Record<string, string>>({})
-  const processingRef = useRef<Set<string>>(new Set())
-
-  // Collect all image URLs needed this render
-  const imgUrls = pets.map((pet, i) => pet.generatedArtUrl || DEMO_URLS[style][i])
-
-  useEffect(() => {
-    pets.forEach((pet, i) => {
-      const isGenerated = !!pet.generatedArtUrl
-      const url = pet.generatedArtUrl || DEMO_URLS[style][i]
-
-      if (transparentUrls[url] || processingRef.current.has(url)) return
-      processingRef.current.add(url)
-
-      if (isGenerated) {
-        // PNG already transparent from server (BiRefNet ran server-side) — use as-is, no white removal
-        setTransparentUrls((prev) => ({ ...prev, [url]: url }))
-      } else {
-        // Demo images have white bg — remove client-side
-        removeWhiteBackground(url).then((transparentUrl) => {
-          setTransparentUrls((prev) => ({ ...prev, [url]: transparentUrl }))
-        })
-      }
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imgUrls.join('|')])
 
   // Background canvas → still needed for StepSummary's finalPreviewDataUrl
   const petKey = pets.map(p => `${p.generatedArtUrl || ''}:${p.name}`).join('|')
@@ -189,15 +153,13 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
                 {pet.name?.trim() || DEFAULT_NAMES[i]}
               </span>
 
-              {/* Pet illustration — only render once background removal is done (no white flash) */}
-              {transparentUrls[imgUrl] && (
-                <img
-                  src={transparentUrls[imgUrl]}
-                  alt={pet.name || `Mascota ${i + 1}`}
-                  className="w-full h-auto block select-none"
-                  draggable={false}
-                />
-              )}
+              {/* Pet illustration — rendered directly, no background removal needed */}
+              <img
+                src={imgUrl}
+                alt={pet.name || `Mascota ${i + 1}`}
+                className="w-full h-auto block select-none"
+                draggable={false}
+              />
             </div>
           )
         })}
