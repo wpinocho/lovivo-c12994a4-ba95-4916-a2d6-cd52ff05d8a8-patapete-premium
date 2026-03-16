@@ -83,12 +83,22 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
   const imgUrls = pets.map((pet, i) => pet.generatedArtUrl || DEMO_URLS[style][i])
 
   useEffect(() => {
-    imgUrls.forEach((url) => {
+    pets.forEach((pet, i) => {
+      const isGenerated = !!pet.generatedArtUrl
+      const url = pet.generatedArtUrl || DEMO_URLS[style][i]
+
       if (transparentUrls[url] || processingRef.current.has(url)) return
       processingRef.current.add(url)
-      removeWhiteBackground(url).then((transparentUrl) => {
-        setTransparentUrls((prev) => ({ ...prev, [url]: transparentUrl }))
-      })
+
+      if (isGenerated) {
+        // PNG already transparent from server (BiRefNet ran server-side) — use as-is, no white removal
+        setTransparentUrls((prev) => ({ ...prev, [url]: url }))
+      } else {
+        // Demo images have white bg — remove client-side
+        removeWhiteBackground(url).then((transparentUrl) => {
+          setTransparentUrls((prev) => ({ ...prev, [url]: transparentUrl }))
+        })
+      }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imgUrls.join('|')])

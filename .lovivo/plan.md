@@ -33,6 +33,16 @@ Return: transparent PNG URL
 - `supabase/functions/generate-tattoo/index.ts` — v18, nueva función `removeBackgroundFromFluxOutput()`, `uploadFinalArt` sube `.png` en lugar de `.webp`, paso 5.5 añadido al pipeline
 - `src/utils/canvasCompositing.ts` — Para `isGenerated`, ya NO llama `removeWhiteBackground()` (PNG ya viene transparente del servidor). `isDemo` sigue usando removeWhiteBackground.
 
+## ✅ Bug corregido: Preview fusionaba blanco del perro con el tapete (v19)
+
+### Problema
+En `CanvasPreview.tsx`, el `useEffect` aplicaba `removeWhiteBackground()` a TODAS las URLs, incluyendo las de `pet.generatedArtUrl`. Esas imágenes ya llegan como PNG transparente del servidor (BiRefNet ya procesó), entonces el algoritmo de "quitar blancos" borraba las patitas crema/blancas del chihuahua, fusionándolas con el tapete beige.
+
+### Solución — `src/components/patapete/configurator/CanvasPreview.tsx`
+El `useEffect` de `transparentUrls` ahora itera sobre `pets` (no `imgUrls`) para poder distinguir:
+- `isGenerated = !!pet.generatedArtUrl` → URL va directo al cache sin procesar
+- Demo images → siguen pasando por `removeWhiteBackground(url)`
+
 ## Bug corregido: Imagen de referencia ICONO incorrecta (v2 — usuario proveyó imagen)
 - URL nueva: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
 - Edge function actualizada con nueva URL ✅
