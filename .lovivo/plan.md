@@ -30,68 +30,266 @@
 
 ---
 
-## 🚨 ACTIVE PLAN: Customización Persistente + Imagen en Carrito
+## 🚨 ACTIVE PLAN: Customización Persistente + Imagen en Carrito + Backend
 
-### Problema
-1. **Arte FLUX expira**: URLs de Replicate CDN expiran en ~24h. Arte se pierde.
-2. **Carrito muestra imagen genérica**: CartSidebar lee `product.images[0]`, no el preview personalizado.
-3. **Backend no recibe la customización**: Checkout solo manda product_id+variant_id+quantity. No hay link entre la orden y el diseño del tapete.
+### Arquitectura aprobada (Lovivo Native)
 
-### Arquitectura solución (Shopify-style)
 ```
-USUARIO DISEÑA → DISEÑO GUARDADO EN DB → CARRITO REFERENCIA DISEÑO → ORDEN → LINK ORDEN↔DISEÑO
+USUARIO DISEÑA → ARTE FLUX GUARDADO EN STORAGE (permanente)
+                        │
+                        ▼
+              USUARIO AGREGA AL CARRITO
+                        │
+                        ▼
+     Preview dataURL → Storage (async, background upload)
+     customization_data JSON → localStorage (inmediato)
+     item.key → link entre carrito y customización
+                        │
+                        ▼
+              CART SIDEBAR lee localStorage
+              Muestra preview personalizado ✅
+                        │
+                        ▼
+              CHECKOUT CREATION (cartToApiItems)
+              Lee localStorage → adjunta customization_data + preview_image_url
+              al payload de checkout-create
+                        │
+                        ▼
+         LOVIVO BACKEND (checkout-create) guarda en order_items:
+         - customization_data (JSONB) — receta de fabricación completa
+         - preview_image_url (TEXT) — imagen del tapete final
+                        │
+                        ▼
+         DASHBOARD ADMIN ve la orden con preview + specs ✅
 ```
 
-### Fase 1 — Arte permanente en Supabase Storage
-- Modificar `supabase/functions/generate-tattoo/index.ts`
-- Después de FLUX genera art URL → descargar → subir a `pet-tattoos/finals/${timestamp}.webp` → devolver URL permanente
-- SUPABASE_URL y SERVICE_ROLE_KEY ya están configurados en la función
-
-### Fase 2 — Imagen personalizada en carrito
-- `PatapeteConfigurator.tsx`: al agregar al carrito, guardar `patapete_preview:${itemKey}` → preview_url en localStorage
-- `CartSidebar.tsx`: leer `patapete_preview:${item.key}` de localStorage para mostrar imagen personalizada
-
-### Fase 3 — DB de órdenes + Edge functions
-**Tabla `patapete_orders`** en Supabase del usuario:
+### Schema change (Lovivo backend — coordinado con admin)
 ```sql
-id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-session_id text UNIQUE NOT NULL,
-lovivo_order_id text,  -- se llena al hacer checkout
-style text NOT NULL,  -- 'dibujo' | 'icono'
-pet_count int NOT NULL,
-pets jsonb NOT NULL,  -- [{name, art_url}]
-phrase_top text,
-phrase_bottom text,
-preview_url text,  -- URL permanente en Storage
-status text DEFAULT 'pending',
-created_at timestamptz DEFAULT now()
+ALTER TABLE order_items
+ADD COLUMN IF NOT EXISTS customization_data JSONB DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS preview_image_url TEXT DEFAULT NULL;
+```
+**IMPORTANTE:** El usuario (dueño de Lovivo) aplicará este cambio en su backend. El storefront envía estos campos y el backend los guarda si existen.
+
+### customization_data para Patapete (estructura exacta)
+```json
+{
+  "type": "patapete",
+  "style": "dibujo",
+  "pet_count": 2,
+  "pets": [
+    { "name": "Max", "art_url": "https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/pet-tattoos/finals/1234.webp" },
+    { "name": "Luna", "art_url": "https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/pet-tattoos/finals/5678.webp" }
+  ],
+  "phrase_top": "Aquí manda",
+  "phrase_bottom": "No toques... ya sabemos que estás aquí",
+  "font": "Plus Jakarta Sans 800",
+  "rug_size": "60x40cm",
+  "material": "fibra de coco"
+}
 ```
 
-**Edge function `save-patapete-order`**:
-- Recibe: customization data + preview dataURL (base64)
-- Sube preview a `patapete-previews/` bucket en Storage
-- Guarda en `patapete_orders` tabla
-- Devuelve: `{id, session_id, preview_url}`
+---
 
-**Edge function `link-patapete-order`**:
-- Recibe: `{session_id, lovivo_order_id}`
-- Actualiza `patapete_orders` con el order_id real
+## Fase 1 — Arte FLUX permanente en Storage
 
-### Cart item key format
-```js
-// From CartContext (FORBIDDEN, don't modify):
-const key = `${product.id}:${variant.id}`
-// For patapete with 1 pet: key = `product_id:28fc993c-e638-459b-9a00-08abacdc9f32`
-// For 2 pets: key = `product_id:1aee4582-040b-477a-b335-e99446fa76c7`
-// For 3 pets: key = `product_id:5f7e007d-b30e-44c8-baa6-5aa03edb23ad`
+**Problema:** FLUX 2 Pro devuelve URLs de Replicate CDN que expiran en ~24h.
+**Solución:** En `generate-tattoo/index.ts`, después de Step 4 (FLUX output), agregar Step 5: descargar el webp de Replicate → subirlo a `pet-tattoos/finals/${Date.now()}.webp` → devolver URL permanente de Storage.
+
+### Archivo a modificar: `supabase/functions/generate-tattoo/index.ts`
+
+Agregar función `uploadFinalArt(artUrl: string): Promise<string>`:
+```typescript
+async function uploadFinalArt(artUrl: string): Promise<string> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const res = await fetch(artUrl)
+  if (!res.ok) throw new Error(`Failed to download FLUX art: ${res.status}`)
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  const filename = `finals/${Date.now()}.webp`
+
+  const { error } = await supabase.storage
+    .from('pet-tattoos')
+    .upload(filename, bytes, { contentType: 'image/webp', upsert: false })
+
+  if (error) throw new Error(`Storage upload failed: ${error.message}`)
+  const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
+  return data.publicUrl
+}
 ```
 
-### Archivos a modificar/crear
-- `supabase/functions/generate-tattoo/index.ts` — agregar upload del arte final de FLUX a Storage
-- `supabase/functions/save-patapete-order/index.ts` — NUEVO
-- `supabase/functions/link-patapete-order/index.ts` — NUEVO
-- `supabase/config.toml` — registrar nuevas funciones
-- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — llamar save-patapete-order, guardar en localStorage
-- `src/components/CartSidebar.tsx` — mostrar imagen personalizada + llamar link-patapete-order
+En el main handler, después de `const artUrl = await generateWithFlux2Pro(...)`:
+```typescript
+// Step 5: Upload FLUX result to permanent Storage
+console.log('[generate-tattoo] ─── Step 5: Upload FLUX art to permanent Storage ───')
+const t5 = Date.now()
+const permanentArtUrl = await uploadFinalArt(artUrl)
+console.log(`[generate-tattoo] Step 5 done in ${Date.now() - t5}ms | permanent URL: ${permanentArtUrl}`)
 
-### Status: PENDIENTE DE APROBACIÓN
+return new Response(JSON.stringify({ url: permanentArtUrl }), { ... })
+```
+
+---
+
+## Fase 2 — Preview personalizado en carrito
+
+### 2a. Edge function para upload del preview: `supabase/functions/upload-patapete-preview/index.ts` (NUEVO)
+
+```typescript
+// Recibe: { base64: string } — dataURL del canvas del tapete completo
+// Sube a: pet-tattoos/previews/${timestamp}.png
+// Devuelve: { url: string }
+```
+
+Necesita CORS headers + SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (ya disponibles en el proyecto).
+Registrar en `supabase/config.toml` bajo [functions.upload-patapete-preview].
+
+### 2b. PatapeteConfigurator.tsx — guardar customización al agregar al carrito
+
+En `handleAddToCart` y `handleOrderNow`, ANTES de llamar `addItem`:
+
+```typescript
+// 1. Calcular item key (igual que CartContext)
+const itemKey = `${product.id}:${variantId}`
+
+// 2. Guardar inmediatamente en localStorage con dataUrl para display rápido en carrito
+const customizationData = {
+  type: 'patapete',
+  style: currentState.style,
+  pet_count: currentState.petCount,
+  pets: currentState.pets.slice(0, currentState.petCount).map(p => ({
+    name: p.name || 'Mascota',
+    art_url: p.generatedArtUrl || null,
+  })),
+  phrase_top: currentState.phrase,
+  phrase_bottom: currentState.phrase2,
+  font: 'Plus Jakarta Sans 800',
+  rug_size: '60x40cm',
+  material: 'fibra de coco',
+}
+const tempEntry = {
+  preview_dataurl: finalPreviewRef.current,  // usar para mostrar en carrito inmediatamente
+  preview_image_url: null,                   // se llenará cuando termine el upload async
+  customization_data: customizationData,
+}
+localStorage.setItem(`patapete_customization:${itemKey}`, JSON.stringify(tempEntry))
+
+// 3. Upload async en background (no bloquea el carrito)
+if (finalPreviewRef.current) {
+  const base64 = finalPreviewRef.current.split(',')[1] // quitar "data:image/png;base64,"
+  supabase.functions.invoke('upload-patapete-preview', { body: { base64 } })
+    .then(({ data }) => {
+      if (data?.url) {
+        const existing = JSON.parse(localStorage.getItem(`patapete_customization:${itemKey}`) || '{}')
+        existing.preview_image_url = data.url
+        localStorage.setItem(`patapete_customization:${itemKey}`, JSON.stringify(existing))
+      }
+    })
+    .catch(console.error)
+}
+
+// 4. Continuar con flujo normal
+addItem(product, variant)
+```
+
+Necesita importar: `import { supabase } from '@/integrations/supabase/client'`
+
+### 2c. CartSidebar.tsx — mostrar imagen personalizada
+
+En la sección de render de product items (actualmente lee `item.product.images?.[0]`), agregar lógica:
+
+```typescript
+// Al inicio del componente o dentro del map:
+const getItemImage = (item: CartProductItem): string | undefined => {
+  try {
+    const stored = localStorage.getItem(`patapete_customization:${item.key}`)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return parsed.preview_dataurl || parsed.preview_image_url || item.product.images?.[0]
+    }
+  } catch {}
+  return item.product.images?.[0]
+}
+```
+
+Usar `getItemImage(item as CartProductItem)` en lugar de `item.product.images?.[0]` para product items.
+
+---
+
+## Fase 3 — Pasar customización al checkout
+
+### src/lib/supabase.ts — Extender CheckoutItem
+
+```typescript
+export interface CheckoutItem {
+  product_id: string
+  quantity: number
+  variant_id?: string
+  selling_plan_id?: string
+  customization_data?: Record<string, any>  // NUEVO
+  preview_image_url?: string                 // NUEVO
+}
+```
+
+### src/lib/cart-utils.ts — Adjuntar customización en cartToApiItems
+
+En el bloque `type === 'product'` (actualmente solo envía product_id, quantity, variant_id, selling_plan_id):
+
+```typescript
+// Leer customización de localStorage
+let customizationFields: { customization_data?: any; preview_image_url?: string } = {}
+try {
+  const stored = localStorage.getItem(`patapete_customization:${product.id}:${variant?.id || ''}`)
+  if (stored) {
+    const parsed = JSON.parse(stored)
+    if (parsed.customization_data) customizationFields.customization_data = parsed.customization_data
+    if (parsed.preview_image_url) customizationFields.preview_image_url = parsed.preview_image_url
+  }
+} catch {}
+
+map.set(key, {
+  product_id: product.id,
+  quantity: item.quantity,
+  ...(variant && { variant_id: variant.id }),
+  ...(sellingPlan && { selling_plan_id: sellingPlan.id }),
+  ...customizationFields,  // NUEVO
+})
+```
+
+**NOTA:** `cartToApiItems` también es llamado desde `CartSidebar.tsx` (handleCreateCheckout usa `useCheckout` → `checkout()` → `cartToApiItems`). El key en localStorage usa el mismo formato que CartContext: `${product.id}:${variant.id}`.
+
+---
+
+## Fase 4 — Cleanup localStorage
+
+Al cargar la página ThankYou o cuando el checkout se completa, limpiar las entradas de `patapete_customization:*` del localStorage para no acumular datos viejos.
+
+En `src/pages/ThankYou.tsx` (o donde se confirme el pago):
+```typescript
+// Clean up patapete customization data after successful order
+Object.keys(localStorage)
+  .filter(k => k.startsWith('patapete_customization:'))
+  .forEach(k => localStorage.removeItem(k))
+```
+
+---
+
+## Resumen de archivos a modificar/crear
+
+| Archivo | Cambio |
+|---------|--------|
+| `supabase/functions/generate-tattoo/index.ts` | Agregar Step 5: upload FLUX result a Storage (permanente) |
+| `supabase/functions/upload-patapete-preview/index.ts` | NUEVO: edge function para subir preview canvas |
+| `supabase/config.toml` | Registrar upload-patapete-preview |
+| `src/lib/supabase.ts` | Agregar `customization_data?` y `preview_image_url?` a CheckoutItem |
+| `src/lib/cart-utils.ts` | Leer localStorage y adjuntar customization fields a checkout items |
+| `src/components/CartSidebar.tsx` | Mostrar preview personalizado del tapete |
+| `src/components/patapete/configurator/PatapeteConfigurator.tsx` | Guardar customización en localStorage + upload async al carrito |
+| `src/pages/ThankYou.tsx` | Cleanup localStorage al completar orden |
+
+## Estado: APROBADO — LISTO PARA IMPLEMENTAR EN CRAFT MODE
+
+### Orden de implementación recomendado:
+1. Fase 1: generate-tattoo Step 5 (URLs permanentes — crítico)
+2. Fase 2: upload-patapete-preview edge function + PatapeteConfigurator + CartSidebar
+3. Fase 3: supabase.ts + cart-utils (pasar data al backend)
+4. Fase 4: ThankYou cleanup
