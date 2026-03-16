@@ -12,51 +12,9 @@ Tienda de tapetes personalizados con mascotas. El configurador interactivo (`Pat
 - **Estilo activo: `icono`** — siempre forzado en estado inicial y tras cargar localStorage
 - Estilo `dibujo` oculto hasta tener sus imágenes demo
 
-## ✅ BUG RESUELTO: Blanco del perro se borraba al compositar
-
-### Solución implementada (v18)
-**BiRefNet en el output de FLUX** (Paso 5.5 en la edge function). El modelo entiende semánticamente dónde está el sujeto vs. el fondo, preservando áreas blancas del propio animal.
-
-### Pipeline actual (v18)
-```
-Paso 1: BiRefNet en foto del usuario → transparent PNG
-Paso 2: Smart crop + normalize → 800×800 white canvas  
-Paso 3: Upload normalized pet → public URL
-Paso 4: Claude Haiku → optimized prompt
-Paso 5: FLUX 2 Pro → cartoon art (white background, temp URL)
-Paso 5.5: BiRefNet en output de FLUX → transparent PNG URL  ← NUEVO
-Paso 6: Download transparent PNG, upload permanente como PNG  ← NUEVO
-Return: transparent PNG URL
-```
-
-### Cambios realizados
-- `supabase/functions/generate-tattoo/index.ts` — v18, nueva función `removeBackgroundFromFluxOutput()`, `uploadFinalArt` sube `.png` en lugar de `.webp`, paso 5.5 añadido al pipeline
-- `src/utils/canvasCompositing.ts` — Para `isGenerated`, ya NO llama `removeWhiteBackground()` (PNG ya viene transparente del servidor). `isDemo` sigue usando removeWhiteBackground.
-
-## ✅ Bug corregido: Preview fusionaba blanco del perro con el tapete (v19)
-
-### Problema
-En `CanvasPreview.tsx`, el `useEffect` aplicaba `removeWhiteBackground()` a TODAS las URLs, incluyendo las de `pet.generatedArtUrl`. Esas imágenes ya llegan como PNG transparente del servidor (BiRefNet ya procesó), entonces el algoritmo de "quitar blancos" borraba las patitas crema/blancas del chihuahua, fusionándolas con el tapete beige.
-
-### Solución — `src/components/patapete/configurator/CanvasPreview.tsx`
-El `useEffect` de `transparentUrls` ahora itera sobre `pets` (no `imgUrls`) para poder distinguir:
-- `isGenerated = !!pet.generatedArtUrl` → URL va directo al cache sin procesar
-- Demo images → siguen pasando por `removeWhiteBackground(url)`
-
-## Bug corregido: Imagen de referencia ICONO incorrecta (v2 — usuario proveyó imagen)
-- URL nueva: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
-- Edge function actualizada con nueva URL ✅
-
-## Bug corregido: Cache al borrar imagen (X button) ✅
-
-## Cambios Recientes
-- Bug fix: estilo `icono` ahora se fuerza correctamente incluso al cargar desde localStorage
-- **PhotoPetForm rediseñado** — layout horizontal compacto: thumbnail 88×88px a la izquierda
-- **Loading UX Pro implementado** ✅:
-  - Mensajes rotativos emocionales en `replicateApi.ts` (4s, 9s, 14s, 18s)
-  - `progressMessage` añadido al tipo `Pet` y al `DEFAULT_PET`
-  - Barra de progreso ease-out (rápido al inicio, lento al final)
-  - Glow pulsante alrededor del thumbnail durante generación
+## ✅ BUG RESUELTO: Blanco del perro se borraba al compositar (v18+v19)
+- Pipeline v18: BiRefNet en foto del usuario (paso 1) + BiRefNet en output de FLUX (paso 5.5)
+- Fix frontend: CanvasPreview distingue imágenes generadas (no aplica removeWhiteBackground) vs demos (sí aplica)
 
 ## Prompts IA (Edge Function generate-tattoo)
 
@@ -66,3 +24,67 @@ El `useEffect` de `transparentUrls` ahora itera sobre `pets` (no `imgUrls`) para
 
 ### DIBUJO (v1 — b&w linocut)
 - Referencia: `style-dibujo.png` (b&w line art)
+
+---
+
+## 🔧 PENDIENTE: Migrar BiRefNet → rembg para eliminar tiempos de cola altos
+
+### Problema
+`men1scus/birefnet` corre en A100 con alta demanda → cola de 7–26s antes de correr
+El modelo en sí tarda <1s, pero la espera destruye la UX.
+
+### Solución: cambiar AMBAS llamadas de BiRefNet a `cjwbw/rembg`
+
+Benchmarks reales:
+- men1scus/birefnet: cola 7–26s + 700ms running = hasta 27s
+- cjwbw/rembg: cola ~14ms + 1.2s running = ~1.2s total
+
+rembg usa U2Net que es semántico (entiende sujeto vs fondo), no pixel-based, así que:
+- Paso 1 (foto usuario): aísla la mascota correctamente
+- Paso 5.5 (cartoon FLUX): fondo blanco puro → rembg lo maneja perfecto, preserva patitas blancas
+
+### Implementación en `supabase/functions/generate-tattoo/index.ts`
+
+**Paso 1: Cambiar `removeBackgroundBiRefNet()`**
+
+Modelo actual: `version: 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7'`
+Endpoint actual: `https://api.replicate.com/v1/predictions` con `version`
+
+Cambio: usar `cjwbw/rembg` via su endpoint de modelo:
+```
+POST https://api.replicate.com/v1/models/cjwbw/rembg/predictions
+body: {
+  input: {
+    image: `data:image/png;base64,${imageBase64}`,
+    model: 'u2net'  // u2net es el mejor para mascotas/animales
+  }
+}
+```
+El output es una URL a PNG transparente (igual que BiRefNet).
+
+**Paso 2: Cambiar `removeBackgroundFromFluxOutput()`**
+
+Misma lógica — cambiar al mismo modelo `cjwbw/rembg`.
+El input aquí es una URL pública de Replicate (FLUX output), no base64.
+```
+input: {
+  image: fluxUrl,
+  model: 'u2net'
+}
+```
+
+**Notas técnicas:**
+- `cjwbw/rembg` usa el endpoint de modelo (no versión), así que la URL es diferente: `https://api.replicate.com/v1/models/cjwbw/rembg/predictions`
+- El campo `Prefer: wait=60` sigue siendo válido para esperar el resultado sincrónicamente
+- El output format es el mismo: URL a imagen PNG con transparencia
+- El polling helper `pollReplicate` sigue igual
+
+**Archivo a modificar:**
+- `supabase/functions/generate-tattoo/index.ts` — reemplazar las dos funciones de background removal
+
+**Versión del archivo después del cambio: v19**
+
+### Ahorro de tiempo estimado
+- Pipeline actual: ~2 BiRefNet calls × ~15s promedio = ~30s solo en colas
+- Pipeline nuevo: ~2 rembg calls × ~1.2s = ~2.4s
+- Ahorro: ~27-28 segundos en el pipeline total 🚀
