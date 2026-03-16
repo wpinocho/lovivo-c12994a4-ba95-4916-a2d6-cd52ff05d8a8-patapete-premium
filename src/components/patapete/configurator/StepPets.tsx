@@ -22,6 +22,7 @@ interface StepPetsProps {
   onPhrase2Change: (phrase2: string) => void
   onGenerate: (petIndex: number, file?: File) => void
   onContinue: () => void
+  onOrderNow: () => void
   onPreviewReady: (dataUrl: string) => void
 }
 
@@ -48,7 +49,7 @@ function getDeliveryRange() {
 export function StepPets({
   style, petCount, pets, phrase, phrase2,
   onStyleChange, onPetCountChange, onPetChange, onPhraseChange, onPhrase2Change,
-  onGenerate, onContinue, onPreviewReady,
+  onGenerate, onContinue, onOrderNow, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
   const allPhotosUploaded = pets.slice(0, petCount).every(
@@ -266,13 +267,27 @@ export function StepPets({
 
           {/* ── CTA section ── */}
           <div className="space-y-3" ref={ctaRef}>
+            {/* Primary CTA */}
             <Button
-              onClick={onContinue}
+              onClick={onOrderNow}
               disabled={!canContinue}
               className="w-full rounded-xl"
               size="lg"
             >
-              {ctaLabel}
+              {isProcessing
+                ? 'Generando tu retrato...'
+                : `¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
+            </Button>
+
+            {/* Secondary CTA */}
+            <Button
+              onClick={onContinue}
+              disabled={!canContinue}
+              variant="outline"
+              className="w-full rounded-xl"
+              size="lg"
+            >
+              Ver mi tapete primero
             </Button>
 
             {/* Trust badges */}
@@ -318,7 +333,7 @@ export function StepPets({
                 <p className="text-xs text-muted-foreground hidden sm:block">¡Tu retrato está listo!</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="text-lg font-bold text-foreground">
                 ${price.toLocaleString('es-MX')}
                 <span className="text-xs font-normal text-muted-foreground ml-1">MXN</span>
@@ -326,9 +341,17 @@ export function StepPets({
               <Button
                 onClick={onContinue}
                 size="default"
+                variant="outline"
+                className="rounded-xl font-semibold px-4 hidden sm:flex"
+              >
+                Ver tapete
+              </Button>
+              <Button
+                onClick={onOrderNow}
+                size="default"
                 className="rounded-xl font-semibold px-5"
               >
-                Ver resumen →
+                Ordenar →
               </Button>
             </div>
           </div>

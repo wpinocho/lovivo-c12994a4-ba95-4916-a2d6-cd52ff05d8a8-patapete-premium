@@ -1,9 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
 import { StepPets } from './StepPets'
 import { StepSummary } from './StepSummary'
 import { compressAndResizeImage } from '@/utils/imagePreprocessing'
 import { generateTattooArt } from '@/utils/replicateApi'
+import { useCart } from '@/contexts/CartContext'
+import { STYLE_LABELS } from './types'
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
 const STORAGE_KEY = 'patapete_v1'
@@ -78,7 +81,16 @@ interface PatapeteConfiguratorProps {
   product: any
 }
 
+// Real variant IDs from the product
+const VARIANT_IDS: Record<1 | 2 | 3, string> = {
+  1: '28fc993c-e638-459b-9a00-08abacdc9f32',
+  2: '1aee4582-040b-477a-b335-e99446fa76c7',
+  3: '5f7e007d-b30e-44c8-baa6-5aa03edb23ad',
+}
+
 export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
+  const navigate = useNavigate()
+  const { addItem } = useCart()
   const saved = loadFromStorage()
 
   const [state, setState] = useState<ConfiguratorState>({
@@ -181,6 +193,32 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     setState(s => ({ ...s, step: 1 }))
   }, [])
 
+  const handleOrderNow = useCallback(() => {
+    if (!product) return
+    const currentState = state
+    const variantId = VARIANT_IDS[currentState.petCount]
+    const variant = product?.variants?.find((v: any) => v.id === variantId)
+
+    // Save customization metadata
+    const customization = {
+      style: STYLE_LABELS[currentState.style],
+      petCount: currentState.petCount,
+      pets: currentState.pets.slice(0, currentState.petCount).map((p, i) => ({
+        name: p.name || `Mascota ${i + 1}`,
+        ...(p.generatedArtUrl ? { artUrl: p.generatedArtUrl } : {}),
+        ...(p.photoPreviewUrl && !p.generatedArtUrl ? { photoUrl: p.photoPreviewUrl } : {}),
+      })),
+      phrase: currentState.phrase,
+      phrase2: currentState.phrase2,
+      previewDataUrl: finalPreviewRef.current,
+      timestamp: new Date().toISOString(),
+    }
+    localStorage.setItem(`patapete_order_${Date.now()}`, JSON.stringify(customization))
+
+    addItem(product, variant)
+    navigate('/pagar')
+  }, [product, state, addItem, navigate])
+
   // Use a ref for style so handleGenerate always reads the latest value
   const styleRef = useRef(state.style)
   styleRef.current = state.style
@@ -219,6 +257,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           onPhrase2Change={handlePhrase2Change}
           onGenerate={handleGenerate}
           onContinue={handleContinueToSummary}
+          onOrderNow={handleOrderNow}
           onPreviewReady={handlePreviewReady}
         />
       )}
@@ -233,6 +272,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           product={product}
           finalPreviewDataUrl={state.finalPreviewDataUrl}
           onBack={handleBack}
+          onOrderNow={handleOrderNow}
         />
       )}
     </div>

@@ -1,16 +1,7 @@
-import { useState } from 'react'
 import { Pet, PRICES, Style, STYLE_LABELS } from './types'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, ArrowLeft, CheckCircle, ShieldCheck, Clock, Ruler, Leaf } from 'lucide-react'
-import { useCart } from '@/contexts/CartContext'
-
-// Real variant IDs from the product
-const VARIANT_IDS: Record<1 | 2 | 3, string> = {
-  1: '28fc993c-e638-459b-9a00-08abacdc9f32',
-  2: '1aee4582-040b-477a-b335-e99446fa76c7',
-  3: '5f7e007d-b30e-44c8-baa6-5aa03edb23ad',
-}
+import { ArrowLeft, ShieldCheck, Clock, Ruler, Leaf, Zap } from 'lucide-react'
 
 const PRODUCT_SPECS = [
   { icon: Ruler,  label: '60 × 40 cm' },
@@ -34,39 +25,13 @@ interface StepSummaryProps {
   product: any
   finalPreviewDataUrl: string | null
   onBack: () => void
+  onOrderNow: () => void
 }
 
 export function StepSummary({
-  style, petCount, pets, phrase, phrase2, product, finalPreviewDataUrl, onBack
+  style, petCount, pets, phrase, phrase2, product, finalPreviewDataUrl, onBack, onOrderNow
 }: StepSummaryProps) {
-  const { addItem } = useCart()
-  const [added, setAdded] = useState(false)
-
   const price = PRICES[style][petCount]
-  const variantId = VARIANT_IDS[petCount]
-  const variant = product?.variants?.find((v: any) => v.id === variantId)
-
-  const handleAddToCart = () => {
-    if (!product) return
-
-    const customization = {
-      style: STYLE_LABELS[style],
-      petCount,
-      pets: pets.slice(0, petCount).map((p, i) => ({
-        name: p.name || `Mascota ${i + 1}`,
-        ...(p.generatedArtUrl ? { artUrl: p.generatedArtUrl } : {}),
-        ...(p.photoPreviewUrl && !p.generatedArtUrl ? { photoUrl: p.photoPreviewUrl } : {}),
-      })),
-      phrase,
-      phrase2,
-      previewDataUrl: finalPreviewDataUrl,
-      timestamp: new Date().toISOString(),
-    }
-    localStorage.setItem(`patapete_order_${Date.now()}`, JSON.stringify(customization))
-
-    addItem(product, variant)
-    setAdded(true)
-  }
 
   const activePets = pets.slice(0, petCount)
 
@@ -74,7 +39,7 @@ export function StepSummary({
     <div className="space-y-6">
       <div className="text-center space-y-1">
         <h2 className="text-2xl font-bold text-foreground">¡Tu tapete está listo! 🐾</h2>
-        <p className="text-muted-foreground text-sm">Revisa el preview y agrega al carrito para ordenar</p>
+        <p className="text-muted-foreground text-sm">Revisa que todo esté perfecto antes de confirmar tu pedido</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -156,25 +121,15 @@ export function StepSummary({
             </div>
           </div>
 
-          {/* Add to cart */}
-          {added ? (
-            <div className="rounded-xl bg-green-50 border border-green-200 p-4 flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-              <div>
-                <p className="font-semibold text-green-800 text-sm">¡Tapete agregado al carrito!</p>
-                <p className="text-xs text-green-700 mt-0.5">Tu personalización ha sido guardada.</p>
-              </div>
-            </div>
-          ) : (
-            <Button
-              onClick={handleAddToCart}
-              size="lg"
-              className="w-full rounded-xl"
-            >
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              Agregar al carrito — ${price.toLocaleString('es-MX')} MXN
-            </Button>
-          )}
+          {/* Order CTA */}
+          <Button
+            onClick={onOrderNow}
+            size="lg"
+            className="w-full rounded-xl"
+          >
+            <Zap className="mr-2 h-5 w-5" />
+            ¡Ordenar ahora! — ${price.toLocaleString('es-MX')} MXN
+          </Button>
 
           {/* Trust badges */}
           <div className="grid grid-cols-2 gap-2 text-xs">

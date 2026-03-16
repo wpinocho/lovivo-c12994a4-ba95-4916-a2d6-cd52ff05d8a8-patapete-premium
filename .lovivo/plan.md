@@ -1,51 +1,51 @@
-# Patapete — Plan & Estado
+# PataPete — Plan de Optimización
 
-## Current State
-Tienda de tapetes personalizados con mascotas. Configurador de producto funcional con:
-- Canvas preview en vivo (CanvasPreview)
-- Generación de arte vía IA (Replicate/FLUX)
-- Persistencia en localStorage
-- StepPets → StepSummary flow
-- Testimonios, FAQ, social proof en la página de producto
+## Estado Actual
+Tienda de tapetes personalizados con mascota (PataPete). Producto principal: tapete con retrato IA de tu mascota ($649–$949 MXN).
 
-## User Preferences
-- Marca premium, cercana, humana — NO mencionar IA directamente al usuario
-- La mascota como protagonista emocional
-- Messaging: "Solo para tu mascota · Diseño exclusivo" (no "Retrato IA")
-- Español en toda la UI
+## Flujo de Compra Actual (post-optimización)
+```
+ProductPage (configurador)
+├── StepPets: sube foto, elige estilo, textos
+│   ├── [¡Ordenar ahora! →] (primario) ──────→ /pagar (checkout directo)
+│   └── [Ver mi tapete] (secundario/outline) ──→ StepSummary
+│
+└── StepSummary: preview + resumen del pedido
+    ├── [¡Ordenar ahora! →] (primario) ──────→ /pagar (checkout directo)
+    └── [← Volver a configurar] ─────────────→ StepPets
+```
 
-## Recent Changes
-- **Logo y favicon actualizados (versión definitiva):**
-  - `public/logo.webp` — patita tejida de coco café, fondo transparente
-  - `public/favicon.png` — misma patita, 64x47px PNG con transparencia
-  - `index.html` — favicon → `/favicon.png`, apple-touch-icon → `/logo.webp`
-  - `BrandLogoLeft.tsx` — usa `src="/logo.webp"` con width/height 36
+## Archivos Clave
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — orquestador, maneja `handleOrderNow` (guarda customización, addItem, navega a /pagar)
+- `src/components/patapete/configurator/StepPets.tsx` — step 1: configurar. CTA doble (Ordenar ahora + Ver tapete). Sticky bar bottom con los mismos.
+- `src/components/patapete/configurator/StepSummary.tsx` — step 2: resumen visual antes de pagar
+- `src/components/patapete/configurator/CanvasPreview.tsx` — preview canvas del tapete
+- `src/components/patapete/configurator/PhotoPetForm.tsx` — upload + generación IA
+- `src/components/patapete/configurator/types.ts` — PRICES, VARIANT_IDS, Style, Pet types
 
-- **Layout fix — ancho completo:**
-  - `PatapeteConfigurator.tsx`: Removido `max-w-4xl mx-auto` → ahora usa `w-full` para aprovechar todo el ancho del template
+## Variantes de Producto (IDs reales)
+- 1 mascota: `28fc993c-e638-459b-9a00-08abacdc9f32`
+- 2 mascotas: `1aee4582-040b-477a-b335-e99446fa76c7`
+- 3 mascotas: `5f7e007d-b30e-44c8-baa6-5aa03edb23ad`
 
-- **4 mejoras de conversión en StepPets.tsx:**
-  1. **Barra sticky CTA** — aparece cuando `canContinue && !ctaInView`. Solo activa cuando hay fotos subidas. Muestra precio y botón "Ver resumen →".
-  2. **Trust badges** — 3 íconos bajo el botón: Pago seguro / Envío incluido / Garantía total.
-  3. **Fecha estimada de entrega** — calculada dinámicamente (+7-10 días hábiles), mostrada en el header.
-  4. **Contador de demanda social** — "X personas lo están viendo ahora" (estable por hora, 8-24).
+## Decisiones de Diseño
+- "¡Ordenar ahora!" siempre es el CTA primario (filled, prominente)
+- "Ver mi tapete" es secundario (outline) — para buyers emocionales
+- Sticky bar en mobile: outline "Ver tapete" (solo sm+) + filled "Ordenar →"
+- Customización se guarda en localStorage con key `patapete_order_{timestamp}`
 
-- **Dependencia añadida:** `react-intersection-observer` (ya se usaba en ProductPageUI pero no estaba en package.json)
+## Funcionalidades Implementadas
+- [x] Generación de arte IA con Replicate (FLUX 2 Pro)
+- [x] Remoción de background (BiRefNet)
+- [x] Preview canvas en tiempo real
+- [x] Selector estilo: Icono / Dibujo
+- [x] Contador de mascotas (1/2/3)
+- [x] Textos superior/inferior personalizables
+- [x] Trust badges + fecha entrega dinámica + social proof
+- [x] Sticky CTA bar (aparece cuando el botón sale de viewport)
+- [x] Doble CTA: "Ordenar ahora" (checkout directo) + "Ver mi tapete" (resumen)
+- [x] Persistencia en localStorage
 
-- **Sticky preview layout:**
-  - Desktop: Grid `lg:grid-cols-2 lg:gap-10 lg:items-start`. Left column sticky top-20 con CanvasPreview.
-  - Mobile: CanvasPreview sticky top-16 z-10.
-
-## Known Issues
-- Reviews de Carlos M. y Sara P. no tienen foto de tapete (solo Ana T. tiene imagen real del tapete)
-
-## Pending
-- Usuario proporcionará fotos reales de más tapetes para integrar en testimonios
-
-## Architecture Notes
-- Slug especial: `tapete-personalizado-patapete` → renderiza PatapeteConfigurator
-- Variant IDs hardcoded en StepSummary.tsx para 1/2/3 mascotas
-- Precios: $649 (1 mascota), $799 (2), $949 (3) — mismo precio para ambos estilos
-- Customization data guardada en localStorage con key `patapete_order_${Date.now()}`
-- Navbar height estimada: ~64px mobile / ~80px desktop (top-16 / top-20 para sticky)
-- `BrandLogoLeft.tsx` usa `src="/logo.webp"` con width/height 36
+## Precios
+- Estilo Icono: 1→$649, 2→$799, 3→$949 MXN
+- Estilo Dibujo: 1→$649, 2→$799, 3→$949 MXN
