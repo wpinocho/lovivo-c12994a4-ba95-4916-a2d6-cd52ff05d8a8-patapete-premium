@@ -351,23 +351,27 @@ ${haikuPrompt}`
   return url
 }
 
-// ─── STEP 6: Upload transparent PNG to permanent Supabase Storage ─────────────
-async function uploadFinalArt(transparentPngUrl: string): Promise<string> {
+// ─── STEP 6: Upload FLUX JPEG to permanent Supabase Storage ──────────────────
+// Note: We skip server-side BiRefNet on the FLUX output (step 5.5) because
+// BiRefNet cannot distinguish the white background from white chest/interior areas.
+// Background removal is handled client-side via flood-fill which preserves interior
+// white regions by only removing pixels connected to the image edges.
+async function uploadFinalArt(artUrl: string): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  const res = await fetch(transparentPngUrl)
-  if (!res.ok) throw new Error(`Failed to download transparent PNG art: ${res.status}`)
+  const res = await fetch(artUrl)
+  if (!res.ok) throw new Error(`Failed to download FLUX art: ${res.status}`)
   const bytes = new Uint8Array(await res.arrayBuffer())
-  const filename = `finals/${Date.now()}.png`
+  const filename = `finals/${Date.now()}.jpg`
 
-  console.log(`[generate-tattoo] Step 6 INPUT — uploading transparent PNG to Storage: ${filename}`)
+  console.log(`[generate-tattoo] Step 6 INPUT — uploading FLUX JPEG to Storage: ${filename}`)
 
   const { error } = await supabase.storage
     .from('pet-tattoos')
-    .upload(filename, bytes, { contentType: 'image/png', upsert: false })
+    .upload(filename, bytes, { contentType: 'image/jpeg', upsert: false })
 
   if (error) throw new Error(`Storage upload (finals) failed: ${error.message}`)
   const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
-  console.log(`[generate-tattoo] Step 6 OUTPUT — permanent transparent PNG URL: ${data.publicUrl}`)
+  console.log(`[generate-tattoo] Step 6 OUTPUT — permanent JPEG URL: ${data.publicUrl}`)
   return data.publicUrl
 }
 
@@ -417,16 +421,13 @@ serve(async (req) => {
     const artUrl = await generateWithFluxFal(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
-    // Step 5.5: fal-ai/birefnet on FLUX output → transparent PNG
-    console.log('[generate-tattoo] ─── Step 5.5: fal-ai/birefnet on FLUX output ───')
-    const t55 = Date.now()
-    const transparentArtUrl = await removeBackgroundFal(artUrl, 'Step 5.5')
-    console.log(`[generate-tattoo] Step 5.5 done in ${Date.now() - t55}ms`)
+    // Step 5.5 SKIPPED — BiRefNet on FLUX output was removing white chest/interior areas.
+    // Background removal now happens client-side via flood-fill (only removes edge-connected bg).
 
-    // Step 6: Upload transparent PNG to permanent Storage
-    console.log('[generate-tattoo] ─── Step 6: Upload transparent PNG to permanent Storage ───')
+    // Step 6: Upload FLUX JPEG to permanent Storage
+    console.log('[generate-tattoo] ─── Step 6: Upload FLUX JPEG to permanent Storage ───')
     const t6 = Date.now()
-    const permanentArtUrl = await uploadFinalArt(transparentArtUrl)
+    const permanentArtUrl = await uploadFinalArt(artUrl)
     console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t6}ms | permanent URL: ${permanentArtUrl}`)
 
     const totalMs = Date.now() - t1

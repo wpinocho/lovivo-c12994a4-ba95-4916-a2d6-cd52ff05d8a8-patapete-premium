@@ -1,4 +1,4 @@
-import { removeWhiteBackground } from './imagePreprocessing'
+import { removeBackgroundFloodFill } from './imagePreprocessing'
 
 /** Cross-browser rounded rect helper */
 function fillRoundRect(
@@ -156,11 +156,11 @@ export async function compositeRug(
     if (!pet?.imageUrl) continue
 
     try {
-      // isGenerated: transparent PNG from edge function — BiRefNet already removed bg server-side
-      // isDemo: demo illustrations still have white bg — remove client-side
-      // raw upload: show as-is while AI processes
-      const drawUrl = pet.isDemo
-        ? await removeWhiteBackground(pet.imageUrl)
+      // For generated & demo images: flood-fill removes outer background, preserving
+      // interior white areas (chest, eyes, etc.). Raw uploads shown semi-transparent.
+      const needsBgRemoval = pet.isGenerated || pet.isDemo
+      const drawUrl = needsBgRemoval
+        ? await removeBackgroundFloodFill(pet.imageUrl)
         : pet.imageUrl
 
       const img = await loadImage(drawUrl)
@@ -174,8 +174,8 @@ export async function compositeRug(
       ctx.rect(x, y, w, clipH)
       ctx.clip()
 
-      if (pet.isGenerated || pet.isDemo) {
-        // Transparent PNG → composite cleanly over rug (no blend mode needed)
+      if (needsBgRemoval) {
+        // Background already removed by flood fill → draw cleanly over rug
         ctx.drawImage(img, x, y, w, h)
       } else {
         // Raw upload in transit: show semi-transparent while AI processes

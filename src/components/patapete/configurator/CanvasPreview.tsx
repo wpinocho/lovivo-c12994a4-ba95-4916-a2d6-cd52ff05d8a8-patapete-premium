@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Style, Pet } from './types'
 import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
+import { removeBackgroundFloodFill } from '@/utils/imagePreprocessing'
 
 // Demo images per style — stored in repo /public/demos/ with transparent background
 const DEMO_URLS: Record<Style, string[]> = {
@@ -67,9 +68,29 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
   const count = Math.min(Math.max(pets.length, 1), 3) as PetCount
   const layout = LAYOUTS[count]
 
-  // Background canvas → still needed for StepSummary's finalPreviewDataUrl
   const petKey = pets.map(p => `${p.generatedArtUrl || ''}:${p.name}`).join('|')
 
+  // Processed image URLs: flood-fill removes outer white background while preserving
+  // interior white areas (chest, eyes). Demo images are already transparent — passthrough.
+  const [processedUrls, setProcessedUrls] = useState<Record<number, string>>({})
+
+  useEffect(() => {
+    const newUrls: Record<number, string> = {}
+    const promises = pets.map(async (pet, i) => {
+      const raw = pet.generatedArtUrl || DEMO_URLS[style][i]
+      if (pet.generatedArtUrl) {
+        // Generated JPEG from FLUX → remove outer white background
+        newUrls[i] = await removeBackgroundFloodFill(raw).catch(() => raw)
+      } else {
+        // Demo images are already transparent webp — use directly
+        newUrls[i] = raw
+      }
+    })
+    Promise.all(promises).then(() => setProcessedUrls(newUrls)).catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petKey, style])
+
+  // Background canvas → still needed for StepSummary's finalPreviewDataUrl
   useEffect(() => {
     if (!onPreviewReady) return
     const petData: PetCompositeData[] = pets.map((pet, i) => ({
@@ -124,7 +145,9 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
         {layout.pets.map((petLayout, i) => {
           const pet = pets[i]
           if (!pet) return null
-          const imgUrl = pet.generatedArtUrl || DEMO_URLS[style][i]
+          // Use flood-fill processed URL (outer bg removed, white chest preserved)
+          // Falls back to raw URL while processing runs, then to demo image
+          const imgUrl = processedUrls[i] || pet.generatedArtUrl || DEMO_URLS[style][i]
 
           return (
             <div

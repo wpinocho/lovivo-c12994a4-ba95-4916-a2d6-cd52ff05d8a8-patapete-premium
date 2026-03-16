@@ -63,6 +63,92 @@ export async function removeWhiteBackground(
   })
 }
 
+/**
+ * Removes ONLY the outer background from an image using flood-fill (BFS from corners).
+ * Unlike threshold-only approaches, this preserves interior white areas like a dog's
+ * white chest — because they are NOT connected to the image edges.
+ *
+ * Algorithm:
+ *   1. Seed BFS queue with all border pixels that are near-white.
+ *   2. Expand to 4-connected neighbors that are also near-white.
+ *   3. Make all visited pixels transparent.
+ *   → Interior white islands (chest, eyes, etc.) are NEVER visited.
+ */
+export async function removeBackgroundFloodFill(
+  url: string,
+  threshold = 240,
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      try {
+        const W = img.naturalWidth
+        const H = img.naturalHeight
+        const canvas = document.createElement('canvas')
+        canvas.width = W
+        canvas.height = H
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0)
+
+        const imageData = ctx.getImageData(0, 0, W, H)
+        const d = imageData.data
+        const visited = new Uint8Array(W * H)
+
+        const isBackground = (idx4: number): boolean => {
+          const a = d[idx4 + 3]
+          if (a < 128) return false // already transparent — skip
+          return Math.min(d[idx4], d[idx4 + 1], d[idx4 + 2]) >= threshold
+        }
+
+        // BFS with head-pointer queue (O(1) dequeue)
+        const queue = new Int32Array(W * H)
+        let head = 0
+        let tail = 0
+
+        const enqueue = (x: number, y: number) => {
+          const idx = y * W + x
+          if (visited[idx]) return
+          if (!isBackground(idx * 4)) return
+          visited[idx] = 1
+          queue[tail++] = idx
+        }
+
+        // Seed from all 4 borders
+        for (let x = 0; x < W; x++) {
+          enqueue(x, 0)
+          enqueue(x, H - 1)
+        }
+        for (let y = 1; y < H - 1; y++) {
+          enqueue(0, y)
+          enqueue(W - 1, y)
+        }
+
+        // BFS — remove connected background
+        while (head < tail) {
+          const idx = queue[head++]
+          d[idx * 4 + 3] = 0
+          const x = idx % W
+          const y = Math.floor(idx / W)
+          if (x > 0)     enqueue(x - 1, y)
+          if (x < W - 1) enqueue(x + 1, y)
+          if (y > 0)     enqueue(x,     y - 1)
+          if (y < H - 1) enqueue(x,     y + 1)
+        }
+
+        ctx.putImageData(imageData, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      } catch {
+        resolve(url)
+      }
+    }
+
+    img.onerror = () => resolve(url)
+    img.src = url
+  })
+}
+
 export async function compressAndResizeImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new window.Image()
