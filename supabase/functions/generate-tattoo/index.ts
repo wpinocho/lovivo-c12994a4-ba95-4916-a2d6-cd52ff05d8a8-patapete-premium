@@ -1,11 +1,14 @@
-// v19 — Replaced BiRefNet (slow queue) with cjwbw/rembg (fast, ~1s) in Steps 1 & 5.5
+// v20 — Migrated from Replicate to Fal.ai (fal-ai/birefnet + fal-ai/flux-2-pro/edit)
+//   Steps 1 & 5.5: fal-ai/birefnet  (real BiRefNet, ~1-2s, no GPU queue)
+//   Step 4:        fal-ai/flux-2-pro/edit  (same model via Fal's faster infra)
+//   No more Replicate dependency.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY')!
-const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
-const SUPABASE_URL       = Deno.env.get('SUPABASE_URL')!
+const FALAI_API_KEY            = Deno.env.get('FALAI_API_KEY')!
+const ANTHROPIC_API_KEY        = Deno.env.get('ANTHROPIC_API_KEY')!
+const SUPABASE_URL             = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const STYLE_REFERENCE_DIBUJO_URL =
@@ -19,67 +22,92 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// ─── Helper: poll Replicate until done ───────────────────────────────────────
-async function pollReplicate(predictionId: string, maxSeconds = 90): Promise<any> {
+// ─── Helper: poll Fal queue until COMPLETED ───────────────────────────────────
+async function pollFal(statusUrl: string, responseUrl: string, maxSeconds = 120): Promise<any> {
   const interval = 1500
   const maxAttempts = Math.ceil((maxSeconds * 1000) / interval)
+
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, interval))
-    const res = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
-      headers: { 'Authorization': `Bearer ${REPLICATE_API_KEY}` },
+
+    const statusRes = await fetch(statusUrl, {
+      headers: { 'Authorization': `Key ${FALAI_API_KEY}` },
     })
-    const result = await res.json()
-    if (result.status === 'succeeded') return result
-    if (result.status === 'failed') throw new Error(result.error || 'Prediction failed')
+    if (!statusRes.ok) {
+      const err = await statusRes.text()
+      throw new Error(`Fal status check failed: ${err}`)
+    }
+    const status = await statusRes.json()
+    console.log(`[generate-tattoo] Fal poll — status: ${status.status} (attempt ${i + 1})`)
+
+    if (status.status === 'COMPLETED') {
+      const resultRes = await fetch(responseUrl, {
+        headers: { 'Authorization': `Key ${FALAI_API_KEY}` },
+      })
+      if (!resultRes.ok) {
+        const err = await resultRes.text()
+        throw new Error(`Fal result fetch failed: ${err}`)
+      }
+      return await resultRes.json()
+    }
+
+    if (status.status === 'FAILED' || status.error) {
+      throw new Error(`Fal prediction failed: ${status.error || JSON.stringify(status)}`)
+    }
   }
-  throw new Error(`Timeout after ${maxSeconds}s`)
+  throw new Error(`Fal poll timeout after ${maxSeconds}s`)
 }
 
-// ─── STEP 1 & 5.5: rembg background removal (replaces BiRefNet — much faster queue) ────────
-// cjwbw/rembg uses isnet-general-use for semantic subject detection (same quality as BiRefNet)
-// but runs on CPU — no GPU queue wait, consistently ~1–2s total.
-async function removeBackgroundRembg(image: string, stepLabel: string): Promise<string> {
-  const modelVersion = 'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003'
-  console.log(`[generate-tattoo] ${stepLabel} INPUT — rembg model: ${modelVersion} | image: ${image.startsWith('data:') ? `base64 (${image.length} chars)` : image}`)
+// ─── Helper: submit to Fal queue → { request_id, status_url, response_url } ──
+async function submitFal(endpoint: string, input: Record<string, unknown>): Promise<{ requestId: string; statusUrl: string; responseUrl: string }> {
+  const url = `https://queue.fal.run/${endpoint}`
+  console.log(`[generate-tattoo] Fal submit → ${url}`)
 
-  const response = await fetch('https://api.replicate.com/v1/predictions', {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${REPLICATE_API_KEY}`,
+      'Authorization': `Key ${FALAI_API_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': 'wait=60',
     },
-    body: JSON.stringify({
-      version: modelVersion,
-      input: {
-        image,
-        model: 'isnet-general-use',
-      },
-    }),
+    body: JSON.stringify(input),
   })
 
-  if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`rembg (${stepLabel}) request failed: ${err}`)
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Fal submit to ${endpoint} failed (${res.status}): ${err}`)
   }
 
-  const prediction = await response.json()
-  console.log(`[generate-tattoo] ${stepLabel} — Prediction ID: ${prediction.id} | Status: ${prediction.status}`)
+  const data = await res.json()
+  if (!data.request_id) throw new Error(`Fal submit: no request_id in response: ${JSON.stringify(data)}`)
 
-  if (prediction.status === 'succeeded') {
-    const out = prediction.output
-    const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
-    if (!url) throw new Error(`rembg (${stepLabel}) returned empty output`)
-    console.log(`[generate-tattoo] ${stepLabel} OUTPUT — transparent PNG URL: ${url}`)
-    return url
+  console.log(`[generate-tattoo] Fal submitted — request_id: ${data.request_id} | queue_position: ${data.queue_position ?? 'n/a'}`)
+
+  return {
+    requestId: data.request_id,
+    statusUrl: data.status_url  || `https://queue.fal.run/${endpoint}/requests/${data.request_id}/status`,
+    responseUrl: data.response_url || `https://queue.fal.run/${endpoint}/requests/${data.request_id}`,
   }
+}
 
-  if (!prediction.id) throw new Error(`rembg ${stepLabel}: no prediction ID in response: ${JSON.stringify(prediction)}`)
-  const result = await pollReplicate(prediction.id, 90)
-  const out = result.output
-  const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
-  if (!url) throw new Error(`rembg (${stepLabel}) returned empty output after polling`)
-  console.log(`[generate-tattoo] ${stepLabel} OUTPUT (polled) — transparent PNG URL: ${url}`)
+// ─── STEPS 1 & 5.5: fal-ai/birefnet background removal ──────────────────────
+// Uses the real BiRefNet model (not rembg). No GPU cold-start queue on Fal.
+async function removeBackgroundFal(imageUrl: string, stepLabel: string): Promise<string> {
+  console.log(`[generate-tattoo] ${stepLabel} INPUT — fal-ai/birefnet | image: ${imageUrl.startsWith('data:') ? `base64 (${imageUrl.length} chars)` : imageUrl}`)
+
+  const { statusUrl, responseUrl } = await submitFal('fal-ai/birefnet', {
+    image_url: imageUrl,
+    model: 'General Use (Light)',
+    operating_resolution: '1024x1024',
+    refine_foreground: true,
+    output_format: 'png',
+  })
+
+  const result = await pollFal(statusUrl, responseUrl, 60)
+
+  const url = result?.image?.url
+  if (!url) throw new Error(`fal-ai/birefnet (${stepLabel}) returned no image URL. Response: ${JSON.stringify(result)}`)
+
+  console.log(`[generate-tattoo] ${stepLabel} OUTPUT — transparent PNG URL: ${url}`)
   return url
 }
 
@@ -271,7 +299,57 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   return text.trim()
 }
 
-// Step 5.5 now uses the shared removeBackgroundRembg() function defined above
+// ─── STEP 4: fal-ai/flux-2-pro/edit → final art via image_urls[] ─────────────
+//
+// Strategy (same as before, now via Fal):
+//   DIBUJO — image_urls = [petUrl, styleRefUrl]
+//   ICONO  — image_urls = [petUrl, styleRefIconoUrl]
+//   Prompt instructs model: first image = pet, second = style reference to apply
+//
+async function generateWithFluxFal(
+  petUrl: string,
+  haikuPrompt: string,
+  artStyle: 'dibujo' | 'icono'
+): Promise<string> {
+  let imageUrls: string[]
+  let finalPrompt: string
+
+  if (artStyle === 'dibujo') {
+    imageUrls = [petUrl, STYLE_REFERENCE_DIBUJO_URL]
+    finalPrompt = `<image 1> is the pet to recreate. <image 2> is the exact art style reference to apply.
+Generate a portrait of the pet from <image 1>, applying STRICTLY the visual style, line weight, and artistic technique shown in <image 2>.
+${haikuPrompt}`
+  } else {
+    imageUrls = [petUrl, STYLE_REFERENCE_ICONO_URL]
+    finalPrompt = `<image 1> is the pet to recreate. <image 2> is the EXACT art style reference to apply.
+Generate a flat colorful 2D cartoon portrait of the pet from <image 1>. The output MUST match the style of <image 2> EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, bright vibrant colors, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
+${haikuPrompt}`
+  }
+
+  console.log(`[generate-tattoo] Step 4 INPUT — fal-ai/flux-2-pro/edit:`)
+  console.log(`  style: ${artStyle}`)
+  console.log(`  image_urls: ${JSON.stringify(imageUrls)}`)
+  console.log(`  image_size: square_hd | output_format: jpeg | safety_tolerance: 2`)
+  console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
+
+  const { statusUrl, responseUrl } = await submitFal('fal-ai/flux-2-pro/edit', {
+    prompt: finalPrompt,
+    image_urls: imageUrls,
+    image_size: 'square_hd',
+    output_format: 'jpeg',
+    safety_tolerance: '2',
+    enable_safety_checker: false,
+  })
+
+  console.log(`[generate-tattoo] Step 4 — FLUX submitted via Fal | polling up to 120s...`)
+
+  const result = await pollFal(statusUrl, responseUrl, 120)
+  const url = result?.images?.[0]?.url
+  if (!url) throw new Error(`fal-ai/flux-2-pro/edit returned no image URL. Response: ${JSON.stringify(result)}`)
+
+  console.log(`[generate-tattoo] Step 4 OUTPUT — FLUX result URL: ${url}`)
+  return url
+}
 
 // ─── STEP 6: Upload transparent PNG to permanent Supabase Storage ─────────────
 async function uploadFinalArt(transparentPngUrl: string): Promise<string> {
@@ -293,85 +371,12 @@ async function uploadFinalArt(transparentPngUrl: string): Promise<string> {
   return data.publicUrl
 }
 
-// ─── STEP 4: FLUX 2 Pro → final art via input_images[] ───────────────────────
-//
-// Strategy:
-//   DIBUJO — input_images = [petUrl, styleRefUrl]
-//            Prompt tells FLUX: first image = pet to recreate, second = style to apply
-//   ICONO  — input_images = [petUrl, styleRefIconoUrl]
-//            Prompt tells FLUX: first image = pet to recreate, second = flat vector style to apply
-//
-async function generateWithFlux2Pro(
-  petUrl: string,
-  haikuPrompt: string,
-  artStyle: 'dibujo' | 'icono'
-): Promise<string> {
-  let inputImages: string[]
-  let finalPrompt: string
-
-  if (artStyle === 'dibujo') {
-    inputImages = [petUrl, STYLE_REFERENCE_DIBUJO_URL]
-    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.
-Generate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.
-${haikuPrompt}`
-  } else {
-    inputImages = [petUrl, STYLE_REFERENCE_ICONO_URL]
-    finalPrompt = `The first image is the pet to recreate. The second image is the EXACT art style reference to apply.
-Generate a flat colorful 2D cartoon portrait of the pet from the first image. The output MUST match the style of the second reference image EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, bright vibrant colors, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
-${haikuPrompt}`
-  }
-
-  console.log(`[generate-tattoo] Step 4 INPUT — FLUX 2 Pro:`)
-  console.log(`  model: black-forest-labs/flux-2-pro`)
-  console.log(`  style: ${artStyle}`)
-  console.log(`  input_images: ${JSON.stringify(inputImages)}`)
-  console.log(`  aspect_ratio: 1:1 | resolution: 1 MP | output_format: webp`)
-  console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
-
-  const fluxInput = {
-    prompt: finalPrompt,
-    input_images: inputImages,
-    aspect_ratio: '1:1',
-    resolution: '1 MP',
-    output_format: 'webp',
-    output_quality: 80,
-    safety_tolerance: 2,
-  }
-
-  const response = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-2-pro/predictions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${REPLICATE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ input: fluxInput }),
-  })
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}))
-    throw new Error(`FLUX 2 Pro error: ${JSON.stringify(err)}`)
-  }
-
-  const prediction = await response.json()
-  if (!prediction.id) throw new Error(`FLUX 2 Pro: no prediction ID. Response: ${JSON.stringify(prediction)}`)
-
-  console.log(`[generate-tattoo] Step 4 — FLUX prediction submitted | ID: ${prediction.id} | polling up to 120s...`)
-
-  const result = await pollReplicate(prediction.id, 120)
-  const out = result.output
-  const url = Array.isArray(out) ? out[0] : out
-  if (!url) throw new Error('FLUX 2 Pro returned no image URL')
-
-  console.log(`[generate-tattoo] Step 4 OUTPUT — FLUX 2 Pro result URL: ${url}`)
-  return url
-}
-
 // ─── Main handler ─────────────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    if (!REPLICATE_API_KEY) throw new Error('REPLICATE_API_KEY secret not configured')
+    if (!FALAI_API_KEY) throw new Error('FALAI_API_KEY secret not configured')
     if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')
 
     const { imageBase64, petName, style } = await req.json()
@@ -379,13 +384,13 @@ serve(async (req) => {
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
-    console.log(`[generate-tattoo] ═══ PIPELINE START ═══`)
+    console.log(`[generate-tattoo] ═══ PIPELINE START (v20 — Fal.ai) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
-    // Step 1: Remove background from user photo
-    console.log('[generate-tattoo] ─── Step 1: rembg background removal (user photo) ───')
+    // Step 1: Remove background from user photo (fal-ai/birefnet)
+    console.log('[generate-tattoo] ─── Step 1: fal-ai/birefnet background removal (user photo) ───')
     const t1 = Date.now()
-    const transparentPngUrl = await removeBackgroundRembg(`data:image/png;base64,${imageBase64}`, 'Step 1')
+    const transparentPngUrl = await removeBackgroundFal(`data:image/png;base64,${imageBase64}`, 'Step 1')
     console.log(`[generate-tattoo] Step 1 done in ${Date.now() - t1}ms`)
 
     // Step 2: Smart crop + normalize
@@ -406,24 +411,23 @@ serve(async (req) => {
     const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
     console.log(`[generate-tattoo] Step 3 done in ${Date.now() - t3}ms`)
 
-    // Step 4: FLUX 2 Pro → final art
-    console.log('[generate-tattoo] ─── Step 4: FLUX 2 Pro generation ───')
+    // Step 4: fal-ai/flux-2-pro/edit → final art
+    console.log('[generate-tattoo] ─── Step 4: fal-ai/flux-2-pro/edit generation ───')
     const t4 = Date.now()
-    const artUrl = await generateWithFlux2Pro(petUrl, optimizedPrompt, artStyle)
+    const artUrl = await generateWithFluxFal(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
-    // Step 5.5: rembg on FLUX output → transparent PNG
-    // isnet-general-use understands subject semantically — preserves white fur/chest/paws
-    console.log('[generate-tattoo] ─── Step 5.5: rembg on FLUX output ───')
+    // Step 5.5: fal-ai/birefnet on FLUX output → transparent PNG
+    console.log('[generate-tattoo] ─── Step 5.5: fal-ai/birefnet on FLUX output ───')
     const t55 = Date.now()
-    const transparentArtUrl = await removeBackgroundRembg(artUrl, 'Step 5.5')
+    const transparentArtUrl = await removeBackgroundFal(artUrl, 'Step 5.5')
     console.log(`[generate-tattoo] Step 5.5 done in ${Date.now() - t55}ms`)
 
-    // Step 6: Upload transparent PNG to permanent Storage (Replicate URLs expire in ~24h)
+    // Step 6: Upload transparent PNG to permanent Storage
     console.log('[generate-tattoo] ─── Step 6: Upload transparent PNG to permanent Storage ───')
-    const t5 = Date.now()
+    const t6 = Date.now()
     const permanentArtUrl = await uploadFinalArt(transparentArtUrl)
-    console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t5}ms | permanent URL: ${permanentArtUrl}`)
+    console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t6}ms | permanent URL: ${permanentArtUrl}`)
 
     const totalMs = Date.now() - t1
     console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${totalMs}ms ═══`)
