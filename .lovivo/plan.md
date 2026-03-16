@@ -12,18 +12,69 @@ Tienda de tapetes personalizados con mascotas. El configurador interactivo (`Pat
 - **Estilo activo: `icono`** — siempre forzado en estado inicial y tras cargar localStorage
 - Estilo `dibujo` oculto hasta tener sus imágenes demo
 
-## Bug corregido: Imagen de referencia ICONO incorrecta (v2 — usuario proveyó imagen)
-- La URL anterior apuntaba a una imagen generada que no era el estilo correcto
-- **Fix v2**: El usuario subió la referencia correcta — Border Terrier peekaboo illustration con colores sólidos, líneas bold y fondo claro
-- URL nueva: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
-- Edge function actualizada con nueva URL
+## ✅ BUG CRÍTICO A RESOLVER: Blanco del perro se borra al compositar
 
-## Bug corregido: Cache al borrar imagen (X button)
-- **Antes**: X button llamaba `onChange({...null})` → saveToStorage en useEffect (asíncrono)
-- **Ahora**: X button llama `onClear()` → `handleClearPet(index)` en PatapeteConfigurator
-  - Resetea el pet a `DEFAULT_PET` en estado
-  - Llama `saveToStorage(newState)` de forma **síncrona** dentro del setState callback
-  - Limpia también los `fieldErrors` en StepPets
+### Problema
+El frontend usa `removeWhiteBackground()` (threshold pixel-based, umbral 238) para quitar el fondo blanco antes de compositar el arte FLUX sobre el tapete. Esto es destructivo: borra también áreas blancas del propio perro (pecho, patitas, boca). Ejemplo: chihuahua con pecho blanco quedaba sin pecho en el tapete.
+
+### Solución aprobada
+**Correr BiRefNet en el output de FLUX** (dentro de la edge function, antes de guardar el resultado permanente). BiRefNet es un modelo AI de segmentación que entiende dónde está el sujeto vs. el fondo, a diferencia del umbral de píxeles que no puede diferenciar "fondo blanco" de "pelaje blanco".
+
+### Cambios necesarios
+
+#### 1. `supabase/functions/generate-tattoo/index.ts`
+Reestructurar el pipeline para añadir un **Paso 5: BiRefNet en el output de FLUX** (antes del upload permanente):
+
+```
+Paso 1: BiRefNet en foto del usuario → transparent PNG
+Paso 2: Smart crop + normalize → 800×800 white canvas  
+Paso 3: Upload normalized pet → public URL
+Paso 4: Claude Haiku → optimized prompt
+Paso 5: FLUX 2 Pro → cartoon art (white background, temp URL)
+[NUEVO] Paso 5.5: BiRefNet en output de FLUX → transparent PNG URL
+[NUEVO] Paso 6: Download transparent PNG, upload permanente como PNG (no webp)
+Return: transparent PNG URL
+```
+
+Renombrar `uploadFinalArt` para que suba como `image/png` en lugar de `image/webp`, y guardar en `finals/TIMESTAMP.png`.
+
+Añadir función `removeBackgroundFromFluxOutput(fluxUrl: string): Promise<string>` que:
+- Descarga la imagen de FLUX (es una URL pública de Replicate)
+- Convierte a base64
+- Llama a BiRefNet igual que en el Paso 1 pero pasando la URL directamente (no necesita base64, BiRefNet acepta URLs)
+- Retorna la URL del transparent PNG
+
+**IMPORTANTE**: BiRefNet acepta `image` como URL directamente (no necesita base64). Usar `image: fluxUrl` en el input.
+
+#### 2. `src/utils/canvasCompositing.ts`
+Para imágenes `isGenerated`, ya NO llamar `removeWhiteBackground()` — el PNG ya viene transparente de la edge function.
+
+Cambiar:
+```ts
+const drawUrl = (pet.isGenerated || pet.isDemo)
+  ? await removeWhiteBackground(pet.imageUrl)
+  : pet.imageUrl
+```
+
+Por:
+```ts
+// isGenerated: transparent PNG from edge function (BiRefNet already removed bg)
+// isDemo: demo illustrations that need white bg removed client-side
+const drawUrl = pet.isDemo
+  ? await removeWhiteBackground(pet.imageUrl)
+  : pet.imageUrl
+```
+
+Esto significa:
+- `isGenerated = true` → usa el PNG directamente (ya transparente del server)
+- `isDemo = true` → sigue usando removeWhiteBackground (demos son ilustraciones con bg blanco)
+- raw upload → sin cambios (semi-transparente 0.72 alpha)
+
+## Bug corregido: Imagen de referencia ICONO incorrecta (v2 — usuario proveyó imagen)
+- URL nueva: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
+- Edge function actualizada con nueva URL ✅
+
+## Bug corregido: Cache al borrar imagen (X button) ✅
 
 ## Cambios Recientes
 - Bug fix: estilo `icono` ahora se fuerza correctamente incluso al cargar desde localStorage
@@ -34,34 +85,15 @@ Tienda de tapetes personalizados con mascotas. El configurador interactivo (`Pat
   - Barra de progreso ease-out (rápido al inicio, lento al final)
   - Glow pulsante alrededor del thumbnail durante generación
 
-## Loading UX — Detalles de Implementación
-
-### Curva ease-out de la barra
-Milestones: 8% → 28% (2s) → 48% (5s) → 64% (9s) → 76% (13s) → 86% (17s) → 93% (21s) → 100% (al recibir resultado)
-
-### Mensajes rotativos
-- 0s: "Analizando tu mascota..."
-- 4s: "Detectando rasgos únicos..."
-- 9s: "Capturando la personalidad..."
-- 14s: "Pintando el retrato..."
-- 18s: "¡Casi listo! ✨"
-
 ## Prompts IA (Edge Function generate-tattoo)
 
 ### ICONO (v3 — referencia provista por usuario)
 - Referencia: Border Terrier peekaboo illustration — colores sólidos, líneas bold, fondo claro
 - URL: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
-- Prompt base Haiku: extrae tipo animal, pelaje, colores, expresión, rasgos clave
-- Template final: "charming flat 2D cartoon illustration, bold clean outlines, solid color fills, sticker/app icon style, NO sketchy lines"
-- FLUX prompt wrapper: "MUST match style: bold clean outlines, solid color fills, flat/cel-shaded, bright vibrant colors, white background. NO sketchy lines, NO fine detail texture, NO painterly look."
 
-### DIBUJO (v1 — b&w linocut)  
-- Referencia: `style-dibujo.png` (b&w line art — correcto)
-- Prompt base Haiku: extrae solo info estructural (ignora colores), rasgos físicos, accesorios
-- Template final: "pure black and white, only extremely thick chunky bold black lines, linocut/rubber stamp style"
+### DIBUJO (v1 — b&w linocut)
+- Referencia: `style-dibujo.png` (b&w line art)
 
-## Archivos modificados (últimos cambios)
-- `supabase/functions/generate-tattoo/index.ts` — STYLE_REFERENCE_ICONO_URL actualizada con imagen del usuario
-- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — `handleClearPet` + pasa `onClearPet`
-- `src/components/patapete/configurator/StepPets.tsx` — `onClearPet` prop + `handleClearPet` local
-- `src/components/patapete/configurator/PhotoPetForm.tsx` — `onClear` prop, X button usa `onClear()`
+## Archivos a modificar (próximo cambio)
+- `supabase/functions/generate-tattoo/index.ts` — Añadir BiRefNet en output de FLUX (nuevo paso 5.5), upload como PNG transparente
+- `src/utils/canvasCompositing.ts` — Para `isGenerated`, skip `removeWhiteBackground` (ya viene transparente)
