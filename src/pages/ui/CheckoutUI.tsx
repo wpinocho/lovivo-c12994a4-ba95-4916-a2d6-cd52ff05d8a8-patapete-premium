@@ -11,6 +11,7 @@ import { CartAppliedRules } from "@/components/ui/CartAppliedRules";
 import { useNavigate } from "react-router-dom";
 import StripePayment from "@/components/StripePayment";
 import { CountryPhoneSelect } from "@/components/CountryPhoneSelect";
+import { BrandLogoLeft } from "@/components/BrandLogoLeft";
 import { HeadlessCheckout } from "@/components/headless/HeadlessCheckout";
 import { useURLCheckoutParams } from "@/hooks/useURLCheckoutParams";
 import { useTokenCheckout } from "@/hooks/useTokenCheckout";
@@ -77,17 +78,7 @@ export default function CheckoutUI() {
           {/* Minimal checkout header - logo only */}
           <header className="border-b bg-background">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-              <a href="/" aria-label="Volver al inicio">
-                <img 
-                  src="/logo.png"
-                  alt="Logo"
-                  className="h-8 w-auto object-contain"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = '<span class="text-xl font-bold text-foreground">YourBrand</span>';
-                  }}
-                />
-              </a>
+              <BrandLogoLeft />
             </div>
           </header>
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
