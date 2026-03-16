@@ -1,52 +1,35 @@
 import { removeBackgroundFloodFill } from './imagePreprocessing'
 
-/** Cross-browser rounded rect helper */
-function fillRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number, y: number, w: number, h: number, r: number
-) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
-  ctx.fill()
-}
-
 export interface PetCompositeData {
   imageUrl: string
   name?: string
   /** No photo uploaded yet — renders a placeholder demo illustration */
   isDemo?: boolean
-  /** AI-generated art — transparent PNG from server (BiRefNet already removed bg) */
+  /** AI-generated art — outer bg will be removed via flood-fill */
   isGenerated?: boolean
 }
 
 // Coir rug mockup — stored in repo public/ folder (same origin, no CORS issues)
 const TAPETE_MOCKUP_URL = '/tapete-mockup.webp'
 
-// ─── Canvas layout constants (600×600 canvas) ─────────────────────────────────
-//
-// The rug mockup is 2048×2048 → scaled 1:1 to fill 600×600 (no cropping).
-// Based on visual inspection, the rug's top edge sits at ~y=390 in canvas coords,
-// and its bottom edge at ~y=545.
-//
-// Peekaboo layout:
-//   • Pets peek ABOVE the rug — their paw line anchors at Y_PAW (top of rug interior)
-//   • Pets are clipped at Y_CLIP (just below the paw line, showing paws but nothing below)
-//   • Phrase rendered ARRIBA inside the rug (just below the paw/clip boundary)
-//   • Names rendered below the phrase, still within the rug
+// ─── Layout config matching CanvasPreview.tsx exactly ─────────────────────────
+type PetCount = 1 | 2 | 3
+interface Layout { pets: { left: number }[]; petWidth: number; petTop: number }
 
-const Y_PAW         = 415   // y where the peekaboo paw-line lands on canvas
-const Y_CLIP        = 438   // clip pet art at this y (shows ~23 px of paws below the line)
-const Y_PHRASE_BTM  = 474   // bottom of phrase text pill (inside rug, "arriba")
-const PAW_RATIO     = 0.76  // paw line sits at ~76 % from the top of FLUX peekaboo output
+const LAYOUTS: Record<PetCount, Layout> = {
+  1: { pets: [{ left: 0.3632 }],                                              petWidth: 0.2739, petTop: 0.4526 },
+  2: { pets: [{ left: 0.1806 }, { left: 0.5229 }],                           petWidth: 0.2739, petTop: 0.4526 },
+  3: { pets: [{ left: 0.1528 }, { left: 0.3930 }, { left: 0.6381 }],         petWidth: 0.2055, petTop: 0.4921 },
+}
+
+// Font sizes matching cqw values in CanvasPreview.tsx (cqw = % of container width)
+const FONT_PHRASE  = 0.055  // 5.5cqw
+const FONT_NAME    = 0.045  // 4.5cqw
+const FONT_PHRASE2 = 0.038  // 3.8cqw
+
+// Vertical positions (matching CanvasPreview.tsx)
+const TOP_PHRASE  = 0.3471  // 34.71% from top
+const TOP_PHRASE2 = 0.70    // 70% from top
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -54,7 +37,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
     img.crossOrigin = 'anonymous'
     img.onload = () => resolve(img)
     img.onerror = () => {
-      // Retry without crossOrigin for blob: / local files
+      // Retry without crossOrigin for blob: / data: / local files
       const img2 = new window.Image()
       img2.onload = () => resolve(img2)
       img2.onerror = reject
@@ -64,66 +47,50 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-// ─── Slot layout ──────────────────────────────────────────────────────────────
-interface PetSlot { x: number; y: number; w: number; h: number }
-
-/**
- * Returns pet slot positions anchored so that the paw line (PAW_RATIO * h from top)
- * lands exactly at Y_PAW. Pets will peek above the rug into the brick/door area.
- */
-function getPetSlots(count: number, W: number, _H: number): PetSlot[] {
-  const slotY = (s: number) => Math.round(Y_PAW - s * PAW_RATIO)
-
-  switch (count) {
-    case 1: {
-      const s = 220
-      return [{ x: Math.round((W - s) / 2), y: slotY(s), w: s, h: s }]
-    }
-    case 2: {
-      const s   = 172
-      const gap = 22
-      const startX = Math.round((W - (s * 2 + gap)) / 2)
-      const y = slotY(s)
-      return [
-        { x: startX,           y, w: s, h: s },
-        { x: startX + s + gap, y, w: s, h: s },
-      ]
-    }
-    case 3:
-    default: {
-      const s   = 142
-      const gap = 14
-      const startX = Math.round((W - (s * 3 + gap * 2)) / 2)
-      const y = slotY(s)
-      return [
-        { x: startX,               y, w: s, h: s },
-        { x: startX + s + gap,     y, w: s, h: s },
-        { x: startX + (s + gap)*2, y, w: s, h: s },
-      ]
+/** Draw text with automatic line wrapping */
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number
+): void {
+  const words = text.split(' ')
+  let line = ''
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' '
+    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+      ctx.fillText(line.trim(), x, y)
+      line = words[n] + ' '
+      y += lineHeight
+    } else {
+      line = testLine
     }
   }
+  ctx.fillText(line.trim(), x, y)
 }
 
 // ─── Main composite function ──────────────────────────────────────────────────
 /**
- * Renders a tapete preview with pet images composited onto the rug mockup.
+ * Renders a tapete preview canvas that exactly matches the HTML/CSS CanvasPreview component.
  *
- * Layout (top→bottom in the 600×600 canvas):
- *   1. Rug mockup background (full canvas)
- *   2. Pet portraits — peekaboo style, heads above the rug, clipped at Y_CLIP
- *   3. Phrase text — inside the rug, just below the paw line ("arriba")
- *   4. Pet name labels — inside the rug, below the phrase
- *
- * Three rendering modes per pet:
- *   isDemo=true       → circular clip, 0.45 opacity (placeholder, no peekaboo clip)
- *   isGenerated=true  → clip to Y_CLIP + multiply blend (white bg disappears onto rug)
- *   otherwise         → clip to Y_CLIP + 0.72 opacity (raw photo in transit)
+ * Layout (matching CanvasPreview.tsx percentages):
+ *   1. Rug mockup background (full canvas, scaled 1.12× from center)
+ *   2. Top phrase at 34.71%  — font 5.5cqw
+ *   3. Pet images at layout-specific positions (% of canvas)
+ *   4. Pet names above each image
+ *   5. Bottom phrase2 at 70% — font 3.8cqw
  */
 export async function compositeRug(
   pets: PetCompositeData[],
   phrase?: string,
+  phrase2?: string,
   mockupUrl: string = TAPETE_MOCKUP_URL
 ): Promise<string> {
+  // Wait for custom fonts (Plus Jakarta Sans) to be available in canvas
+  await document.fonts.ready
+
   const W = 600
   const H = 600
 
@@ -132,7 +99,13 @@ export async function compositeRug(
   canvas.height = H
   const ctx = canvas.getContext('2d')!
 
-  // ── 1. Draw rug mockup ─────────────────────────────────────────────────────
+  // Apply 1.12 scale from center — matching CSS: transform: scale(1.12) transformOrigin: center
+  ctx.save()
+  ctx.translate(W / 2, H / 2)
+  ctx.scale(1.12, 1.12)
+  ctx.translate(-W / 2, -H / 2)
+
+  // ── 1. Draw rug mockup (cover fill) ───────────────────────────────────────
   try {
     const tapete = await loadImage(mockupUrl)
     const scale  = Math.max(W / tapete.naturalWidth, H / tapete.naturalHeight)
@@ -140,107 +113,86 @@ export async function compositeRug(
     const th     = tapete.naturalHeight * scale
     ctx.drawImage(tapete, (W - tw) / 2, (H - th) / 2, tw, th)
   } catch {
+    // Fallback gradient if mockup fails to load
     const grad = ctx.createLinearGradient(0, 0, W, H)
     grad.addColorStop(0, '#c8a46e')
     grad.addColorStop(1, '#a07840')
     ctx.fillStyle = grad
-    ctx.fillRect(0, 0, W, H)
+    ctx.fillRect(-W, -H, W * 3, H * 3)
   }
 
-  const slots = getPetSlots(pets.length, W, H)
+  // ── 2. Layout config ───────────────────────────────────────────────────────
+  const count = Math.min(Math.max(pets.length, 1), 3) as PetCount
+  const layout = LAYOUTS[count]
+  const petWidthPx = Math.round(layout.petWidth * W)
+  const petTopPx   = Math.round(layout.petTop * H)
 
-  // ── 2. First pass: pet images (no names yet) ───────────────────────────────
-  for (let i = 0; i < pets.length; i++) {
-    const pet  = pets[i]
-    const slot = slots[i]
-    if (!pet?.imageUrl) continue
+  // ── 3. Top phrase (34.71% from top) ───────────────────────────────────────
+  const phraseText = phrase?.trim() || 'Aquí manda'
+  const phraseFontSize = Math.round(FONT_PHRASE * W)
+  ctx.save()
+  ctx.font         = `800 ${phraseFontSize}px 'Plus Jakarta Sans', sans-serif`
+  ctx.fillStyle    = '#000000'
+  ctx.textAlign    = 'center'
+  ctx.textBaseline = 'top'
+  ctx.fillText(phraseText, W / 2, Math.round(TOP_PHRASE * H))
+  ctx.restore()
+
+  // ── 4. Pet images with names ───────────────────────────────────────────────
+  for (let i = 0; i < Math.min(pets.length, count); i++) {
+    const pet = pets[i]
+    const petLayoutItem = layout.pets[i]
+    if (!petLayoutItem || !pet?.imageUrl) continue
+
+    const petLeftPx = Math.round(petLayoutItem.left * W)
 
     try {
-      // For generated & demo images: flood-fill removes outer background, preserving
-      // interior white areas (chest, eyes, etc.). Raw uploads shown semi-transparent.
+      // Flood-fill removes outer white background while preserving interior white areas
       const needsBgRemoval = pet.isGenerated || pet.isDemo
       const drawUrl = needsBgRemoval
         ? await removeBackgroundFloodFill(pet.imageUrl)
         : pet.imageUrl
 
       const img = await loadImage(drawUrl)
-      const { x, y, w, h } = slot
 
-      ctx.save()
+      // h-auto equivalent: maintain natural aspect ratio
+      const aspectRatio  = img.naturalHeight / img.naturalWidth
+      const petHeightPx  = Math.round(petWidthPx * aspectRatio)
 
-      // ── Peekaboo: clip to Y_CLIP (head above rug, paws visible, nothing below) ──
-      const clipH = Math.min(h, Math.max(10, Y_CLIP - y))
-      ctx.beginPath()
-      ctx.rect(x, y, w, clipH)
-      ctx.clip()
-
-      if (needsBgRemoval) {
-        // Background already removed by flood fill → draw cleanly over rug
-        ctx.drawImage(img, x, y, w, h)
-      } else {
-        // Raw upload in transit: show semi-transparent while AI processes
-        ctx.globalAlpha = 0.72
-        ctx.drawImage(img, x, y, w, h)
+      // ── Pet name above the image ─────────────────────────────────────────
+      // CSS: top:0, transform: translateY(calc(-100% + 14px))
+      // → name bottom = petTopPx + 14px
+      if (pet.name?.trim()) {
+        const nameFontSize = Math.round(FONT_NAME * W)
+        ctx.save()
+        ctx.font         = `800 ${nameFontSize}px 'Plus Jakarta Sans', sans-serif`
+        ctx.fillStyle    = '#000000'
+        ctx.textAlign    = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.fillText(pet.name.trim(), petLeftPx + petWidthPx / 2, petTopPx + 14)
+        ctx.restore()
       }
 
-      ctx.restore()
+      // ── Draw pet image ────────────────────────────────────────────────────
+      ctx.drawImage(img, petLeftPx, petTopPx, petWidthPx, petHeightPx)
     } catch {
       // Skip pet if image fails to load
     }
   }
 
-  // ── 3. Phrase — inside rug, ARRIBA (just below the paw line) ──────────────
-  if (phrase?.trim()) {
-    const text     = `"${phrase.trim()}"`
-    const fontSize = Math.max(13, Math.min(20, W / text.length * 1.0))
-    ctx.save()
-    ctx.font          = `800 ${fontSize}px 'Plus Jakarta Sans', sans-serif`
-    ctx.textAlign     = 'center'
-    ctx.textBaseline  = 'bottom'
-    const textW = ctx.measureText(text).width
+  // ── 5. Bottom phrase2 (70% from top) ──────────────────────────────────────
+  const phrase2Text = phrase2?.trim() || 'No toques... ya sabemos que estás aquí'
+  const phrase2FontSize = Math.round(FONT_PHRASE2 * W)
+  ctx.save()
+  ctx.font         = `800 ${phrase2FontSize}px 'Plus Jakarta Sans', sans-serif`
+  ctx.fillStyle    = '#000000'
+  ctx.textAlign    = 'center'
+  ctx.textBaseline = 'top'
+  // 8% padding on each side = 84% max width (matching padding: '0 8%' in CSS)
+  wrapText(ctx, phrase2Text, W / 2, Math.round(TOP_PHRASE2 * H), W * 0.84, phrase2FontSize * 1.2)
+  ctx.restore()
 
-    // Pill background
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'
-    fillRoundRect(
-      ctx,
-      W / 2 - textW / 2 - 14,
-      Y_PHRASE_BTM - fontSize - 4,
-      textW + 28,
-      fontSize + 10,
-      6
-    )
-
-    ctx.fillStyle = '#f5e1c3'
-    ctx.fillText(text, W / 2, Y_PHRASE_BTM)
-    ctx.restore()
-  }
-
-  // ── 4. Second pass: pet name labels (below phrase, inside rug) ─────────────
-  // Position names below the phrase if present, or just below the paw clip if not.
-  const yNames = phrase?.trim() ? Y_PHRASE_BTM + 26 : Y_PAW + 52
-
-  for (let i = 0; i < pets.length; i++) {
-    const pet  = pets[i]
-    const slot = slots[i]
-    if (!pet?.name?.trim()) continue
-
-    const fontSize = Math.max(11, Math.round(Math.min(slot.w, slot.h) * 0.10))
-    ctx.save()
-    ctx.font          = `bold ${fontSize}px 'Plus Jakarta Sans', sans-serif`
-    ctx.textAlign     = 'center'
-    ctx.textBaseline  = 'top'
-    const labelX = slot.x + slot.w / 2
-    const textW  = ctx.measureText(pet.name).width
-    const pillH  = fontSize * 1.4
-    const pillPad = 8
-
-    ctx.fillStyle = 'rgba(0,0,0,0.40)'
-    fillRoundRect(ctx, labelX - textW / 2 - pillPad, yNames, textW + pillPad * 2, pillH, 4)
-
-    ctx.fillStyle = '#f5e1c3'
-    ctx.fillText(pet.name, labelX, yNames + 2)
-    ctx.restore()
-  }
+  ctx.restore() // restore the 1.12 scale transform
 
   return canvas.toDataURL('image/jpeg', 0.92)
 }

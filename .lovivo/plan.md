@@ -22,7 +22,7 @@ Tienda de tapetes personalizados con mascotas. Pipeline de generación de arte e
 - Queue: `Int32Array` con head-pointer para O(1) dequeue
 - Siembra BFS desde todos los píxeles del borde
 - Solo remueve píxeles conectados al exterior → interior white islands preserved
-- Demo images (transparent webp) passan directo sin procesar
+- Demo images (transparent webp) pasan directo sin procesar
 
 ## Fal.ai REST API Pattern (Deno, sin SDK)
 - **Submit**: `POST https://queue.fal.run/{endpoint}` con `Authorization: Key {FALAI_API_KEY}`
@@ -38,10 +38,17 @@ Tienda de tapetes personalizados con mascotas. Pipeline de generación de arte e
 - `REPLICATE_API_KEY` — ya no se usa
 
 ## Frontend Architecture
-- `CanvasPreview.tsx` — preview HTML/CSS en tiempo real. Usa `processedUrls` state (flood fill aplicado en useEffect). Demo images directo, generated images procesadas.
+- `CanvasPreview.tsx` — preview HTML/CSS en tiempo real. Usa `processedUrls` state (flood fill aplicado en useEffect). Demo images directo, generated images procesadas. Llama `compositeRug(petData, phrase, phrase2)` para generar el cart thumbnail.
 - `PhotoPetForm.tsx` — upload de foto + trigger de generación
-- `canvasCompositing.ts` — composición canvas sobre el tapete (para finalPreviewDataUrl del carrito). Usa `removeBackgroundFloodFill` para isGenerated/isDemo.
+- `canvasCompositing.ts` — genera el cart thumbnail (600×600 canvas) que **replica exactamente** el layout CSS de CanvasPreview: scale(1.12) desde center, top phrase 34.71%, pets en layout por %, nombres sobre mascotas, phrase2 70%. Usa `removeBackgroundFloodFill` para isGenerated/isDemo.
 - `replicateApi.ts` — llama a la edge function `generate-tattoo`
+
+## Cart Preview Flow
+1. `CanvasPreview` → `compositeRug(pets, phrase, phrase2)` → `onPreviewReady(dataUrl)`
+2. `PatapeteConfigurator` → `finalPreviewRef.current = dataUrl`
+3. Al "Agregar al carrito" → `saveCustomizationToCart` → `localStorage.setItem(patapete_customization:${itemKey}, { preview_dataurl: dataUrl })`
+4. Upload async a Supabase Storage → `preview_image_url`
+5. `CartSidebar.getProductItemImage` → lee `preview_image_url || preview_dataurl` → muestra el tapete compuesto correcto
 
 ## Demo Images (public/demos/)
 - `icono-0.webp` — mascota default 1 (fondo transparente, no necesita procesamiento)

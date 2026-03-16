@@ -90,17 +90,18 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petKey, style])
 
-  // Background canvas → still needed for StepSummary's finalPreviewDataUrl
+  // Background canvas → generates the cart preview thumbnail (must match the HTML/CSS layout)
   useEffect(() => {
     if (!onPreviewReady) return
     const petData: PetCompositeData[] = pets.map((pet, i) => ({
       imageUrl: pet.generatedArtUrl || DEMO_URLS[style][i],
       name: pet.name,
-      isGenerated: true,
+      isGenerated: !!pet.generatedArtUrl,
+      isDemo: !pet.generatedArtUrl,
     }))
-    compositeRug(petData, phrase).then(onPreviewReady).catch(console.error)
+    compositeRug(petData, phrase, phrase2).then(onPreviewReady).catch(console.error)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [petKey, phrase])
+  }, [petKey, phrase, phrase2])
 
   return (
     // .tapete-preview sets container-type: inline-size (see index.css)
