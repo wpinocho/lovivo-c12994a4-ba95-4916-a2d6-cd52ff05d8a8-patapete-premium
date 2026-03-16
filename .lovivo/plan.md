@@ -15,15 +15,19 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 - Español en toda la UI
 
 ## Recent Changes
+- **Logo y favicon actualizados:**
+  - `public/logo.webp` — pata woven café (200×149, sin fondo) — usada en navbar
+  - `public/favicon.png` — versión 64×64 para pestaña del navegador
+  - `index.html` — favicon apunta a `/favicon.png`, meta title/description actualizados con copy de Patapete
+
 - **Sticky preview layout:**
   - `StepPets.tsx`: Reestructurado con sticky preview.
-    - **Desktop:** Grid `lg:grid-cols-2 lg:items-start`. Left column tiene `sticky top-20` con CanvasPreview. Right column tiene el form completo y scrollea normalmente. Se libera al llegar a los testimonios (sticky para cuando el grid-container sale del viewport).
-    - **Mobile:** CanvasPreview aparece PRIMERO (arriba del form) con `sticky top-16 z-10`, máximo 75% de ancho centrado. Form options scrollean debajo. También se libera al llegar a "Lo que dicen nuestros clientes".
-  - Eliminado `flex-col-reverse` y el CanvasPreview duplicado de mobile dentro del form.
+    - **Desktop:** Grid `lg:grid-cols-2 lg:items-start`. Left column tiene `sticky top-20` con CanvasPreview. Right column tiene el form completo y scrollea normalmente.
+    - **Mobile:** CanvasPreview aparece PRIMERO (arriba del form) con `sticky top-16 z-10`.
 
 - **Rediseño de página de producto (Patapete):**
   - `StepPets.tsx`: Header rediseñado como página de producto real — h1 con título, star rating (4.9), precio dinámico arriba a la derecha, descripción.
-  - `ProductPageUI.tsx`: Reestructurado — configurador PRIMERO, testimonios + FAQ DEBAJO del fold. Layout: max-w-5xl.
+  - `ProductPageUI.tsx`: Reestructurado — configurador PRIMERO, testimonios + FAQ DEBAJO del fold.
 
 - **Componentes nuevos creados:**
   - `ProductSocialProof.tsx` — stats bar + 3 review cards
@@ -35,7 +39,6 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 
 ## Pending
 - Usuario proporcionará fotos reales de más tapetes para integrar en testimonios
-- Imagen hero `/hero-patapete.jpg` existe en public/
 
 ## Architecture Notes
 - Slug especial: `tapete-personalizado-patapete` → renderiza PatapeteConfigurator
@@ -43,3 +46,4 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 - Precios: $649 (1 mascota), $799 (2), $949 (3) — mismo precio para ambos estilos
 - Customization data guardada en localStorage con key `patapete_order_${Date.now()}`
 - Navbar height estimada: ~64px mobile / ~80px desktop (top-16 / top-20 para sticky)
+- `BrandLogoLeft.tsx` usa `src="/logo.webp"` con width/height 36
