@@ -4,14 +4,15 @@ import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
 import { removeWhiteBackground } from '@/utils/imagePreprocessing'
 
 // Demo images per style and pet index (0-based)
+// ⚠️ Always use product-images bucket URLs (permanent) — never message-images (expires)
 const DEMO_URLS: Record<Style, string[]> = {
   dibujo: [
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-arwx7s0sczr.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/demo-dibujo-0.webp',
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ubs0fcngr3.webp',
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-hxsvvcjo85m.webp',
   ],
   icono: [
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773603073733-szmqd98fvsm.webp',
+    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/demo-icono-0.webp',
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ssazvmuwl7.webp',
     'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-2q1ktqjly0v.webp',
   ],

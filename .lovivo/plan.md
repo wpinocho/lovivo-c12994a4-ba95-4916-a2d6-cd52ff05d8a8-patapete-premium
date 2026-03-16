@@ -1,65 +1,76 @@
 # Patapete — Plan de implementación
 
 ## Estado actual
-- Ecommerce de tapetes personalizados (diseño a medida por cada cliente)
-- Configurador: seleccionar mascota → personalizar diseño → preview aprobado antes de comprar → checkout
-- Landing page + página de producto con FAQ existente
+El configurador visual (`PatapeteConfigurator`) está funcionando. El flujo completo incluye:
+- Subida de foto de mascota → edge function `generate-tattoo` (BiRefNet + FLUX 2 Pro)
+- Preview en canvas con textos y múltiples mascotas
+- Guardado de customización en localStorage al agregar al carrito
+- CartSidebar muestra imagen personalizada del tapete
+- ThankYou limpia el localStorage al completar compra
 
-## Decisiones de diseño
-- Tipografía del tapete: **toda Plus Jakarta Sans 800** (bold, sin itálica, sin serif)
-  - Phrase superior, nombres, phrase inferior — misma fuente
-  - Aplica tanto en CanvasPreview.tsx (preview visual) como en canvasCompositing.ts (JPG final)
-- Flujo: Botón "⚡ Ordenar ahora" + "🛒 Agregar al carrito"
-- StepSummary eliminado como paso navegable — contenido inline en el configurador
+## Cambios recientes
+- **Demo images [0] reparadas** — Los URLs del bucket `message-images` para los slots `dibujo[0]` e `icono[0]` se rompieron (el bucket `message-images` no es permanente). Se generaron nuevas imágenes demo (Golden Retriever icono + dibujo) y se guardaron en el bucket permanente `product-images`. Actualizado en `CanvasPreview.tsx`.
+- ⚠️ Los slots [1] y [2] también usan `message-images` — podrían romperse en el futuro. Migrar cuando sea posible.
 
-## Garantía (definida)
-- Cubre: defectos físicos de fabricación/material
-- NO cubre: cambios de diseño (cliente ya vio y aprobó el preview)
-- Timeline real: producción 3-5 días hábiles, entrega 7-10 días totales
+## Arquitectura de customización
 
-## FAQs
-- Ambos archivos (landing + página de producto) actualizados y consistentes
-- Pregunta clave: "¿El preview es el diseño real?" — diferenciador principal
+### Flujo al agregar al carrito:
+1. `PatapeteConfigurator.saveCustomizationToCart()` guarda en localStorage:
+   - Key: `patapete_customization:{productId}:{variantId}`
+   - Value: `{ preview_dataurl, preview_image_url, customization_data }`
+2. Edge function `upload-patapete-preview` sube canvas PNG a Storage (background, no-blocking)
+3. `cartToApiItems` en `cart-utils.ts` lee localStorage y adjunta al checkout payload
 
-## Archivos clave
-- src/components/patapete/configurator/CanvasPreview.tsx — preview visual en configurador
-- src/utils/canvasCompositing.ts — generación del JPG final para el pedido
-- src/components/patapete/configurator/StepSummary.tsx — resumen antes de pagar
-- src/components/patapete/ProductFAQ.tsx — FAQ página de producto
-- src/components/patapete/PatapeteFAQ.tsx — FAQ landing page
+### Datos que se envían al backend:
+```json
+{
+  "customization_data": {
+    "type": "patapete",
+    "style": "dibujo|icono",
+    "pet_count": 1|2|3,
+    "pets": [{ "name": "...", "art_url": "..." }],
+    "phrase_top": "...",
+    "phrase_bottom": "...",
+    "font": "Plus Jakarta Sans 800",
+    "rug_size": "60x40cm",
+    "material": "fibra de coco"
+  },
+  "preview_image_url": "https://..."
+}
+```
 
----
-
-## ✅ COMPLETADO: Customización Persistente + Imagen en Carrito + Backend
-
-### Qué se implementó
-
-**Fase 1 — URLs permanentes (generate-tattoo/index.ts)**
-- Step 5 agregado: descarga el webp de Replicate → sube a `pet-tattoos/finals/${timestamp}.webp`
-- Edge function ahora devuelve URL permanente de Supabase Storage (nunca expira)
-- Función `uploadFinalArt()` añadida antes del handler principal
-
-**Fase 2 — Preview personalizado en carrito**
-- `supabase/functions/upload-patapete-preview/index.ts` — nueva edge function que recibe base64 PNG del canvas y sube a `pet-tattoos/previews/`
-- `supabase/config.toml` — registrado `[functions.upload-patapete-preview]`
-- `PatapeteConfigurator.tsx` — helper `saveCustomizationToCart()` que:
-  1. Guarda `customization_data` + `preview_dataurl` en localStorage inmediatamente
-  2. Sube el preview a Storage async (non-blocking) y actualiza `preview_image_url` cuando termina
-  - Clave localStorage: `patapete_customization:${productId}:${variantId}` (mismo formato que CartContext)
-- `CartSidebar.tsx` — función `getProductItemImage()` que lee localStorage para mostrar el tapete personalizado
-
-**Fase 3 — Customización al checkout**
-- `src/lib/supabase.ts` — `CheckoutItem` extendido con `customization_data?` y `preview_image_url?`
-- `src/lib/cart-utils.ts` — `cartToApiItems()` lee localStorage por item key y adjunta ambos campos al payload
-
-**Fase 4 — Cleanup localStorage**
-- `src/pages/ThankYou.tsx` — limpia todas las entradas `patapete_customization:*` tras completar la compra
-
-### Pendiente (coordinación con admin Lovivo)
+### Pendiente en el backend (Lovivo):
 ```sql
--- Aplicar en el backend de Lovivo para persistir la customización en órdenes:
 ALTER TABLE order_items
 ADD COLUMN IF NOT EXISTS customization_data JSONB DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS preview_image_url TEXT DEFAULT NULL;
 ```
-El storefront ya envía estos campos en el payload de `checkout-create`. El backend los guardará cuando se aplique la migración.
+
+## Archivos clave
+- `src/components/patapete/configurator/CanvasPreview.tsx` — Preview visual
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — Orquestador
+- `src/components/patapete/configurator/StepPets.tsx` — UI del configurador
+- `src/components/patapete/configurator/PhotoPetForm.tsx` — Upload + generación por mascota
+- `src/components/CartSidebar.tsx` — Muestra imagen personalizada del tapete
+- `src/lib/cart-utils.ts` — Adjunta customization_data al checkout payload
+- `src/pages/ThankYou.tsx` — Limpia localStorage post-compra
+- `supabase/functions/generate-tattoo/index.ts` — Pipeline: BiRefNet → smart crop → FLUX 2 Pro
+- `supabase/functions/upload-patapete-preview/index.ts` — Sube canvas preview a Storage
+
+## Variant IDs del producto
+```
+1 mascota: 28fc993c-e638-459b-9a00-08abacdc9f32
+2 mascotas: 1aee4582-040b-477a-b335-e99446fa76c7
+3 mascotas: 5f7e007d-b30e-44c8-baa6-5aa03edb23ad
+```
+
+## Imágenes demo (DEMO_URLS en CanvasPreview.tsx)
+- `dibujo[0]`: product-images bucket — demo-dibujo-0.webp (Golden Retriever b&w) ✅ permanente
+- `icono[0]`: product-images bucket — demo-icono-0.webp (Golden Retriever colorido) ✅ permanente
+- `dibujo[1]`, `dibujo[2]`, `icono[1]`, `icono[2]`: message-images bucket ⚠️ puede expirar
+
+## Notas técnicas
+- `removeWhiteBackground()` en `imagePreprocessing.ts` procesa demos para quitar fondo blanco
+- `compositeRug()` en `canvasCompositing.ts` genera el dataUrl para el carrito
+- `styleRef` es un `useRef` para evitar stale closure en `handleGenerate`
+- LocalStorage key format: `patapete_customization:{productId}:{variantId}`
