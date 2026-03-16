@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { PenLine, Palette, Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck, CheckCircle, Scissors, Home } from 'lucide-react'
+import { Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck, CheckCircle, Scissors, Home } from 'lucide-react'
 
 interface StepPetsProps {
   style: Style
@@ -195,43 +195,6 @@ export function StepPets({
                 phrase2={phrase2}
                 onPreviewReady={onPreviewReady}
               />
-            </div>
-          </div>
-
-          {/* Style selector */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">¿Qué estilo prefieres?</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => onStyleChange('icono')}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
-                  style === 'icono'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/40'
-                )}
-              >
-                <Palette className={cn('w-6 h-6', style === 'icono' ? 'text-primary' : 'text-muted-foreground')} />
-                <span className="font-semibold text-sm text-foreground">Icono</span>
-                <span className="text-xs text-muted-foreground text-center leading-snug">
-                  Vector colorido, minimalista
-                </span>
-              </button>
-              <button
-                onClick={() => onStyleChange('dibujo')}
-                className={cn(
-                  'flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-left',
-                  style === 'dibujo'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/40'
-                )}
-              >
-                <PenLine className={cn('w-6 h-6', style === 'dibujo' ? 'text-primary' : 'text-muted-foreground')} />
-                <span className="font-semibold text-sm text-foreground">Dibujo</span>
-                <span className="text-xs text-muted-foreground text-center leading-snug">
-                  Líneas negras gruesas, estilo sello
-                </span>
-              </button>
             </div>
           </div>
 

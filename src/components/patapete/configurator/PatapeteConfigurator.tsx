@@ -46,7 +46,7 @@ function loadFromStorage(): Partial<ConfiguratorState> | null {
       }
     })
     return {
-      style: saved.style || 'dibujo',
+      style: saved.style || 'icono',
       petCount: saved.petCount || 1,
       phrase: saved.phrase || '',
       phrase2: saved.phrase2 || '',
@@ -98,7 +98,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
   const [state, setState] = useState<ConfiguratorState>({
     step: 1,
-    style: 'dibujo',
+    style: 'icono',
     petCount: 1,
     pets: [{ ...DEFAULT_PET }, { ...DEFAULT_PET }, { ...DEFAULT_PET }],
     phrase: '',
