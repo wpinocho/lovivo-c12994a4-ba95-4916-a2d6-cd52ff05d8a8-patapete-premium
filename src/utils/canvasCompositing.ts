@@ -24,7 +24,7 @@ export interface PetCompositeData {
   name?: string
   /** No photo uploaded yet — renders a placeholder demo illustration */
   isDemo?: boolean
-  /** AI-generated art (white background) — background removed, composited cleanly */
+  /** AI-generated art — transparent PNG from server (BiRefNet already removed bg) */
   isGenerated?: boolean
 }
 
@@ -156,8 +156,10 @@ export async function compositeRug(
     if (!pet?.imageUrl) continue
 
     try {
-      // Remove white background so the art composites cleanly (simulates sublimation)
-      const drawUrl = (pet.isGenerated || pet.isDemo)
+      // isGenerated: transparent PNG from edge function — BiRefNet already removed bg server-side
+      // isDemo: demo illustrations still have white bg — remove client-side
+      // raw upload: show as-is while AI processes
+      const drawUrl = pet.isDemo
         ? await removeWhiteBackground(pet.imageUrl)
         : pet.imageUrl
 

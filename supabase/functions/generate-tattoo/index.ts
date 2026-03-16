@@ -1,4 +1,4 @@
-// v17 — Fix: stale closure bug (style always sent as 'dibujo') + exact user prompts for Haiku
+// v18 — Step 5.5: BiRefNet on FLUX output → transparent PNG (fixes white fur being erased)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -268,23 +268,69 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   return text.trim()
 }
 
-// ─── STEP 5: Upload FLUX result to permanent Supabase Storage ────────────────
-async function uploadFinalArt(artUrl: string): Promise<string> {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  const res = await fetch(artUrl)
-  if (!res.ok) throw new Error(`Failed to download FLUX art: ${res.status}`)
-  const bytes = new Uint8Array(await res.arrayBuffer())
-  const filename = `finals/${Date.now()}.webp`
+// ─── STEP 5.5: BiRefNet on FLUX output → transparent PNG ────────────────────
+// Runs the same BiRefNet model on the FLUX cartoon result so that white areas
+// belonging to the pet (chest, paws, muzzle) are preserved — only the actual
+// background is removed.  BiRefNet understands subject vs background semantically.
+async function removeBackgroundFromFluxOutput(fluxUrl: string): Promise<string> {
+  const modelVersion = 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7'
+  console.log(`[generate-tattoo] Step 5.5 INPUT — BiRefNet on FLUX URL: ${fluxUrl}`)
 
-  console.log(`[generate-tattoo] Step 5 INPUT — uploading FLUX art to Storage: ${filename}`)
+  const response = await fetch('https://api.replicate.com/v1/predictions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${REPLICATE_API_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'wait=60',
+    },
+    body: JSON.stringify({
+      version: modelVersion,
+      input: { image: fluxUrl },
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    throw new Error(`BiRefNet (step 5.5) request failed: ${err}`)
+  }
+
+  const prediction = await response.json()
+  console.log(`[generate-tattoo] Step 5.5 — Prediction ID: ${prediction.id} | Status: ${prediction.status}`)
+
+  if (prediction.status === 'succeeded') {
+    const out = prediction.output
+    const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
+    if (!url) throw new Error('BiRefNet (step 5.5) returned empty output')
+    console.log(`[generate-tattoo] Step 5.5 OUTPUT — transparent PNG URL: ${url}`)
+    return url
+  }
+
+  if (!prediction.id) throw new Error(`BiRefNet step 5.5: no prediction ID: ${JSON.stringify(prediction)}`)
+  const result = await pollReplicate(prediction.id, 90)
+  const out = result.output
+  const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
+  if (!url) throw new Error('BiRefNet (step 5.5) returned empty output after polling')
+  console.log(`[generate-tattoo] Step 5.5 OUTPUT (polled) — transparent PNG URL: ${url}`)
+  return url
+}
+
+// ─── STEP 6: Upload transparent PNG to permanent Supabase Storage ─────────────
+async function uploadFinalArt(transparentPngUrl: string): Promise<string> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const res = await fetch(transparentPngUrl)
+  if (!res.ok) throw new Error(`Failed to download transparent PNG art: ${res.status}`)
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  const filename = `finals/${Date.now()}.png`
+
+  console.log(`[generate-tattoo] Step 6 INPUT — uploading transparent PNG to Storage: ${filename}`)
 
   const { error } = await supabase.storage
     .from('pet-tattoos')
-    .upload(filename, bytes, { contentType: 'image/webp', upsert: false })
+    .upload(filename, bytes, { contentType: 'image/png', upsert: false })
 
   if (error) throw new Error(`Storage upload (finals) failed: ${error.message}`)
   const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
-  console.log(`[generate-tattoo] Step 5 OUTPUT — permanent art URL: ${data.publicUrl}`)
+  console.log(`[generate-tattoo] Step 6 OUTPUT — permanent transparent PNG URL: ${data.publicUrl}`)
   return data.publicUrl
 }
 
@@ -407,11 +453,18 @@ serve(async (req) => {
     const artUrl = await generateWithFlux2Pro(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
-    // Step 5: Upload FLUX result to permanent Storage (Replicate URLs expire in ~24h)
-    console.log('[generate-tattoo] ─── Step 5: Upload FLUX art to permanent Storage ───')
+    // Step 5.5: BiRefNet on FLUX output → transparent PNG
+    // This intelligently removes the white background without touching white fur/chest/paws
+    console.log('[generate-tattoo] ─── Step 5.5: BiRefNet on FLUX output ───')
+    const t55 = Date.now()
+    const transparentArtUrl = await removeBackgroundFromFluxOutput(artUrl)
+    console.log(`[generate-tattoo] Step 5.5 done in ${Date.now() - t55}ms`)
+
+    // Step 6: Upload transparent PNG to permanent Storage (Replicate URLs expire in ~24h)
+    console.log('[generate-tattoo] ─── Step 6: Upload transparent PNG to permanent Storage ───')
     const t5 = Date.now()
-    const permanentArtUrl = await uploadFinalArt(artUrl)
-    console.log(`[generate-tattoo] Step 5 done in ${Date.now() - t5}ms | permanent URL: ${permanentArtUrl}`)
+    const permanentArtUrl = await uploadFinalArt(transparentArtUrl)
+    console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t5}ms | permanent URL: ${permanentArtUrl}`)
 
     const totalMs = Date.now() - t1
     console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${totalMs}ms ═══`)
