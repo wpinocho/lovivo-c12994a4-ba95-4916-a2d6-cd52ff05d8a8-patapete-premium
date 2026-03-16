@@ -8,9 +8,9 @@ import { removeWhiteBackground } from '@/utils/imagePreprocessing'
 // ⚠️ dibujo: pending user images — using icono as placeholder until replaced
 const DEMO_URLS: Record<Style, string[]> = {
   dibujo: [
-    '/demos/dibujo-0.webp',
-    '/demos/dibujo-1.webp',
-    '/demos/dibujo-2.webp',
+    '/demos/icono-0.webp',  // ⏳ TEMP: replace with real dibujo images when provided
+    '/demos/icono-1.webp',
+    '/demos/icono-2.webp',
   ],
   icono: [
     '/demos/icono-0.webp',

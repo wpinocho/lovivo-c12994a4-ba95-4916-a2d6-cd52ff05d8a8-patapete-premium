@@ -102,11 +102,6 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, photoError, 
               src={hasResult ? pet.generatedArtUrl! : pet.photoPreviewUrl}
               alt={hasResult ? `Retrato IA de mascota ${petIndex + 1}` : `Foto de mascota ${petIndex + 1}`}
               className="w-full h-full object-cover"
-              onError={() => {
-                // Art URL is broken (e.g. expired message-images URL) → clear it
-                // so the user sees their original photo and the retry button appears
-                if (hasResult) onChange({ generatedArtUrl: null })
-              }}
             />
           </div>
 

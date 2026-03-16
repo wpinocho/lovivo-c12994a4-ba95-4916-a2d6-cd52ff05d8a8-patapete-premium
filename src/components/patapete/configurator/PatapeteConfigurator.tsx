@@ -42,9 +42,7 @@ function loadFromStorage(): Partial<ConfiguratorState> | null {
         photoPreviewUrl: p.photoBase64
           ? `data:image/png;base64,${p.photoBase64}`
           : null,
-        // Only restore art URLs from the pet-tattoos bucket (permanent storage).
-        // Discard any stale message-images URLs — they expire and would show as broken images.
-        generatedArtUrl: (p.generatedArtUrl && !p.generatedArtUrl.includes('message-images')) ? p.generatedArtUrl : null,
+        generatedArtUrl: p.generatedArtUrl || null,
       }
     })
     return {
