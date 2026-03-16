@@ -192,7 +192,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   }, [])
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8 py-4">
+    <div className="w-full space-y-8 py-4">
       {state.error && (
         <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-xl p-4 text-sm">
           {state.error}

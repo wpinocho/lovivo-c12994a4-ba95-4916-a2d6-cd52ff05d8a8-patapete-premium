@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+import { useInView } from 'react-intersection-observer'
 import { Pet, PRICES, Style } from './types'
 import { PhotoPetForm } from './PhotoPetForm'
 import { CanvasPreview } from './CanvasPreview'
@@ -5,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { PenLine, Palette, Star } from 'lucide-react'
+import { PenLine, Palette, Star, Shield, Package, Clock, Truck, Eye } from 'lucide-react'
 
 interface StepPetsProps {
   style: Style
@@ -23,6 +25,26 @@ interface StepPetsProps {
   onPreviewReady: (dataUrl: string) => void
 }
 
+// ── Calculates a delivery range of 7-10 business days from today ──
+function getDeliveryRange() {
+  const addBusinessDays = (date: Date, days: number) => {
+    const result = new Date(date)
+    let added = 0
+    while (added < days) {
+      result.setDate(result.getDate() + 1)
+      const day = result.getDay()
+      if (day !== 0 && day !== 6) added++
+    }
+    return result
+  }
+  const now = new Date()
+  const from = addBusinessDays(now, 7)
+  const to = addBusinessDays(now, 10)
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })
+  return `${fmt(from)} – ${fmt(to)}`
+}
+
 export function StepPets({
   style, petCount, pets, phrase, phrase2,
   onStyleChange, onPetCountChange, onPetChange, onPhraseChange, onPhrase2Change,
@@ -35,11 +57,27 @@ export function StepPets({
   const canContinue = !isProcessing && allPhotosUploaded
 
   const price = PRICES[style][petCount]
+  const deliveryRange = useMemo(() => getDeliveryRange(), [])
+
+  // Social proof: stable viewer count (changes every hour, between 8-24)
+  const viewerCount = useMemo(() => {
+    const seed = Math.floor(Date.now() / 3_600_000)
+    return 8 + (seed % 17)
+  }, [])
+
+  // Track when the inline CTA button is in viewport
+  const { ref: ctaRef, inView: ctaInView } = useInView({ threshold: 0.5 })
+
+  const ctaLabel = isProcessing
+    ? 'Generando tu retrato...'
+    : canContinue
+      ? `Ver resumen — $${price.toLocaleString('es-MX')} MXN →`
+      : 'Ver resumen →'
 
   return (
     <div className="space-y-4">
 
-      {/* ── Product header — title, rating, price (static, always on top) ── */}
+      {/* ── Product header — title, rating, price ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-1">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
@@ -58,7 +96,20 @@ export function StepPets({
           <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
             Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
           </p>
+
+          {/* Social proof + delivery — below description */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Eye className="w-3.5 h-3.5 text-primary" />
+              <span className="font-medium text-foreground">{viewerCount}</span> personas lo están viendo ahora
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Truck className="w-3.5 h-3.5 text-primary" />
+              Llega entre <span className="font-medium text-foreground ml-1">{deliveryRange}</span>
+            </span>
+          </div>
         </div>
+
         <div className="sm:text-right shrink-0">
           <div className="text-3xl font-bold text-foreground">
             ${price.toLocaleString('es-MX')}
@@ -69,8 +120,8 @@ export function StepPets({
       </div>
 
       {/* ── Main layout: 2-col sticky on desktop, single col on mobile ── */}
-      {/*    lg:items-start is REQUIRED for sticky to work in a grid     */}
-      <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+      {/*    lg:items-start is REQUIRED for sticky to work in a grid        */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-10 lg:items-start">
 
         {/* ── LEFT: sticky preview — desktop only ── */}
         <div className="hidden lg:block sticky top-20">
@@ -91,9 +142,8 @@ export function StepPets({
         {/* ── RIGHT: form (mobile: full-width, desktop: right col) ── */}
         <div className="space-y-6">
 
-          {/* MOBILE: sticky preview — first thing visible, sticks on scroll */}
+          {/* MOBILE: sticky preview — first thing visible */}
           <div className="lg:hidden sticky top-16 z-10 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm">
-            {/* Constrain width so it doesn't take the full screen height */}
             <div className="mx-auto max-w-[75%]">
               <CanvasPreview
                 style={style}
@@ -214,28 +264,76 @@ export function StepPets({
             </div>
           </div>
 
-          {/* Continue button */}
-          <Button
-            onClick={onContinue}
-            disabled={!canContinue}
-            className="w-full rounded-xl"
-            size="lg"
-          >
-            {isProcessing
-              ? 'Generando tu retrato...'
-              : canContinue
-                ? `Ver resumen — $${price.toLocaleString('es-MX')} MXN →`
-                : 'Ver resumen →'
-            }
-          </Button>
+          {/* ── CTA section ── */}
+          <div className="space-y-3" ref={ctaRef}>
+            <Button
+              onClick={onContinue}
+              disabled={!canContinue}
+              className="w-full rounded-xl"
+              size="lg"
+            >
+              {ctaLabel}
+            </Button>
 
-          {!allPhotosUploaded && (
-            <p className="text-xs text-center text-muted-foreground">
-              Sube la foto de {petCount === 1 ? 'tu mascota' : 'todas tus mascotas'} para continuar
-            </p>
-          )}
+            {/* Trust badges */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { icon: Shield, label: 'Pago seguro' },
+                { icon: Package, label: 'Envío incluido' },
+                { icon: Clock,  label: 'Garantía total' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex flex-col items-center gap-1 rounded-xl border border-border bg-muted/30 py-2.5 px-2 text-center">
+                  <Icon className="w-4 h-4 text-primary" />
+                  <span className="text-[11px] text-muted-foreground leading-tight">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {!allPhotosUploaded && (
+              <p className="text-xs text-center text-muted-foreground">
+                Sube la foto de {petCount === 1 ? 'tu mascota' : 'todas tus mascotas'} para continuar
+              </p>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* ── Sticky CTA bar — only when canContinue and button is out of view ── */}
+      {canContinue && (
+        <div
+          className={cn(
+            'fixed bottom-0 left-0 right-0 z-50 bg-background/97 backdrop-blur-md border-t shadow-lg transition-all duration-300 ease-out pb-[env(safe-area-inset-bottom)]',
+            ctaInView ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+          )}
+        >
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="hidden sm:flex">
+                {[0,1,2,3,4].map(i => (
+                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                ))}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-foreground truncate">Tapete personalizado</p>
+                <p className="text-xs text-muted-foreground hidden sm:block">¡Tu retrato está listo!</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-lg font-bold text-foreground">
+                ${price.toLocaleString('es-MX')}
+                <span className="text-xs font-normal text-muted-foreground ml-1">MXN</span>
+              </span>
+              <Button
+                onClick={onContinue}
+                size="default"
+                className="rounded-xl font-semibold px-5"
+              >
+                Ver resumen →
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

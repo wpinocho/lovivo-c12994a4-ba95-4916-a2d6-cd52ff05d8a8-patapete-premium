@@ -16,24 +16,25 @@ Tienda de tapetes personalizados con mascotas. Configurador de producto funciona
 
 ## Recent Changes
 - **Logo y favicon actualizados (versión definitiva):**
-  - `public/logo.webp` — patita tejida de coco café, fondo transparente, 578x432 original → guardada en repo
+  - `public/logo.webp` — patita tejida de coco café, fondo transparente
   - `public/favicon.png` — misma patita, 64x47px PNG con transparencia
-  - `index.html` — favicon → `/favicon.png`, apple-touch-icon → `/logo.webp`, meta title/description de Patapete
-  - `BrandLogoLeft.tsx` — ya usa `src="/logo.webp"` con width/height 36
+  - `index.html` — favicon → `/favicon.png`, apple-touch-icon → `/logo.webp`
+  - `BrandLogoLeft.tsx` — usa `src="/logo.webp"` con width/height 36
+
+- **Layout fix — ancho completo:**
+  - `PatapeteConfigurator.tsx`: Removido `max-w-4xl mx-auto` → ahora usa `w-full` para aprovechar todo el ancho del template
+
+- **4 mejoras de conversión en StepPets.tsx:**
+  1. **Barra sticky CTA** — aparece cuando `canContinue && !ctaInView`. Solo activa cuando hay fotos subidas. Muestra precio y botón "Ver resumen →".
+  2. **Trust badges** — 3 íconos bajo el botón: Pago seguro / Envío incluido / Garantía total.
+  3. **Fecha estimada de entrega** — calculada dinámicamente (+7-10 días hábiles), mostrada en el header.
+  4. **Contador de demanda social** — "X personas lo están viendo ahora" (estable por hora, 8-24).
+
+- **Dependencia añadida:** `react-intersection-observer` (ya se usaba en ProductPageUI pero no estaba en package.json)
 
 - **Sticky preview layout:**
-  - `StepPets.tsx`: Reestructurado con sticky preview.
-    - **Desktop:** Grid `lg:grid-cols-2 lg:items-start`. Left column tiene `sticky top-20` con CanvasPreview. Right column tiene el form completo y scrollea normalmente.
-    - **Mobile:** CanvasPreview aparece PRIMERO (arriba del form) con `sticky top-16 z-10`.
-
-- **Rediseño de página de producto (Patapete):**
-  - `StepPets.tsx`: Header rediseñado como página de producto real — h1 con título, star rating (4.9), precio dinámico arriba a la derecha, descripción.
-  - `ProductPageUI.tsx`: Reestructurado — configurador PRIMERO, testimonios + FAQ DEBAJO del fold.
-
-- **Componentes nuevos creados:**
-  - `ProductSocialProof.tsx` — stats bar + 3 review cards
-  - `ProductFAQ.tsx` — 6 preguntas frecuentes con Accordion
-  - `StepSummary.tsx` — resumen con garantía Patapete prominente, specs del producto, timeline post-compra
+  - Desktop: Grid `lg:grid-cols-2 lg:gap-10 lg:items-start`. Left column sticky top-20 con CanvasPreview.
+  - Mobile: CanvasPreview sticky top-16 z-10.
 
 ## Known Issues
 - Reviews de Carlos M. y Sara P. no tienen foto de tapete (solo Ana T. tiene imagen real del tapete)
