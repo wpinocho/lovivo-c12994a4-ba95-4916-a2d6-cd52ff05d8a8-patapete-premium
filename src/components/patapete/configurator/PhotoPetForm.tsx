@@ -97,7 +97,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate }: PhotoPetFo
           {!isProcessing && (
             <button
               onClick={() => {
-                onChange({ photoFile: null, photoPreviewUrl: null, processedImageUrl: null, generatedArtUrl: null })
+                onChange({ photoFile: null, photoPreviewUrl: null, processedImageUrl: null, generatedArtUrl: null, photoBase64: null })
                 if (fileInputRef.current) fileInputRef.current.value = ''
               }}
               className="absolute top-2 right-2 w-8 h-8 bg-background/80 backdrop-blur rounded-full border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
