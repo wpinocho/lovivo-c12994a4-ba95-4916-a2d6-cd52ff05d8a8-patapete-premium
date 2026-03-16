@@ -130,7 +130,7 @@ export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
   if (logic.product?.slug === PATAPETE_SLUG) {
     return (
       <EcommerceTemplate>
-        <div className="max-w-5xl mx-auto px-2 sm:px-0">
+        <div>
           {/* Configurador — lo primero que ve el usuario */}
           <PatapeteConfigurator product={logic.product} />
 
