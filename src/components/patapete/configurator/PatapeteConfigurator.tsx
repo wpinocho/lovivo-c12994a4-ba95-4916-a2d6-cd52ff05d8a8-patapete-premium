@@ -174,7 +174,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
         compressedBase64,
         pet.name || 'mascota',
         styleRef.current,
-        (status) => console.log(`[IA] ${status}`)
+        (status) => updatePet({ progressMessage: status })
       )
 
       updatePet({ generatedArtUrl: artUrl, isGeneratingArt: false })

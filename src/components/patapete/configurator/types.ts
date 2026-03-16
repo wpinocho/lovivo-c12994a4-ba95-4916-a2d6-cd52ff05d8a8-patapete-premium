@@ -9,6 +9,7 @@ export interface Pet {
   isProcessingBg: boolean
   isGeneratingArt: boolean
   name: string
+  progressMessage: string
 }
 
 export interface ConfiguratorState {
@@ -32,6 +33,7 @@ export const DEFAULT_PET: Pet = {
   isProcessingBg: false,
   isGeneratingArt: false,
   name: '',
+  progressMessage: '',
 }
 
 export const STYLE_LABELS: Record<Style, string> = {

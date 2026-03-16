@@ -55,10 +55,10 @@ export async function generateTattooArt(
 function simulateProgress(onProgress?: TattooProgressCallback): ReturnType<typeof setInterval> {
   const messages = [
     { delay: 0,     text: 'Analizando tu mascota...' },
-    { delay: 5000,  text: 'Removiendo fondo con IA...' },
-    { delay: 14000, text: 'Analizando rasgos y generando descripción...' },
-    { delay: 25000, text: 'Creando retrato con FLUX 2 Pro... (~40s)' },
-    { delay: 55000, text: 'Casi listo...' },
+    { delay: 4000,  text: 'Detectando rasgos únicos...' },
+    { delay: 9000,  text: 'Capturando la personalidad...' },
+    { delay: 14000, text: 'Pintando el retrato...' },
+    { delay: 18000, text: '¡Casi listo! ✨' },
   ]
 
   let msgIndex = 0
