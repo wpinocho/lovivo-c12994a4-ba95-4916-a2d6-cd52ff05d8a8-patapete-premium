@@ -12,7 +12,7 @@ const STYLE_REFERENCE_DIBUJO_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png'
 
 const STYLE_REFERENCE_ICONO_URL =
-  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono-ref.webp'
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

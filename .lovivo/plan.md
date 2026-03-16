@@ -12,12 +12,11 @@ Tienda de tapetes personalizados con mascotas. El configurador interactivo (`Pat
 - **Estilo activo: `icono`** — siempre forzado en estado inicial y tras cargar localStorage
 - Estilo `dibujo` oculto hasta tener sus imágenes demo
 
-## Bug corregido: Imagen de referencia ICONO incorrecta
-- La URL `style-icono.webp` apuntaba a una **screenshot de la app** (no una referencia limpia)
-- FLUX copiaba la UI completa con el dibujo en b&w → generaba resultados con estética de dibujo
-- **Fix**: Se generó nueva imagen de referencia `style-icono-ref.webp` (golden retriever flat cartoon)
-- URL nueva: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono-ref.webp`
-- Edge function actualizada con nueva URL + prompt ICONO reforzado para flat colorful cartoon
+## Bug corregido: Imagen de referencia ICONO incorrecta (v2 — usuario proveyó imagen)
+- La URL anterior apuntaba a una imagen generada que no era el estilo correcto
+- **Fix v2**: El usuario subió la referencia correcta — Border Terrier peekaboo illustration con colores sólidos, líneas bold y fondo claro
+- URL nueva: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
+- Edge function actualizada con nueva URL
 
 ## Bug corregido: Cache al borrar imagen (X button)
 - **Antes**: X button llamaba `onChange({...null})` → saveToStorage en useEffect (asíncrono)
@@ -49,8 +48,9 @@ Milestones: 8% → 28% (2s) → 48% (5s) → 64% (9s) → 76% (13s) → 86% (17s
 
 ## Prompts IA (Edge Function generate-tattoo)
 
-### ICONO (v2 — flat cartoon)
-- Referencia: `style-icono-ref.webp` (golden retriever cartoon generado con flux.pro)
+### ICONO (v3 — referencia provista por usuario)
+- Referencia: Border Terrier peekaboo illustration — colores sólidos, líneas bold, fondo claro
+- URL: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773698793129-msnlow463lm.webp`
 - Prompt base Haiku: extrae tipo animal, pelaje, colores, expresión, rasgos clave
 - Template final: "charming flat 2D cartoon illustration, bold clean outlines, solid color fills, sticker/app icon style, NO sketchy lines"
 - FLUX prompt wrapper: "MUST match style: bold clean outlines, solid color fills, flat/cel-shaded, bright vibrant colors, white background. NO sketchy lines, NO fine detail texture, NO painterly look."
@@ -61,7 +61,7 @@ Milestones: 8% → 28% (2s) → 48% (5s) → 64% (9s) → 76% (13s) → 86% (17s
 - Template final: "pure black and white, only extremely thick chunky bold black lines, linocut/rubber stamp style"
 
 ## Archivos modificados (últimos cambios)
-- `supabase/functions/generate-tattoo/index.ts` — STYLE_REFERENCE_ICONO_URL + SYSTEM_PROMPT_ICONO + FLUX prompt
+- `supabase/functions/generate-tattoo/index.ts` — STYLE_REFERENCE_ICONO_URL actualizada con imagen del usuario
 - `src/components/patapete/configurator/PatapeteConfigurator.tsx` — `handleClearPet` + pasa `onClearPet`
 - `src/components/patapete/configurator/StepPets.tsx` — `onClearPet` prop + `handleClearPet` local
 - `src/components/patapete/configurator/PhotoPetForm.tsx` — `onClear` prop, X button usa `onClear()`
