@@ -1,4 +1,4 @@
-// v18 — Step 5.5: BiRefNet on FLUX output → transparent PNG (fixes white fur being erased)
+// v19 — Replaced BiRefNet (slow queue) with cjwbw/rembg (fast, ~1s) in Steps 1 & 5.5
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -35,10 +35,12 @@ async function pollReplicate(predictionId: string, maxSeconds = 90): Promise<any
   throw new Error(`Timeout after ${maxSeconds}s`)
 }
 
-// ─── STEP 1: BiRefNet background removal ─────────────────────────────────────
-async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
-  const modelVersion = 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7'
-  console.log(`[generate-tattoo] Step 1 INPUT — BiRefNet model: ${modelVersion} | image base64 length: ${imageBase64.length}`)
+// ─── STEP 1 & 5.5: rembg background removal (replaces BiRefNet — much faster queue) ────────
+// cjwbw/rembg uses isnet-general-use for semantic subject detection (same quality as BiRefNet)
+// but runs on CPU — no GPU queue wait, consistently ~1–2s total.
+async function removeBackgroundRembg(image: string, stepLabel: string): Promise<string> {
+  const modelVersion = 'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003'
+  console.log(`[generate-tattoo] ${stepLabel} INPUT — rembg model: ${modelVersion} | image: ${image.startsWith('data:') ? `base64 (${image.length} chars)` : image}`)
 
   const response = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
@@ -50,33 +52,34 @@ async function removeBackgroundBiRefNet(imageBase64: string): Promise<string> {
     body: JSON.stringify({
       version: modelVersion,
       input: {
-        image: `data:image/png;base64,${imageBase64}`,
+        image,
+        model: 'isnet-general-use',
       },
     }),
   })
 
   if (!response.ok) {
     const err = await response.text()
-    throw new Error(`BiRefNet request failed: ${err}`)
+    throw new Error(`rembg (${stepLabel}) request failed: ${err}`)
   }
 
   const prediction = await response.json()
-  console.log(`[generate-tattoo] Step 1 — Prediction ID: ${prediction.id} | Status: ${prediction.status}`)
+  console.log(`[generate-tattoo] ${stepLabel} — Prediction ID: ${prediction.id} | Status: ${prediction.status}`)
 
   if (prediction.status === 'succeeded') {
     const out = prediction.output
     const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
-    if (!url) throw new Error('BiRefNet returned empty output')
-    console.log(`[generate-tattoo] Step 1 OUTPUT — transparent PNG URL: ${url}`)
+    if (!url) throw new Error(`rembg (${stepLabel}) returned empty output`)
+    console.log(`[generate-tattoo] ${stepLabel} OUTPUT — transparent PNG URL: ${url}`)
     return url
   }
 
-  if (!prediction.id) throw new Error(`BiRefNet: no prediction ID in response: ${JSON.stringify(prediction)}`)
+  if (!prediction.id) throw new Error(`rembg ${stepLabel}: no prediction ID in response: ${JSON.stringify(prediction)}`)
   const result = await pollReplicate(prediction.id, 90)
   const out = result.output
   const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
-  if (!url) throw new Error('BiRefNet returned empty output after polling')
-  console.log(`[generate-tattoo] Step 1 OUTPUT (polled) — transparent PNG URL: ${url}`)
+  if (!url) throw new Error(`rembg (${stepLabel}) returned empty output after polling`)
+  console.log(`[generate-tattoo] ${stepLabel} OUTPUT (polled) — transparent PNG URL: ${url}`)
   return url
 }
 
@@ -268,51 +271,7 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   return text.trim()
 }
 
-// ─── STEP 5.5: BiRefNet on FLUX output → transparent PNG ────────────────────
-// Runs the same BiRefNet model on the FLUX cartoon result so that white areas
-// belonging to the pet (chest, paws, muzzle) are preserved — only the actual
-// background is removed.  BiRefNet understands subject vs background semantically.
-async function removeBackgroundFromFluxOutput(fluxUrl: string): Promise<string> {
-  const modelVersion = 'f74986db0355b58403ed20963af156525e2891ea3c2d499bfbfb2a28cd87c5d7'
-  console.log(`[generate-tattoo] Step 5.5 INPUT — BiRefNet on FLUX URL: ${fluxUrl}`)
-
-  const response = await fetch('https://api.replicate.com/v1/predictions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${REPLICATE_API_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'wait=60',
-    },
-    body: JSON.stringify({
-      version: modelVersion,
-      input: { image: fluxUrl },
-    }),
-  })
-
-  if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`BiRefNet (step 5.5) request failed: ${err}`)
-  }
-
-  const prediction = await response.json()
-  console.log(`[generate-tattoo] Step 5.5 — Prediction ID: ${prediction.id} | Status: ${prediction.status}`)
-
-  if (prediction.status === 'succeeded') {
-    const out = prediction.output
-    const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
-    if (!url) throw new Error('BiRefNet (step 5.5) returned empty output')
-    console.log(`[generate-tattoo] Step 5.5 OUTPUT — transparent PNG URL: ${url}`)
-    return url
-  }
-
-  if (!prediction.id) throw new Error(`BiRefNet step 5.5: no prediction ID: ${JSON.stringify(prediction)}`)
-  const result = await pollReplicate(prediction.id, 90)
-  const out = result.output
-  const url = typeof out === 'string' ? out : Array.isArray(out) ? out[0] : null
-  if (!url) throw new Error('BiRefNet (step 5.5) returned empty output after polling')
-  console.log(`[generate-tattoo] Step 5.5 OUTPUT (polled) — transparent PNG URL: ${url}`)
-  return url
-}
+// Step 5.5 now uses the shared removeBackgroundRembg() function defined above
 
 // ─── STEP 6: Upload transparent PNG to permanent Supabase Storage ─────────────
 async function uploadFinalArt(transparentPngUrl: string): Promise<string> {
@@ -423,10 +382,10 @@ serve(async (req) => {
     console.log(`[generate-tattoo] ═══ PIPELINE START ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
-    // Step 1: Remove background
-    console.log('[generate-tattoo] ─── Step 1: BiRefNet background removal ───')
+    // Step 1: Remove background from user photo
+    console.log('[generate-tattoo] ─── Step 1: rembg background removal (user photo) ───')
     const t1 = Date.now()
-    const transparentPngUrl = await removeBackgroundBiRefNet(imageBase64)
+    const transparentPngUrl = await removeBackgroundRembg(`data:image/png;base64,${imageBase64}`, 'Step 1')
     console.log(`[generate-tattoo] Step 1 done in ${Date.now() - t1}ms`)
 
     // Step 2: Smart crop + normalize
@@ -453,11 +412,11 @@ serve(async (req) => {
     const artUrl = await generateWithFlux2Pro(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
-    // Step 5.5: BiRefNet on FLUX output → transparent PNG
-    // This intelligently removes the white background without touching white fur/chest/paws
-    console.log('[generate-tattoo] ─── Step 5.5: BiRefNet on FLUX output ───')
+    // Step 5.5: rembg on FLUX output → transparent PNG
+    // isnet-general-use understands subject semantically — preserves white fur/chest/paws
+    console.log('[generate-tattoo] ─── Step 5.5: rembg on FLUX output ───')
     const t55 = Date.now()
-    const transparentArtUrl = await removeBackgroundFromFluxOutput(artUrl)
+    const transparentArtUrl = await removeBackgroundRembg(artUrl, 'Step 5.5')
     console.log(`[generate-tattoo] Step 5.5 done in ${Date.now() - t55}ms`)
 
     // Step 6: Upload transparent PNG to permanent Storage (Replicate URLs expire in ~24h)
