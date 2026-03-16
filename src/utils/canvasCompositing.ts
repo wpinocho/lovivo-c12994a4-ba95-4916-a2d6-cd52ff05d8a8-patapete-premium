@@ -28,8 +28,8 @@ export interface PetCompositeData {
   isGenerated?: boolean
 }
 
-// New lighter coir mat for clean multiply blend
-const TAPETE_MOCKUP_URL = 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773256082834-gf5g5a3no07.webp'
+// Coir rug mockup — stored in repo public/ folder (same origin, no CORS issues)
+const TAPETE_MOCKUP_URL = '/tapete-mockup.webp'
 
 // ─── Canvas layout constants (600×600 canvas) ─────────────────────────────────
 //

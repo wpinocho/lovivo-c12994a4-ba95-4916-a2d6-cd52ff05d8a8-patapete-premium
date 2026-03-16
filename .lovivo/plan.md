@@ -8,9 +8,35 @@ El configurador visual (`PatapeteConfigurator`) está funcionando. El flujo comp
 - CartSidebar muestra imagen personalizada del tapete
 - ThankYou limpia el localStorage al completar compra
 
+## Arquitectura de Storage (2 Supabase)
+
+### Supabase de Lovivo (`ptgmltivisbtvmoxwnhd`) — NO manipulable directamente
+- Bucket `product-images`: imágenes de productos (permanente)
+- Bucket `message-images`: **TEMPORAL/inestable — URLs expiran ⚠️**
+- `lov-copy` / `image--optimize` guardan aquí con `also_in_repo: True`
+- Las style references del pipeline FLUX apuntan aquí (OK, son permanentes)
+
+### Supabase del usuario (`vqmqdhsajdldsraxsqba`) — controlable via supabase_* tools
+- Bucket `pet-tattoos`: fotos procesadas de mascotas de usuarios
+  - `temp/`: fotos normalizadas temporales (BiRefNet output)
+  - `finals/`: arte FLUX final permanente
+- Las edge functions `generate-tattoo` y `upload-patapete-preview` corren aquí
+
+### Repo `public/` — MEJOR opción para assets estáticos
+- Mismo origen que la app → CERO problemas de CORS en canvas
+- Nunca expiran, siempre disponibles
+- `/tapete-mockup.webp` — fondo del tapete ✅ guardado
+- `/demos/icono-0.webp` — terrier con paliacate ✅ guardado
+- `/demos/icono-1.webp` — chihuahua ✅ guardado
+- `/demos/icono-2.webp` — bulldog francés ✅ guardado
+- `/demos/dibujo-0.webp` — ⏳ PENDIENTE (user enviará imágenes)
+- `/demos/dibujo-1.webp` — ⏳ PENDIENTE
+- `/demos/dibujo-2.webp` — ⏳ PENDIENTE
+
 ## Cambios recientes
-- **Demo images [0] reparadas** — Los URLs del bucket `message-images` para los slots `dibujo[0]` e `icono[0]` se rompieron (el bucket `message-images` no es permanente). Se generaron nuevas imágenes demo (Golden Retriever icono + dibujo) y se guardaron en el bucket permanente `product-images`. Actualizado en `CanvasPreview.tsx`.
-- ⚠️ Los slots [1] y [2] también usan `message-images` — podrían romperse en el futuro. Migrar cuando sea posible.
+- **Arquitectura de demos corregida** — Todas las imágenes demo e imagen del tapete migradas al repo `public/` para evitar CORS y URLs que expiran
+- `CanvasPreview.tsx` y `canvasCompositing.ts` actualizados para usar paths `/demos/icono-X.webp` y `/tapete-mockup.webp`
+- Dibujo usa icono como placeholder temporal hasta recibir imágenes del usuario
 
 ## Arquitectura de customización
 
@@ -48,6 +74,7 @@ ADD COLUMN IF NOT EXISTS preview_image_url TEXT DEFAULT NULL;
 
 ## Archivos clave
 - `src/components/patapete/configurator/CanvasPreview.tsx` — Preview visual
+- `src/utils/canvasCompositing.ts` — Composición del canvas (también usa /tapete-mockup.webp)
 - `src/components/patapete/configurator/PatapeteConfigurator.tsx` — Orquestador
 - `src/components/patapete/configurator/StepPets.tsx` — UI del configurador
 - `src/components/patapete/configurator/PhotoPetForm.tsx` — Upload + generación por mascota
@@ -63,14 +90,3 @@ ADD COLUMN IF NOT EXISTS preview_image_url TEXT DEFAULT NULL;
 2 mascotas: 1aee4582-040b-477a-b335-e99446fa76c7
 3 mascotas: 5f7e007d-b30e-44c8-baa6-5aa03edb23ad
 ```
-
-## Imágenes demo (DEMO_URLS en CanvasPreview.tsx)
-- `dibujo[0]`: product-images bucket — demo-dibujo-0.webp (Golden Retriever b&w) ✅ permanente
-- `icono[0]`: product-images bucket — demo-icono-0.webp (Golden Retriever colorido) ✅ permanente
-- `dibujo[1]`, `dibujo[2]`, `icono[1]`, `icono[2]`: message-images bucket ⚠️ puede expirar
-
-## Notas técnicas
-- `removeWhiteBackground()` en `imagePreprocessing.ts` procesa demos para quitar fondo blanco
-- `compositeRug()` en `canvasCompositing.ts` genera el dataUrl para el carrito
-- `styleRef` es un `useRef` para evitar stale closure en `handleGenerate`
-- LocalStorage key format: `patapete_customization:{productId}:{variantId}`

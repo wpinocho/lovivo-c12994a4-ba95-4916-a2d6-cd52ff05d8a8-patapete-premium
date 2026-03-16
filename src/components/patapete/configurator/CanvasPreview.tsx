@@ -4,23 +4,23 @@ import { compositeRug, PetCompositeData } from '@/utils/canvasCompositing'
 import { removeWhiteBackground } from '@/utils/imagePreprocessing'
 
 // Demo images per style and pet index (0-based)
-// ⚠️ Always use product-images bucket URLs (permanent) — never message-images (expires)
+// ✅ All stored in repo /public/demos/ — same origin, no CORS issues, never expire
+// ⚠️ dibujo: pending user images — using icono as placeholder until replaced
 const DEMO_URLS: Record<Style, string[]> = {
   dibujo: [
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/demo-dibujo-0.webp',
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ubs0fcngr3.webp',
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-hxsvvcjo85m.webp',
+    '/demos/icono-0.webp',  // ⏳ TEMP: replace with real dibujo images when provided
+    '/demos/icono-1.webp',
+    '/demos/icono-2.webp',
   ],
   icono: [
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/demo-icono-0.webp',
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-ssazvmuwl7.webp',
-    'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773601373946-2q1ktqjly0v.webp',
+    '/demos/icono-0.webp',
+    '/demos/icono-1.webp',
+    '/demos/icono-2.webp',
   ],
 }
 
-// Lighter coir rug mockup (2048×2048)
-const TAPETE_URL =
-  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773256082834-gf5g5a3no07.webp'
+// Coir rug mockup (2048×2048) — stored in repo public/ folder
+const TAPETE_URL = '/tapete-mockup.webp'
 
 // ── Layout config — all values are % of the square container ─────────────────
 // Coordinates converted from Figma (2048×2048 frame).
