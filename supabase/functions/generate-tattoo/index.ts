@@ -12,7 +12,7 @@ const STYLE_REFERENCE_DIBUJO_URL =
   'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-dibujo.png'
 
 const STYLE_REFERENCE_ICONO_URL =
-  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono.webp'
+  'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/style-icono-ref.webp'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -184,11 +184,10 @@ Rasgos distintivos CRÍTICOS y accesorios (ej. oreja izquierda caída, mancha bl
 
 Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
 
-A high-quality, charming digital illustration 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws playfully resting on a solid dark horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
-STYLE: Expressive, modern 2D digital illustration with soft, smooth shading to give a subtle sense of volume. Clean, refined outlines (not overly thick). It should look like premium character art, NOT hyper-realistic photography and NOT a flat stencil.
-DETAILS: The fur texture is [TEXTURA Y LONGITUD DEL PELO], captured with elegant, simplified brushstrokes rather than over-detailed individual hairs.
-COLORS & LIGHTING: [COLORES PRINCIPALES Y DISTRIBUCIÓN]. Use rich, vibrant colors with gentle shadows and highlights.
-EXPRESSION & FEATURES: [EXPRESIÓN FACIAL EXACTA]. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready illustration with clear shapes, perfect for high-resolution sublimation.`
+A charming flat 2D cartoon illustration 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws playfully resting on a solid black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+STYLE: Flat colorful vector cartoon illustration. Bold clean outlines, solid color fills with minimal cel-shading. Like a professional sticker design or mobile app character icon. NO sketchy lines, NO crosshatching, NO pencil texture, NO painterly brushstrokes, NO photorealism.
+FUR & COLORS: [TEXTURA Y LONGITUD DEL PELO]. [COLORES PRINCIPALES Y DISTRIBUCIÓN]. Use vibrant, saturated colors. Simple gradient or cel-shade highlights only.
+EXPRESSION & FEATURES: [EXPRESIÓN FACIAL EXACTA]. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Clean shapes, print-ready for sublimation.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
@@ -312,8 +311,8 @@ Generate a portrait of the pet from the first image, applying STRICTLY the visua
 ${haikuPrompt}`
   } else {
     inputImages = [petUrl, STYLE_REFERENCE_ICONO_URL]
-    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.
-Generate a flat vector illustration portrait of the pet from the first image, using the exact style of the second reference image.
+    finalPrompt = `The first image is the pet to recreate. The second image is the EXACT art style reference to apply.
+Generate a flat colorful 2D cartoon portrait of the pet from the first image. The output MUST match the style of the second reference image EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, bright vibrant colors, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
 ${haikuPrompt}`
   }
 

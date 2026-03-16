@@ -10,6 +10,7 @@ interface PhotoPetFormProps {
   pet: Pet
   onChange: (updates: Partial<Pet>) => void
   onGenerate: (file?: File) => void
+  onClear: () => void
   photoError?: string
   nameError?: string
 }
@@ -25,7 +26,7 @@ const PROGRESS_MILESTONES = [
   { at: 21000, pct: 93 },
 ]
 
-export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, photoError, nameError }: PhotoPetFormProps) {
+export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, onClear, photoError, nameError }: PhotoPetFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [progress, setProgress] = useState(0)
 
@@ -140,7 +141,8 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, photoError, 
             {!isProcessing && (
               <button
                 onClick={() => {
-                  onChange({ photoFile: null, photoPreviewUrl: null, processedImageUrl: null, generatedArtUrl: null, photoBase64: null, progressMessage: '' })
+                  // onClear resets pet to DEFAULT_PET and writes to localStorage synchronously
+                  onClear()
                   if (fileInputRef.current) fileInputRef.current.value = ''
                 }}
                 className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-background border border-border rounded-full flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors shadow-sm"

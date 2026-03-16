@@ -21,6 +21,7 @@ interface StepPetsProps {
   onPhraseChange: (phrase: string) => void
   onPhrase2Change: (phrase2: string) => void
   onGenerate: (petIndex: number, file?: File) => void
+  onClearPet: (index: number) => void
   onAddToCart: () => void
   onOrderNow: () => void
   onPreviewReady: (dataUrl: string) => void
@@ -49,7 +50,7 @@ function getDeliveryRange() {
 export function StepPets({
   style, petCount, pets, phrase, phrase2,
   onStyleChange, onPetCountChange, onPetChange, onPhraseChange, onPhrase2Change,
-  onGenerate, onAddToCart, onOrderNow, onPreviewReady,
+  onGenerate, onClearPet, onAddToCart, onOrderNow, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
 
@@ -84,6 +85,16 @@ export function StepPets({
     setFieldErrors({})
     if (action === 'order') onOrderNow()
     else onAddToCart()
+  }
+
+  // Clear pet + field errors
+  function handleClearPet(index: number) {
+    onClearPet(index)
+    if (fieldErrors[index]) {
+      const newErrors = { ...fieldErrors }
+      delete newErrors[index]
+      setFieldErrors(newErrors)
+    }
   }
 
   // Wrapper for onPetChange that clears errors when the user fixes a field
@@ -235,6 +246,7 @@ export function StepPets({
                 pet={pets[i]}
                 onChange={updates => handlePetChange(i, updates)}
                 onGenerate={file => onGenerate(i, file ?? undefined)}
+                onClear={() => handleClearPet(i)}
                 photoError={fieldErrors[i]?.photo}
                 nameError={fieldErrors[i]?.name}
               />

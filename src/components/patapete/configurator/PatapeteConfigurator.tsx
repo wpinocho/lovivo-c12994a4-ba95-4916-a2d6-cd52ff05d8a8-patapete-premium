@@ -130,6 +130,17 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     })
   }, [])
 
+  const handleClearPet = useCallback((index: number) => {
+    setState(prev => {
+      const pets = [...prev.pets]
+      pets[index] = { ...DEFAULT_PET }
+      const newState = { ...prev, pets }
+      // Write to localStorage synchronously — don't wait for useEffect
+      saveToStorage(newState)
+      return newState
+    })
+  }, [])
+
   const handlePhraseChange = useCallback((phrase: string) => {
     setState(s => ({ ...s, phrase }))
   }, [])
@@ -295,6 +306,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           onPhraseChange={handlePhraseChange}
           onPhrase2Change={handlePhrase2Change}
           onGenerate={handleGenerate}
+          onClearPet={handleClearPet}
           onAddToCart={handleAddToCart}
           onOrderNow={handleOrderNow}
           onPreviewReady={handlePreviewReady}
