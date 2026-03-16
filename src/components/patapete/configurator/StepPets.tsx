@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { PenLine, Palette, Star, Shield, Package, Clock, Truck, Eye } from 'lucide-react'
+import { PenLine, Palette, Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck } from 'lucide-react'
 
 interface StepPetsProps {
   style: Style
@@ -21,7 +21,7 @@ interface StepPetsProps {
   onPhraseChange: (phrase: string) => void
   onPhrase2Change: (phrase2: string) => void
   onGenerate: (petIndex: number, file?: File) => void
-  onContinue: () => void
+  onAddToCart: () => void
   onOrderNow: () => void
   onPreviewReady: (dataUrl: string) => void
 }
@@ -49,7 +49,7 @@ function getDeliveryRange() {
 export function StepPets({
   style, petCount, pets, phrase, phrase2,
   onStyleChange, onPetCountChange, onPetChange, onPhraseChange, onPhrase2Change,
-  onGenerate, onContinue, onOrderNow, onPreviewReady,
+  onGenerate, onAddToCart, onOrderNow, onPreviewReady,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
 
@@ -59,7 +59,7 @@ export function StepPets({
   }>({})
   const petRefs = useRef<(HTMLDivElement | null)[]>([null, null, null])
 
-  function validateAndProceed(action: 'order' | 'continue') {
+  function validateAndProceed(action: 'order' | 'cart') {
     if (isProcessing) return
     const errors: typeof fieldErrors = {}
     let firstErrorIndex = -1
@@ -83,7 +83,7 @@ export function StepPets({
     }
     setFieldErrors({})
     if (action === 'order') onOrderNow()
-    else onContinue()
+    else onAddToCart()
   }
 
   // Wrapper for onPetChange that clears errors when the user fixes a field
@@ -116,8 +116,6 @@ export function StepPets({
 
   // Track when the inline CTA button is in viewport
   const { ref: ctaRef, inView: ctaInView } = useInView({ threshold: 0.5 })
-
-  const ctaLabel = isProcessing ? 'Generando tu retrato...' : `Ver resumen — $${price.toLocaleString('es-MX')} MXN →`
 
   return (
     <div className="space-y-4">
@@ -318,7 +316,7 @@ export function StepPets({
 
           {/* ── CTA section ── */}
           <div className="space-y-3" ref={ctaRef}>
-            {/* Primary CTA */}
+            {/* Primary CTA: Order now */}
             <Button
               onClick={() => validateAndProceed('order')}
               disabled={isProcessing}
@@ -327,18 +325,19 @@ export function StepPets({
             >
               {isProcessing
                 ? 'Generando tu retrato...'
-                : `¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
+                : `⚡ ¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
             </Button>
 
-            {/* Secondary CTA */}
+            {/* Secondary CTA: Add to cart */}
             <Button
-              onClick={() => validateAndProceed('continue')}
+              onClick={() => validateAndProceed('cart')}
               disabled={isProcessing}
               variant="outline"
               className="w-full rounded-xl"
               size="lg"
             >
-              Ver mi tapete primero
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Agregar al carrito
             </Button>
 
             {/* Trust badges */}
@@ -355,7 +354,37 @@ export function StepPets({
               ))}
             </div>
 
+            {/* Guarantee */}
+            <div className="rounded-xl border border-green-200 bg-green-50/60 dark:bg-green-950/20 dark:border-green-900 p-3 flex gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-green-800 dark:text-green-300">Garantía Patapete</p>
+                <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 leading-relaxed">
+                  Si el diseño no te convence, lo rehacemos sin costo. Sin preguntas.
+                </p>
+              </div>
+            </div>
 
+            {/* What happens next */}
+            <div className="border border-border rounded-xl p-4 bg-muted/20 space-y-3">
+              <p className="text-xs font-bold text-foreground text-center">¿Qué pasa después de ordenar?</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { emoji: '📦', title: 'Recibimos tu pedido', sub: 'Inmediatamente' },
+                  { emoji: '🎨', title: 'Creamos el diseño', sub: '1-2 días hábiles' },
+                  { emoji: '📸', title: 'Te enviamos el preview', sub: 'Aprobación tuya' },
+                  { emoji: '🚚', title: 'Producción y envío', sub: '5-7 días hábiles' },
+                ].map((step, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-lg leading-none">{step.emoji}</span>
+                    <div>
+                      <p className="text-xs font-semibold text-foreground leading-tight">{step.title}</p>
+                      <p className="text-xs text-muted-foreground">{step.sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -386,12 +415,13 @@ export function StepPets({
                 <span className="text-xs font-normal text-muted-foreground ml-1">MXN</span>
               </span>
               <Button
-                onClick={() => validateAndProceed('continue')}
+                onClick={() => validateAndProceed('cart')}
                 size="default"
                 variant="outline"
                 className="rounded-xl font-semibold px-4 hidden sm:flex"
               >
-                Ver tapete
+                <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                Agregar al carrito
               </Button>
               <Button
                 onClick={() => validateAndProceed('order')}

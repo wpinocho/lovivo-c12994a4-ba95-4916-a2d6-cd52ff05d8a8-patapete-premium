@@ -2,10 +2,10 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
 import { StepPets } from './StepPets'
-import { StepSummary } from './StepSummary'
 import { compressAndResizeImage } from '@/utils/imagePreprocessing'
 import { generateTattooArt } from '@/utils/replicateApi'
 import { useCart } from '@/contexts/CartContext'
+import { useCartUISafe } from '@/components/CartProvider'
 import { STYLE_LABELS } from './types'
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
@@ -91,6 +91,8 @@ const VARIANT_IDS: Record<1 | 2 | 3, string> = {
 export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   const navigate = useNavigate()
   const { addItem } = useCart()
+  const cartUI = useCartUISafe()
+  const openCart = cartUI?.openCart ?? (() => {})
   const saved = loadFromStorage()
 
   const [state, setState] = useState<ConfiguratorState>({
@@ -185,13 +187,29 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     }
   }, [state.pets])
 
-  const handleContinueToSummary = useCallback(() => {
-    setState(s => ({ ...s, step: 2, error: null, finalPreviewDataUrl: finalPreviewRef.current }))
-  }, [])
+  const handleAddToCart = useCallback(() => {
+    if (!product) return
+    const currentState = state
+    const variantId = VARIANT_IDS[currentState.petCount]
+    const variant = product?.variants?.find((v: any) => v.id === variantId)
 
-  const handleBack = useCallback(() => {
-    setState(s => ({ ...s, step: 1 }))
-  }, [])
+    const customization = {
+      style: STYLE_LABELS[currentState.style],
+      petCount: currentState.petCount,
+      pets: currentState.pets.slice(0, currentState.petCount).map((p, i) => ({
+        name: p.name || `Mascota ${i + 1}`,
+        ...(p.generatedArtUrl ? { artUrl: p.generatedArtUrl } : {}),
+      })),
+      phrase: currentState.phrase,
+      phrase2: currentState.phrase2,
+      previewDataUrl: finalPreviewRef.current,
+      timestamp: new Date().toISOString(),
+    }
+    localStorage.setItem(`patapete_order_${Date.now()}`, JSON.stringify(customization))
+
+    addItem(product, variant)
+    openCart()
+  }, [product, state, addItem, openCart])
 
   const handleOrderNow = useCallback(() => {
     if (!product) return
@@ -256,23 +274,9 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           onPhraseChange={handlePhraseChange}
           onPhrase2Change={handlePhrase2Change}
           onGenerate={handleGenerate}
-          onContinue={handleContinueToSummary}
+          onAddToCart={handleAddToCart}
           onOrderNow={handleOrderNow}
           onPreviewReady={handlePreviewReady}
-        />
-      )}
-
-      {state.step === 2 && (
-        <StepSummary
-          style={state.style}
-          petCount={state.petCount}
-          pets={state.pets}
-          phrase={state.phrase}
-          phrase2={state.phrase2}
-          product={product}
-          finalPreviewDataUrl={state.finalPreviewDataUrl}
-          onBack={handleBack}
-          onOrderNow={handleOrderNow}
         />
       )}
     </div>

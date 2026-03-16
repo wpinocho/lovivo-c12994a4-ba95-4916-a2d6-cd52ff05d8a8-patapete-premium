@@ -1,57 +1,39 @@
-# PataPete — Plan de Optimización
+# Patapete — Plan del proyecto
 
-## Estado Actual
-Tienda de tapetes personalizados con mascota (PataPete). Producto principal: tapete con retrato IA de tu mascota ($649–$949 MXN).
+## Estado actual
+Configurador de tapetes personalizados completamente funcional. Se eligió e implementó la **Opción B** del análisis de flujo de CTAs.
 
-## Flujo de Compra Actual (post-optimización)
+## Flujo de CTAs (Implementado — Opción B)
+
 ```
-ProductPage (configurador)
-├── StepPets: sube foto, elige estilo, textos
-│   ├── [¡Ordenar ahora! →] (primario) ──────→ /pagar (checkout directo)
-│   └── [Ver mi tapete] (secundario/outline) ──→ StepSummary
-│
-└── StepSummary: preview + resumen del pedido
-    ├── [¡Ordenar ahora! →] (primario) ──────→ /pagar (checkout directo)
-    └── [← Volver a configurar] ─────────────→ StepPets
+[⚡ ¡Ordenar ahora! — $XXX MXN →]   ← añade al carrito + navega a /pagar (comprador impulsivo)
+[🛒 Agregar al carrito]              ← añade al carrito + abre CartSidebar (comprador multi-tapete)
 ```
 
-## Archivos Clave
-- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — orquestador
-- `src/components/patapete/configurator/StepPets.tsx` — step 1: configurar
-- `src/components/patapete/configurator/StepSummary.tsx` — step 2: resumen
-- `src/components/patapete/configurator/CanvasPreview.tsx` — canvas preview
-- `src/components/patapete/configurator/PhotoPetForm.tsx` — upload + IA
-- `src/components/patapete/configurator/types.ts` — tipos y precios
+- `StepSummary` eliminado como paso de navegación (step 2 removido de PatapeteConfigurator)
+- Su contenido valioso (garantía + timeline "¿Qué pasa después?") movido inline a `StepPets` bajo los CTAs
+- La barra sticky también actualizada: "Ver tapete" → "Agregar al carrito"
 
-## Variantes de Producto (IDs reales)
-- 1 mascota: `28fc993c-e638-459b-9a00-08abacdc9f32`
-- 2 mascotas: `1aee4582-040b-477a-b335-e99446fa76c7`
-- 3 mascotas: `5f7e007d-b30e-44c8-baa6-5aa03edb23ad`
+## Archivos clave del configurador
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — orquestador, maneja `handleOrderNow` y `handleAddToCart`
+- `src/components/patapete/configurator/StepPets.tsx` — único paso del configurador, todos los CTAs aquí
+- `src/components/patapete/configurator/StepSummary.tsx` — ya no se usa (puede eliminarse en el futuro)
+- `src/components/patapete/configurator/CanvasPreview.tsx` — preview del tapete en canvas
+- `src/components/patapete/configurator/PhotoPetForm.tsx` — formulario por mascota (foto + nombre)
 
-## Precios
-- Estilo Icono: 1→$649, 2→$799, 3→$949 MXN
-- Estilo Dibujo: 1→$649, 2→$799, 3→$949 MXN
+## Lógica de apertura del carrito
+`handleAddToCart` usa `useCartUISafe()` de `@/components/CartProvider` para llamar `openCart()`.
 
----
+## Decisiones de UX implementadas
+- Validación en el momento del clic (no botones deshabilitados) — feedback más claro
+- Errores con borde rojo + scroll automático al primer campo con error
+- Errores se limpian al corregir (foto o nombre)
+- Textos superior/inferior opcionales
+- LocalStorage persistencia del estado del configurador
 
-## Funcionalidades Implementadas
-- [x] Generación de arte IA con Replicate (FLUX 2 Pro)
-- [x] Remoción de background (BiRefNet)
-- [x] Preview canvas en tiempo real
-- [x] Selector estilo: Icono / Dibujo
-- [x] Contador de mascotas (1/2/3)
-- [x] Textos superior/inferior personalizables
-- [x] Trust badges + fecha entrega dinámica + social proof
-- [x] Sticky CTA bar (aparece cuando el botón sale de viewport)
-- [x] Doble CTA: "Ordenar ahora" (checkout directo) + "Ver mi tapete" (resumen)
-- [x] Persistencia en localStorage
-- [x] Fix: borrar foto también limpia localStorage (photoBase64)
-- [x] Validación en-click con scroll al campo faltante
-  - Botones siempre activos (solo blocked durante procesamiento IA)
-  - Al click sin completar: borde rojo + mensaje de error bajo cada campo faltante
-  - Scroll automático al primer error
-  - Errores se limpian al corregir el campo (onChange)
-  - Tarjeta del pet tiene borde rojo/fondo si tiene errores
-- [x] Fix botón retry: solo aparece en fallo (no cuando generatedArtUrl existe)
-- [x] Nombre de mascota ya no dice "(opcional)" — es campo requerido
-- [x] Textos superior/inferior no son requeridos (usan defaults del canvas si vacíos)
+## Variantes del producto (IDs reales)
+```
+1 mascota: '28fc993c-e638-459b-9a00-08abacdc9f32'
+2 mascotas: '1aee4582-040b-477a-b335-e99446fa76c7'
+3 mascotas: '5f7e007d-b30e-44c8-baa6-5aa03edb23ad'
+```
