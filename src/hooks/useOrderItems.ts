@@ -15,6 +15,7 @@ export interface OrderItem {
   quantity: number
   price: number
   total: number
+  preview_image_url?: string
   product: {
     id: string
     name: string
@@ -213,6 +214,7 @@ export const useOrderItems = () => {
         quantity: item.quantity,
         price: item.price,
         total: item.total,
+        preview_image_url: item.preview_image_url || undefined,
         product: {
           id: item.product_id,
           name: productName,

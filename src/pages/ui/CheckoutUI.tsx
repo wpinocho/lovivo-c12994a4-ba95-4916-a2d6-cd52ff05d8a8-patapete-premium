@@ -637,11 +637,22 @@ export default function CheckoutUI() {
                       </Button>
                     </div>
                   ) : (
-                    Array.isArray(logic.summaryItems) && logic.summaryItems.map(item => (
+                    Array.isArray(logic.summaryItems) && logic.summaryItems.map(item => {
+                      let itemImage = item.product.images?.[0] || "/placeholder.svg"
+                      try {
+                        const stored = localStorage.getItem(`patapete_customization:${item.key}`)
+                        if (stored) {
+                          const parsed = JSON.parse(stored)
+                          itemImage = parsed.preview_image_url || parsed.preview_dataurl || (item as any).preview_image_url || itemImage
+                        } else if ((item as any).preview_image_url) {
+                          itemImage = (item as any).preview_image_url
+                        }
+                      } catch { /* ignore */ }
+                      return (
                       <div key={item.key} className="flex items-center space-x-4">
                         <div className="relative">
                           <img 
-                            src={item.product.images?.[0] || "/placeholder.svg"} 
+                            src={itemImage} 
                             alt={item.product.name} 
                             className="w-16 h-16 object-cover rounded border" 
                           />
@@ -691,7 +702,8 @@ export default function CheckoutUI() {
                           {formatMoney(item.total || (item.price * item.quantity), logic.currencyCode)}
                         </div>
                       </div>
-                    ))
+                      )
+                    })
                   )}
 
                   {/* Código de descuento */}
