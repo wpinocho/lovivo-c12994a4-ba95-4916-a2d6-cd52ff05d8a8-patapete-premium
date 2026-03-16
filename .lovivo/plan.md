@@ -1,50 +1,27 @@
-# Patapete Configurador — Plan
+# Patapete — Plan del Proyecto
 
-## Current State
-- Configurador visual integrado en la página de producto
-- Solo estilo **icono** activo (dibujo ocultado por ahora)
-- Estilo fijo en 'icono' — selector de estilo removido del UI
-- El configurador empieza directamente en "¿Cuántas mascotas?"
-- Assets estáticos (demos + tapete) en `public/` del repo — mismo origen, cero CORS
+## Estado General
+Tienda de tapetes personalizados con mascotas. El configurador interactivo (`PatapeteConfigurator`) genera retratos de mascotas con IA (FLUX) y los compone sobre un mockup de tapete.
 
-## Bug fixes aplicados
-- **Bug crítico resuelto:** `PatapeteConfigurator.tsx` al hacer spread de `saved` del localStorage, sobreescribía `style: 'icono'` con el valor guardado (probablemente `'dibujo'` de sesiones anteriores). Fix: `...(saved ? { ...saved, style: 'icono' as const } : {})` — el estilo siempre se fuerza a `'icono'` después del spread.
+## Arquitectura de Almacenamiento
+- Assets estáticos en `public/` del repo (mismo origen, sin CORS, sin expiración)
+- Imágenes demo: `public/demos/icono-0.webp`, `icono-1.webp`, `icono-2.webp`
+- Tapete mockup: `public/tapete-mockup.webp`
 
-## Architecture: Two Supabase layers
+## Estado del Estilo
+- **Estilo activo: `icono`** — siempre forzado en estado inicial y tras cargar localStorage
+- Estilo `dibujo` oculto hasta tener sus imágenes demo
 
-### 1. Lovivo Platform (shared, NO modificar)
-- `src/lib/supabase.ts` + `src/lib/edge.ts`
-- Maneja products, orders, checkout, payments
+## Cambios Recientes
+- Bug fix: estilo `icono` ahora se fuerza correctamente incluso al cargar desde localStorage
+- Prompt de Haiku para `icono` actualizado con extracción detallada (expresión, textura pelo, colores, rasgos críticos)
+- **PhotoPetForm rediseñado** — layout horizontal compacto: thumbnail 88×88px a la izquierda, instrucciones/nombre a la derecha. Mucho más limpio y proporcional al preview del tapete.
 
-### 2. User's Own Supabase (modificable)
-- `src/integrations/supabase/client.ts` → `userSupabase`
-- Bucket `pet-tattoos` (PUBLIC) — guarda los retratos generados por IA que sube el usuario
-- Edge functions: `generate-tattoo`, `upload-patapete-preview`
-
-## Static Assets (public/ folder — same origin, no CORS, never expire)
-- `/tapete-mockup.webp` — fondo del tapete
-- `/demos/icono-0.webp` — terrier (mascota demo 1)
-- `/demos/icono-1.webp` — chihuahua (mascota demo 2)
-- `/demos/icono-2.webp` — bulldog francés (mascota demo 3)
-- ⏳ `/demos/dibujo-0.webp`, `dibujo-1.webp`, `dibujo-2.webp` — pendientes (estilo dibujo oculto por ahora)
-
-## Variant IDs (product)
-- 1 mascota: `28fc993c-e638-459b-9a00-08abacdc9f32`
-- 2 mascotas: `1aee4582-040b-477a-b335-e99446fa76c7`
-- 3 mascotas: `5f7e007d-b30e-44c8-baa6-5aa03edb23ad`
-
-## Prompts (edge function generate-tattoo)
-### SYSTEM_PROMPT_ICONO (actualizado)
-Extrae: tipo de animal, textura y longitud de pelo, colores y distribución, expresión facial exacta, rasgos/accesorios críticos.
-Plantilla: digital illustration 2D moderna con shading suave, volumen, outlines limpios — premium character art, NOT flat stencil. Fondo blanco puro.
-
-### SYSTEM_PROMPT_DIBUJO (sin cambios)
-Extrae solo información estructural (ignora colores), genera plantilla B&N linocut/rubber stamp.
-
-## Flow
-1. ~~StepStyle~~ (removido — solo icono por ahora)
-2. **StepPets** — seleccionar cantidad de mascotas, subir fotos, frases, CTA
-
-## Pending
-- Backend: ALTER TABLE `order_items` para columnas `customization_data` JSONB y `preview_image_url` TEXT
-- Cuando se reactive el estilo dibujo: agregar imágenes demo y reactivar selector
+## Archivos Clave
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx` — orquestador principal
+- `src/components/patapete/configurator/PhotoPetForm.tsx` — form de foto por mascota (compact redesign)
+- `src/components/patapete/configurator/CanvasPreview.tsx` — preview del tapete en CSS
+- `src/utils/canvasCompositing.ts` — composición canvas para finalPreviewDataUrl
+- `src/utils/imagePreprocessing.ts` — removeWhiteBackground + compressAndResizeImage
+- `src/utils/replicateApi.ts` — llamadas a Replicate (BiRefNet + FLUX)
+- `supabase/functions/generate-tattoo/index.ts` — edge function: analiza foto con Haiku → genera prompt → llama FLUX
