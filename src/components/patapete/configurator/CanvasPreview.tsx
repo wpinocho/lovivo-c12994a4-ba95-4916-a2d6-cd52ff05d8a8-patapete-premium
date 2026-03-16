@@ -135,8 +135,7 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
           style={{
             top: '34.71%',
             fontSize: FONT.phrase,
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontStyle: 'italic',
+            fontFamily: '"Plus Jakarta Sans", sans-serif',
             fontWeight: 800,
             color: INK,
             padding: '0 8%',
@@ -198,8 +197,7 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
           style={{
             top: '74%',
             fontSize: FONT.phrase2,
-            fontFamily: '"Playfair Display", Georgia, serif',
-            fontStyle: 'italic',
+            fontFamily: '"Plus Jakarta Sans", sans-serif',
             fontWeight: 800,
             color: INK,
             padding: '0 8%',

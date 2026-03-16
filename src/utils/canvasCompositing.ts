@@ -192,7 +192,7 @@ export async function compositeRug(
     const text     = `"${phrase.trim()}"`
     const fontSize = Math.max(13, Math.min(20, W / text.length * 1.0))
     ctx.save()
-    ctx.font          = `italic ${fontSize}px 'Playfair Display', serif`
+    ctx.font          = `800 ${fontSize}px 'Plus Jakarta Sans', sans-serif`
     ctx.textAlign     = 'center'
     ctx.textBaseline  = 'bottom'
     const textW = ctx.measureText(text).width

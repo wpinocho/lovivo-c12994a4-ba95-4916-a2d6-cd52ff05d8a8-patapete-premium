@@ -1,26 +1,29 @@
-# Patapete — Plan
+# Patapete — Plan de implementación
 
-## Current State
-Configurador de tapetes personalizados con fotos de mascotas. Stack: React/TS, Supabase, Stripe.
+## Estado actual
+- Ecommerce de tapetes personalizados (diseño a medida por cada cliente)
+- Configurador: seleccionar mascota → personalizar diseño → preview aprobado antes de comprar → checkout
+- Landing page + página de producto con FAQ existente
 
-## Recent Changes
-- Garantía actualizada en todos los archivos: de "rehacemos el diseño" → "reponemos si hay defecto de fabricación"
-- Flujo "¿Qué pasa después de ordenar?" corregido a tiempos reales:
-  1. Orden confirmada → empezamos producción
-  2. Fabricamos tu tapete — 3-5 días hábiles
-  3. Lo enviamos — con número de rastreo por correo
-  4. Llega a tu puerta — 7-10 días desde la compra
-- Iconos del proceso ahora usan Lucide (CheckCircle, Scissors, Truck, Home) con `text-primary` (terracotta) en vez de emojis
-- FAQs (PatapeteFAQ.tsx + ProductFAQ.tsx) actualizados para ser coherentes con el modelo real: preview antes de comprar = diseño ya aprobado
-- ProductFAQ: pregunta "¿Puedo ver el diseño antes?" → "¿El preview que veo es el diseño real del tapete?"
+## Decisiones de diseño
+- Tipografía del tapete: **toda Plus Jakarta Sans 800** (bold, sin itálica, sin serif)
+  - Phrase superior, nombres, phrase inferior — misma fuente
+  - Aplica tanto en CanvasPreview.tsx (preview visual) como en canvasCompositing.ts (JPG final)
+- Flujo: Botón "⚡ Ordenar ahora" + "🛒 Agregar al carrito"
+- StepSummary eliminado como paso navegable — contenido inline en el configurador
 
-## User Preferences
-- Lenguaje es-MX
-- Preview antes de comprar = diferenciador clave → comunicarlo explícitamente
-- Garantía cubre solo defectos físicos, NO cambio de opinión sobre diseño
-- Tiempos: producción 3-5 días hábiles, total 7-10 días hábiles
+## Garantía (definida)
+- Cubre: defectos físicos de fabricación/material
+- NO cubre: cambios de diseño (cliente ya vio y aprobó el preview)
+- Timeline real: producción 3-5 días hábiles, entrega 7-10 días totales
 
-## CTA Flow
-- "⚡ ¡Ordenar ahora!" → directo a checkout
-- "🛒 Agregar al carrito" → abre sidebar
-- Sticky CTA bar cuando los botones salen de pantalla
+## FAQs
+- Ambos archivos (landing + página de producto) actualizados y consistentes
+- Pregunta clave: "¿El preview es el diseño real?" — diferenciador principal
+
+## Archivos clave
+- src/components/patapete/configurator/CanvasPreview.tsx — preview visual en configurador
+- src/utils/canvasCompositing.ts — generación del JPG final para el pedido
+- src/components/patapete/configurator/StepSummary.tsx — resumen antes de pagar
+- src/components/patapete/ProductFAQ.tsx — FAQ página de producto
+- src/components/patapete/PatapeteFAQ.tsx — FAQ landing page
