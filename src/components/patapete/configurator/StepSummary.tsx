@@ -1,7 +1,7 @@
 import { Pet, PRICES, Style, STYLE_LABELS } from './types'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, ShieldCheck, Clock, Ruler, Leaf, Zap } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, Clock, Ruler, Leaf, Zap, CheckCircle, Scissors, Truck, Home } from 'lucide-react'
 
 const PRODUCT_SPECS = [
   { icon: Ruler,  label: '60 × 40 cm' },
@@ -10,10 +10,10 @@ const PRODUCT_SPECS = [
 ]
 
 const PROCESS_STEPS = [
-  { emoji: '📦', title: 'Recibimos tu pedido', sub: 'Inmediatamente' },
-  { emoji: '🎨', title: 'Creamos el diseño', sub: '1-2 días hábiles' },
-  { emoji: '📸', title: 'Te enviamos el preview', sub: 'Aprobación tuya' },
-  { emoji: '🚚', title: 'Producción y envío', sub: '5-7 días hábiles' },
+  { icon: CheckCircle, title: 'Orden confirmada',     sub: 'Empezamos producción' },
+  { icon: Scissors,    title: 'Fabricamos tu tapete', sub: '3–5 días hábiles' },
+  { icon: Truck,       title: 'Lo enviamos',          sub: 'Número de rastreo por correo' },
+  { icon: Home,        title: 'Llega a tu puerta',    sub: '7–10 días desde la compra' },
 ]
 
 interface StepSummaryProps {
@@ -111,12 +111,12 @@ export function StepSummary({
           </div>
 
           {/* Guarantee card */}
-          <div className="rounded-2xl border border-green-200 bg-green-50/60 dark:bg-green-950/20 dark:border-green-900 p-4 flex gap-3">
-            <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+          <div className="rounded-2xl border border-border bg-secondary/30 p-4 flex gap-3">
+            <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-green-800 dark:text-green-300">Garantía Patapete</p>
-              <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 leading-relaxed">
-                Si el diseño no te convence, lo rehacemos sin costo. Sin preguntas, sin complicaciones.
+              <p className="text-sm font-bold text-foreground">Garantía Patapete</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Si tu tapete llega con cualquier defecto de fabricación, lo reponemos sin costo. Sin preguntas, sin complicaciones.
               </p>
             </div>
           </div>
@@ -162,7 +162,9 @@ export function StepSummary({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {PROCESS_STEPS.map((step, i) => (
             <div key={i} className="flex flex-col items-center text-center gap-1.5">
-              <div className="text-2xl">{step.emoji}</div>
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                <step.icon className="w-4 h-4 text-primary" />
+              </div>
               <p className="text-xs font-semibold text-foreground leading-tight">{step.title}</p>
               <p className="text-xs text-muted-foreground">{step.sub}</p>
               {i < PROCESS_STEPS.length - 1 && (

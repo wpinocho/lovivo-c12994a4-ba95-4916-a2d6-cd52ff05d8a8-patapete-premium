@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { PenLine, Palette, Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck } from 'lucide-react'
+import { PenLine, Palette, Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck, CheckCircle, Scissors, Home } from 'lucide-react'
 
 interface StepPetsProps {
   style: Style
@@ -355,12 +355,12 @@ export function StepPets({
             </div>
 
             {/* Guarantee */}
-            <div className="rounded-xl border border-green-200 bg-green-50/60 dark:bg-green-950/20 dark:border-green-900 p-3 flex gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+            <div className="rounded-xl border border-border bg-secondary/30 p-3 flex gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-bold text-green-800 dark:text-green-300">Garantía Patapete</p>
-                <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 leading-relaxed">
-                  Si el diseño no te convence, lo rehacemos sin costo. Sin preguntas.
+                <p className="text-xs font-bold text-foreground">Garantía Patapete</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Si tu tapete llega con cualquier defecto de fabricación, lo reponemos sin costo. Sin preguntas.
                 </p>
               </div>
             </div>
@@ -370,16 +370,16 @@ export function StepPets({
               <p className="text-xs font-bold text-foreground text-center">¿Qué pasa después de ordenar?</p>
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { emoji: '📦', title: 'Recibimos tu pedido', sub: 'Inmediatamente' },
-                  { emoji: '🎨', title: 'Creamos el diseño', sub: '1-2 días hábiles' },
-                  { emoji: '📸', title: 'Te enviamos el preview', sub: 'Aprobación tuya' },
-                  { emoji: '🚚', title: 'Producción y envío', sub: '5-7 días hábiles' },
-                ].map((step, i) => (
+                  { icon: CheckCircle, title: 'Orden confirmada', sub: 'Empezamos producción' },
+                  { icon: Scissors,    title: 'Fabricamos tu tapete', sub: '3–5 días hábiles' },
+                  { icon: Truck,       title: 'Lo enviamos', sub: 'Número de rastreo por correo' },
+                  { icon: Home,        title: 'Llega a tu puerta', sub: '7–10 días desde la compra' },
+                ].map(({ icon: Icon, title, sub }, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <span className="text-lg leading-none">{step.emoji}</span>
+                    <Icon className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs font-semibold text-foreground leading-tight">{step.title}</p>
-                      <p className="text-xs text-muted-foreground">{step.sub}</p>
+                      <p className="text-xs font-semibold text-foreground leading-tight">{title}</p>
+                      <p className="text-xs text-muted-foreground">{sub}</p>
                     </div>
                   </div>
                 ))}

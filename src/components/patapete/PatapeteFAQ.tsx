@@ -24,11 +24,11 @@ const faqs = [
   },
   {
     q: '¿Cuánto tarda en llegar?',
-    a: 'El tiempo de producción es de 3 a 5 días hábiles, más el tiempo de envío según tu ubicación en México. En total estimamos entre 5 y 10 días hábiles desde que confirmas tu pedido.',
+    a: 'Una vez que confirmas tu pedido empezamos producción de inmediato. La fabricación toma 3 a 5 días hábiles, luego te enviamos el número de rastreo por correo. En total tu tapete llega entre 7 y 10 días hábiles desde la compra.',
   },
   {
-    q: '¿Aceptan devoluciones?',
-    a: 'Como cada tapete se hace a pedido con el diseño de tu mascota, no aceptamos devoluciones por cambio de opinión. Sí cubrimos cualquier daño o defecto de producción — si llega roto o con error nuestro, lo reponemos sin costo.',
+    q: '¿Tienen garantía?',
+    a: 'Sí. Garantía Patapete: si tu tapete llega con cualquier defecto de fabricación — impresión dañada, material roto o cualquier falla física — lo reponemos sin costo, sin preguntas. El diseño lo viste en el preview antes de comprar, así que el resultado será exactamente lo que aprobaste.',
   },
   {
     q: '¿Qué pasa si mi foto no sirve?',
