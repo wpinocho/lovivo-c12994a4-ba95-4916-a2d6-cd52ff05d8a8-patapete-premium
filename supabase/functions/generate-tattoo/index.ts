@@ -168,24 +168,27 @@ async function uploadNormalizedPet(base64: string): Promise<string> {
 }
 
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
-const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
+const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen (Flux).
 
-Analiza la imagen y extrae lo siguiente:
+Analiza la imagen y extrae lo siguiente de forma precisa:
 
 Tipo de animal y raza aproximada.
 
-Textura del pelo (ej. liso y corto, esponjoso, alambre/scruffy).
+Textura y longitud del pelo (ej. liso y corto, rizado, esponjoso).
 
-Colores principales (ej. café chocolate con marcas cobrizas).
+Colores principales y cómo están distribuidos (ej. base café claro con antifaz oscuro).
 
-Rasgos distintivos CRÍTICOS y accesorios (ej. ojos azul claro muy llamativos, orejas caídas, collar/paliacate simplificado a un solo color).
+Expresión facial exacta (ej. boca cerrada, sonrisa ligera, lengua de fuera de lado, mirada atenta).
+
+Rasgos distintivos CRÍTICOS y accesorios (ej. oreja izquierda caída, mancha blanca en el pecho, paliacate rojo liso).
 
 Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
 
-A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
-STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
-CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
-LIMITED COLOR PALETTE: [COLORES PRINCIPALES DEL PELO]. Solid black for outlines. Pink tongue. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
+A high-quality, charming digital illustration 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws playfully resting on a solid dark horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+STYLE: Expressive, modern 2D digital illustration with soft, smooth shading to give a subtle sense of volume. Clean, refined outlines (not overly thick). It should look like premium character art, NOT hyper-realistic photography and NOT a flat stencil.
+DETAILS: The fur texture is [TEXTURA Y LONGITUD DEL PELO], captured with elegant, simplified brushstrokes rather than over-detailed individual hairs.
+COLORS & LIGHTING: [COLORES PRINCIPALES Y DISTRIBUCIÓN]. Use rich, vibrant colors with gentle shadows and highlights.
+EXPRESSION & FEATURES: [EXPRESIÓN FACIAL EXACTA]. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready illustration with clear shapes, perfect for high-resolution sublimation.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 

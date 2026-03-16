@@ -1,4 +1,4 @@
-# Patapete Configurator — Plan
+# Patapete Configurador — Plan
 
 ## Current State
 - Configurador visual integrado en la página de producto
@@ -6,6 +6,9 @@
 - Estilo fijo en 'icono' — selector de estilo removido del UI
 - El configurador empieza directamente en "¿Cuántas mascotas?"
 - Assets estáticos (demos + tapete) en `public/` del repo — mismo origen, cero CORS
+
+## Bug fixes aplicados
+- **Bug crítico resuelto:** `PatapeteConfigurator.tsx` al hacer spread de `saved` del localStorage, sobreescribía `style: 'icono'` con el valor guardado (probablemente `'dibujo'` de sesiones anteriores). Fix: `...(saved ? { ...saved, style: 'icono' as const } : {})` — el estilo siempre se fuerza a `'icono'` después del spread.
 
 ## Architecture: Two Supabase layers
 
@@ -30,11 +33,18 @@
 - 2 mascotas: `1aee4582-040b-477a-b335-e99446fa76c7`
 - 3 mascotas: `5f7e007d-b30e-44c8-baa6-5aa03edb23ad`
 
+## Prompts (edge function generate-tattoo)
+### SYSTEM_PROMPT_ICONO (actualizado)
+Extrae: tipo de animal, textura y longitud de pelo, colores y distribución, expresión facial exacta, rasgos/accesorios críticos.
+Plantilla: digital illustration 2D moderna con shading suave, volumen, outlines limpios — premium character art, NOT flat stencil. Fondo blanco puro.
+
+### SYSTEM_PROMPT_DIBUJO (sin cambios)
+Extrae solo información estructural (ignora colores), genera plantilla B&N linocut/rubber stamp.
+
 ## Flow
 1. ~~StepStyle~~ (removido — solo icono por ahora)
 2. **StepPets** — seleccionar cantidad de mascotas, subir fotos, frases, CTA
 
 ## Pending
-- Verificar que `/demos/icono-*.webp` estén correctamente en el repo (pueden faltar si no se guardaron en sesión anterior)
 - Backend: ALTER TABLE `order_items` para columnas `customization_data` JSONB y `preview_image_url` TEXT
 - Cuando se reactive el estilo dibujo: agregar imágenes demo y reactivar selector

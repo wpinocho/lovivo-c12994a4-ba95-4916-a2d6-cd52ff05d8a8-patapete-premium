@@ -106,7 +106,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     finalPreviewDataUrl: null,
     isGenerating: false,
     error: null,
-    ...(saved || {}),
+    ...(saved ? { ...saved, style: 'icono' as const } : {}),
   })
 
   // Persist state to localStorage on every change
