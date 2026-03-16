@@ -44,6 +44,13 @@ const ThankYou = () => {
         } else {
           setOrder(null)
         }
+
+        // Clean up Patapete customisation entries (no longer needed after purchase)
+        try {
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('patapete_customization:'))
+            .forEach(k => localStorage.removeItem(k))
+        } catch { /* ignore */ }
       } catch (error) {
         console.error('Error loading order:', error)
         setOrder(null)

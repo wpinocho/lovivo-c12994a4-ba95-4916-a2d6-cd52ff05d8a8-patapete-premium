@@ -7,6 +7,7 @@ import { generateTattooArt } from '@/utils/replicateApi'
 import { useCart } from '@/contexts/CartContext'
 import { useCartUISafe } from '@/components/CartProvider'
 import { STYLE_LABELS } from './types'
+import { userSupabase } from '@/integrations/supabase/client'
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
 const STORAGE_KEY = 'patapete_v1'
@@ -187,29 +188,64 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     }
   }, [state.pets])
 
+  // ─── Shared helper: build customization_data JSON and save to localStorage ──
+  const saveCustomizationToCart = useCallback((currentState: ConfiguratorState, variantId: string, productId: string) => {
+    const itemKey = `${productId}:${variantId}` // matches CartContext key format
+
+    const customizationData = {
+      type: 'patapete',
+      style: currentState.style,
+      pet_count: currentState.petCount,
+      pets: currentState.pets.slice(0, currentState.petCount).map((p, i) => ({
+        name: p.name || `Mascota ${i + 1}`,
+        art_url: p.generatedArtUrl || null,
+      })),
+      phrase_top: currentState.phrase,
+      phrase_bottom: currentState.phrase2,
+      font: 'Plus Jakarta Sans 800',
+      rug_size: '60x40cm',
+      material: 'fibra de coco',
+    }
+
+    // Store immediately with the preview dataUrl for instant display in the cart
+    const entry = {
+      preview_dataurl: finalPreviewRef.current || null,
+      preview_image_url: null as string | null,  // filled after async upload
+      customization_data: customizationData,
+    }
+    try {
+      localStorage.setItem(`patapete_customization:${itemKey}`, JSON.stringify(entry))
+    } catch { /* localStorage may be full */ }
+
+    // Upload the canvas preview to Supabase Storage in the background (non-blocking)
+    if (finalPreviewRef.current) {
+      const base64 = finalPreviewRef.current.split(',')[1] // strip "data:image/png;base64,"
+      userSupabase.functions.invoke('upload-patapete-preview', { body: { base64 } })
+        .then(({ data }) => {
+          if (data?.url) {
+            try {
+              const existing = JSON.parse(localStorage.getItem(`patapete_customization:${itemKey}`) || '{}')
+              existing.preview_image_url = data.url
+              localStorage.setItem(`patapete_customization:${itemKey}`, JSON.stringify(existing))
+            } catch { /* ignore */ }
+          }
+        })
+        .catch((err) => console.warn('[Patapete] Background preview upload failed:', err))
+    }
+
+    return itemKey
+  }, [])
+
   const handleAddToCart = useCallback(() => {
     if (!product) return
     const currentState = state
     const variantId = VARIANT_IDS[currentState.petCount]
     const variant = product?.variants?.find((v: any) => v.id === variantId)
 
-    const customization = {
-      style: STYLE_LABELS[currentState.style],
-      petCount: currentState.petCount,
-      pets: currentState.pets.slice(0, currentState.petCount).map((p, i) => ({
-        name: p.name || `Mascota ${i + 1}`,
-        ...(p.generatedArtUrl ? { artUrl: p.generatedArtUrl } : {}),
-      })),
-      phrase: currentState.phrase,
-      phrase2: currentState.phrase2,
-      previewDataUrl: finalPreviewRef.current,
-      timestamp: new Date().toISOString(),
-    }
-    localStorage.setItem(`patapete_order_${Date.now()}`, JSON.stringify(customization))
-
+    saveCustomizationToCart(currentState, variantId, product.id)
     addItem(product, variant)
     openCart()
-  }, [product, state, addItem, openCart])
+  }, [product, state, addItem, openCart, saveCustomizationToCart])
 
   const handleOrderNow = useCallback(() => {
     if (!product) return
@@ -217,25 +253,10 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     const variantId = VARIANT_IDS[currentState.petCount]
     const variant = product?.variants?.find((v: any) => v.id === variantId)
 
-    // Save customization metadata
-    const customization = {
-      style: STYLE_LABELS[currentState.style],
-      petCount: currentState.petCount,
-      pets: currentState.pets.slice(0, currentState.petCount).map((p, i) => ({
-        name: p.name || `Mascota ${i + 1}`,
-        ...(p.generatedArtUrl ? { artUrl: p.generatedArtUrl } : {}),
-        ...(p.photoPreviewUrl && !p.generatedArtUrl ? { photoUrl: p.photoPreviewUrl } : {}),
-      })),
-      phrase: currentState.phrase,
-      phrase2: currentState.phrase2,
-      previewDataUrl: finalPreviewRef.current,
-      timestamp: new Date().toISOString(),
-    }
-    localStorage.setItem(`patapete_order_${Date.now()}`, JSON.stringify(customization))
-
+    saveCustomizationToCart(currentState, variantId, product.id)
     addItem(product, variant)
     navigate('/pagar')
-  }, [product, state, addItem, navigate])
+  }, [product, state, addItem, navigate, saveCustomizationToCart])
 
   // Use a ref for style so handleGenerate always reads the latest value
   const styleRef = useRef(state.style)

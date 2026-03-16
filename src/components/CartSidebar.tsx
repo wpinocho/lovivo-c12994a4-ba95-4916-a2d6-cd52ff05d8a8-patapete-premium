@@ -25,6 +25,22 @@ interface CartSidebarProps {
   onClose: () => void
 }
 
+/** Returns the best available image for a cart product item.
+ *  Patapete items: tries the personalised preview stored in localStorage first.
+ *  Other items: falls back to product/variant images as usual.
+ */
+function getProductItemImage(item: CartProductItem): string | undefined {
+  try {
+    const stored = localStorage.getItem(`patapete_customization:${item.key}`)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // Prefer the permanent Storage URL; fall back to the in-memory dataUrl
+      return parsed.preview_image_url || parsed.preview_dataurl || undefined
+    }
+  } catch { /* localStorage may be unavailable */ }
+  return item.variant?.image_urls?.[0] || item.variant?.image || item.product.images?.[0]
+}
+
 export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
   const { state, updateQuantity, removeItem, clearCart, addItem } = useCart()
   const navigate = useNavigate()
@@ -212,11 +228,14 @@ export const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
                         /* --- Product Item --- */
                         <div className="flex items-start space-x-3">
                           <div className="w-16 h-16 bg-muted rounded-md overflow-hidden flex-shrink-0">
-                            {(item.product.images && item.product.images.length > 0) || item.variant?.image || item.variant?.image_urls?.length ? (
-                              <img src={item.variant?.image_urls?.[0] || item.variant?.image || item.product.images![0]} alt={item.product.title} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
-                            )}
+                            {(() => {
+                              const imgSrc = getProductItemImage(item as CartProductItem)
+                              return imgSrc ? (
+                                <img src={imgSrc} alt={item.product.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
+                              )
+                            })()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-sm text-foreground line-clamp-2">

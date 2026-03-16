@@ -266,6 +266,26 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   return text.trim()
 }
 
+// ─── STEP 5: Upload FLUX result to permanent Supabase Storage ────────────────
+async function uploadFinalArt(artUrl: string): Promise<string> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const res = await fetch(artUrl)
+  if (!res.ok) throw new Error(`Failed to download FLUX art: ${res.status}`)
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  const filename = `finals/${Date.now()}.webp`
+
+  console.log(`[generate-tattoo] Step 5 INPUT — uploading FLUX art to Storage: ${filename}`)
+
+  const { error } = await supabase.storage
+    .from('pet-tattoos')
+    .upload(filename, bytes, { contentType: 'image/webp', upsert: false })
+
+  if (error) throw new Error(`Storage upload (finals) failed: ${error.message}`)
+  const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
+  console.log(`[generate-tattoo] Step 5 OUTPUT — permanent art URL: ${data.publicUrl}`)
+  return data.publicUrl
+}
+
 // ─── STEP 4: FLUX 2 Pro → final art via input_images[] ───────────────────────
 //
 // Strategy:
@@ -385,11 +405,17 @@ serve(async (req) => {
     const artUrl = await generateWithFlux2Pro(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
+    // Step 5: Upload FLUX result to permanent Storage (Replicate URLs expire in ~24h)
+    console.log('[generate-tattoo] ─── Step 5: Upload FLUX art to permanent Storage ───')
+    const t5 = Date.now()
+    const permanentArtUrl = await uploadFinalArt(artUrl)
+    console.log(`[generate-tattoo] Step 5 done in ${Date.now() - t5}ms | permanent URL: ${permanentArtUrl}`)
+
     const totalMs = Date.now() - t1
     console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${totalMs}ms ═══`)
-    console.log(`[generate-tattoo] FINAL OUTPUT URL: ${artUrl}`)
+    console.log(`[generate-tattoo] FINAL OUTPUT URL: ${permanentArtUrl}`)
 
-    return new Response(JSON.stringify({ url: artUrl }), {
+    return new Response(JSON.stringify({ url: permanentArtUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {

@@ -36,11 +36,23 @@ export function cartToApiItems(cartItems: CartItem[]): CheckoutItem[] {
       if (existing) {
         existing.quantity += item.quantity
       } else {
+        // Attach Patapete (or other custom product) personalisation data if present in localStorage
+        let customizationFields: { customization_data?: any; preview_image_url?: string } = {}
+        try {
+          const stored = localStorage.getItem(`patapete_customization:${productItem.key}`)
+          if (stored) {
+            const parsed = JSON.parse(stored)
+            if (parsed.customization_data) customizationFields.customization_data = parsed.customization_data
+            if (parsed.preview_image_url) customizationFields.preview_image_url = parsed.preview_image_url
+          }
+        } catch { /* localStorage may be unavailable */ }
+
         map.set(key, {
           product_id: product.id,
           quantity: item.quantity,
           ...(variant && { variant_id: variant.id }),
           ...(sellingPlan && { selling_plan_id: sellingPlan.id }),
+          ...customizationFields,
         })
       }
     }

@@ -91,6 +91,10 @@ export interface CheckoutItem {
   quantity: number
   variant_id?: string
   selling_plan_id?: string
+  /** Patapete (and future custom products) — full manufacturing recipe */
+  customization_data?: Record<string, any>
+  /** Permanent URL of the custom product preview image */
+  preview_image_url?: string
 }
 
 export interface OrderItem {
