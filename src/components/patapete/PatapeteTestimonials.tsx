@@ -9,6 +9,8 @@ const testimonials = [
     rating: 5,
     text: 'Nunca imaginé que un tapete pudiera hacerme llorar de emoción. El de mi Luna quedó perfectamente igual a ella — la cara, la expresión, todo. Mis visitas siempre preguntan dónde lo compré.',
     avatarInitials: 'MG',
+    photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-il55q3miib.webp',
+    photoAlt: 'Tapete personalizado de mascota en caja de envío',
   },
   {
     name: 'Rodrigo M.',
@@ -18,6 +20,8 @@ const testimonials = [
     rating: 5,
     text: 'Lo pedí como regalo para mi mamá y no pudo creer que fuera real. Dijo que era "el regalo más bonito que le habían dado". Canelo ya tiene su trono en la entrada de la casa.',
     avatarInitials: 'RM',
+    photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-79davb2huk.webp',
+    photoAlt: 'Pastor alemán junto a su tapete personalizado en la cocina',
   },
   {
     name: 'Sofía V.',
@@ -27,6 +31,8 @@ const testimonials = [
     rating: 5,
     text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas — la calidad del material y el nivel de detalle del diseño son increíbles. Ya quiero uno para el cuarto.',
     avatarInitials: 'SV',
+    photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-kqrq9bnc2q7.webp',
+    photoAlt: 'Tapete personalizado con tres perros siendo sostenido',
   },
   {
     name: 'Carlos B.',
@@ -36,6 +42,8 @@ const testimonials = [
     rating: 5,
     text: 'Mi perro falleció hace unos meses. Este tapete se convirtió en la forma más bonita de tenerlo siempre en casa. Cada vez que llego, lo primero que veo es su retrato. Gracias, Patapete.',
     avatarInitials: 'CB',
+    photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-b6cszct9tu8.webp',
+    photoAlt: 'Tapete personalizado de dachshund sobre piso de madera',
   },
 ]
 
@@ -85,30 +93,41 @@ export const PatapeteTestimonials = () => {
           {testimonials.map((t) => (
             <article
               key={t.name}
-              className="card-premium p-6 flex flex-col gap-4 hover:-translate-y-1 transition-transform duration-300"
+              className="card-premium flex flex-col hover:-translate-y-1 transition-transform duration-300 overflow-hidden"
             >
-              {/* Stars */}
-              <StarRating rating={t.rating} />
-
-              {/* Quote */}
-              <blockquote className="text-sm text-foreground leading-relaxed flex-1">
-                &ldquo;{t.text}&rdquo;
-              </blockquote>
-
-              {/* Pet name tag */}
-              <div className="inline-flex items-center gap-1.5 self-start bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
-                🐾 {t.petName}
+              {/* Real photo */}
+              <div className="w-full h-44 overflow-hidden flex-shrink-0">
+                <img
+                  src={t.photo}
+                  alt={t.photoAlt}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
-              {/* Author */}
-              <div className="flex items-center gap-3 pt-1 border-t border-border/50">
-                {/* Placeholder avatar — user will add photos later */}
-                <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-primary">{t.avatarInitials}</span>
+              <div className="p-5 flex flex-col gap-3 flex-1">
+                {/* Stars */}
+                <StarRating rating={t.rating} />
+
+                {/* Quote */}
+                <blockquote className="text-sm text-foreground leading-relaxed flex-1">
+                  &ldquo;{t.text}&rdquo;
+                </blockquote>
+
+                {/* Pet name tag */}
+                <div className="inline-flex items-center gap-1.5 self-start bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full">
+                  🐾 {t.petName}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground leading-none">{t.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t.city}</p>
+
+                {/* Author */}
+                <div className="flex items-center gap-3 pt-1 border-t border-border/50">
+                  <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">{t.avatarInitials}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground leading-none">{t.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t.city}</p>
+                  </div>
                 </div>
               </div>
             </article>

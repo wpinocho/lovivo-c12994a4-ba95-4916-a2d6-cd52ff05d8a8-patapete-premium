@@ -1,31 +1,32 @@
 import { Star } from 'lucide-react'
 
-const TAPETE_IMAGE = 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773605369513-eutj0l5ssem.webp'
-
 const REVIEWS = [
   {
     name: 'Ana T.',
     initials: 'AT',
     text: 'Pedí el tapete con mi perrita Mochi y quedó increíble. Todos en casa lo aman y preguntan dónde lo conseguí.',
     stars: 5,
-    tapeteImg: TAPETE_IMAGE,
-    tag: 'Mochi 🐩',
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-il55q3miib.webp',
+    tapeteAlt: 'Tapete personalizado recién desempacado',
+    tag: 'Buddy 🐶',
   },
   {
     name: 'Carlos M.',
     initials: 'CM',
-    text: 'Lo regalé a mi mamá con su gato Canela para su cumpleaños. La hizo llorar de emoción. Hermoso y muy fácil de pedir.',
+    text: 'Lo regalé a mi mamá con su gato Salem para su cumpleaños. La hizo llorar de emoción. Hermoso y muy fácil de pedir.',
     stars: 5,
-    tapeteImg: null,
-    tag: null,
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-xrdo9mrysk.webp',
+    tapeteAlt: 'Gato negro junto a su tapete personalizado',
+    tag: 'Salem 🐈‍⬛',
   },
   {
     name: 'Sara P.',
     initials: 'SP',
     text: 'Proceso súper fácil y el resultado quedó espectacular. La calidad del tapete supera mis expectativas.',
     stars: 5,
-    tapeteImg: null,
-    tag: null,
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-b6cszct9tu8.webp',
+    tapeteAlt: 'Tapete personalizado de Milo el dachshund',
+    tag: 'Milo 🐾',
   },
 ]
 
@@ -80,7 +81,7 @@ export function ProductSocialProof() {
                 <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-border">
                   <img
                     src={review.tapeteImg}
-                    alt="Tapete personalizado Patapete"
+                    alt={review.tapeteAlt ?? 'Tapete personalizado Patapete'}
                     className="w-full h-full object-cover"
                   />
                 </div>
