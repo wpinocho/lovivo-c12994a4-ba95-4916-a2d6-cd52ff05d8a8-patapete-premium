@@ -53,9 +53,9 @@ export const PatapeteTransformation = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl transform rotate-2" />
               <div className="relative bg-card rounded-3xl overflow-hidden shadow-warm-lg border border-border/40 p-4">
                 <img
-                  src="/before-after-patapete.jpg"
-                  alt="Transformación: foto de mascota a tapete personalizado"
-                  className="w-full rounded-2xl"
+                  src="https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773707761228-8i08cxe955s.webp"
+                  alt="Canela junto a su tapete personalizado Patapete — retrato de mascota impreso por sublimación"
+                  className="w-full rounded-2xl object-cover"
                   loading="lazy"
                   decoding="async"
                 />
