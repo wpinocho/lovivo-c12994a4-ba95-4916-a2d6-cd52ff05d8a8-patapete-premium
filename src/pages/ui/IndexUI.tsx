@@ -7,7 +7,6 @@ import { PatapeteTransformation } from '@/components/patapete/PatapeteTransforma
 import { PatapeteGallery } from '@/components/patapete/PatapeteGallery'
 import { PatapeteBenefits } from '@/components/patapete/PatapeteBenefits'
 import { PatapeteGiftSection } from '@/components/patapete/PatapeteGiftSection'
-import { PatapeteUGCGallery } from '@/components/patapete/PatapeteUGCGallery'
 import { PatapetePersonalization } from '@/components/patapete/PatapetePersonalization'
 import { PatapeteMaterials } from '@/components/patapete/PatapeteMaterials'
 import { PatapeteFAQ } from '@/components/patapete/PatapeteFAQ'
@@ -39,10 +38,7 @@ export const IndexUI = ({ logic: _logic }: IndexUIProps) => {
       {/* 4. Testimonios de clientes */}
       <PatapeteTestimonials />
 
-      {/* 5. Galería UGC — fotos reales de clientes */}
-      <PatapeteUGCGallery />
-
-      {/* 6. Transformación / Before-After */}
+      {/* 5. Transformación / Before-After */}
       <PatapeteTransformation />
 
       {/* 6. Galería de tapetes reales */}
