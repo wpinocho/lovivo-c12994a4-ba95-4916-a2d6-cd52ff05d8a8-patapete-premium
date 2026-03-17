@@ -34,6 +34,10 @@ const faqs = [
     q: '¿Qué pasa si mi foto no sirve?',
     a: 'Antes de procesar tu pedido revisamos que la foto sea apta para el diseño. Si hay algún problema, te contactamos por WhatsApp para que nos envíes una mejor foto, sin que tengas que pagar de nuevo.',
   },
+  {
+    q: '¿Dónde lo coloco para que dure más tiempo?',
+    a: 'El tapete resiste lluvia, lodo y manguerazos sin ningún problema. Para mantener los colores de tu mascota vibrantes por años, recomendamos colocarlo en entradas techadas, porches o pasillos interiores, evitando la exposición directa y prolongada al sol. Igual que cualquier tela o tapete de color — el sol intenso desgasta los pigmentos con el tiempo.',
+  },
 ]
 
 export const PatapeteFAQ = () => {

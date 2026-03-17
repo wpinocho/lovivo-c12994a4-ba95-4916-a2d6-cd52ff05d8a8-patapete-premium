@@ -39,6 +39,11 @@ const FAQ_ITEMS = [
     answer:
       'Exactamente. El preview interactivo que ves al configurar tu tapete es una representación muy fiel del resultado final — el mismo diseño, composición y texto. Eso es uno de los grandes valores de Patapete: tú apruebas cómo queda antes de pagar. Una vez que confirmas la compra, producimos el tapete con ese diseño.',
   },
+  {
+    question: '¿Dónde lo coloco para que dure más tiempo?',
+    answer:
+      'El tapete resiste lluvia, lodo y manguerazos sin ningún problema. Para mantener los colores de tu mascota vibrantes por años, recomendamos colocarlo en entradas techadas, porches o pasillos interiores, evitando la exposición directa y prolongada al sol. Igual que cualquier tela o tapete de color — el sol intenso desgasta los pigmentos con el tiempo.',
+  },
 ]
 
 export function ProductFAQ() {

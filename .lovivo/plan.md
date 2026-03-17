@@ -7,12 +7,12 @@ Tienda de tapetes personalizados con IA para mascotas (Patapete). Producto únic
 - **Material real:** Sublimable Synthetic Coir Doormat (fibra sintética tipo coco con impresión por sublimación)
 - **Comunicación al cliente:** "Fibra sintética premium", "Sublimación HD", "colores fusionados en la fibra — no pintados por encima"
 - **Ventajas clave a destacar:** No se pela, no se agrieta, resiste agua/lodo, mayor detalle de imagen que fibra natural
-- **Cuidado del sol:** Se comunica elegantemente como instrucción premium — "colocar en entradas techadas o interiores"
+- **Cuidado del sol:** Se comunica SOLO como FAQ ("¿Dónde lo coloco para que dure más tiempo?") — en PatapeteFAQ.tsx y ProductFAQ.tsx. Ya NO aparece como bloque visual en PatapeteMaterials.tsx.
 
 ## Cambios de Material Realizados (todos los archivos actualizados)
-- PatapeteMaterials.tsx — sección principal reescrita con nueva narrativa + nota de sol
-- ProductFAQ.tsx — respuestas de material y "cómo queda" actualizadas
-- PatapeteFAQ.tsx — variaciones del preview: removida mención a "fibra de coco natural"
+- PatapeteMaterials.tsx — sección principal reescrita con nueva narrativa + nota de sol ELIMINADA
+- ProductFAQ.tsx — FAQ de sol agregada + respuestas de material actualizadas
+- PatapeteFAQ.tsx — FAQ de sol agregada + mención a "fibra de coco natural" removida
 - PatapetePersonalization.tsx — "sublimación HD" en lugar de "sobre fibra de coco natural"
 - PatapeteStyles.tsx — "sublimación HD" en la descripción del feature
 - PatapeteTestimonials.tsx — "calidad del material" (neutral)

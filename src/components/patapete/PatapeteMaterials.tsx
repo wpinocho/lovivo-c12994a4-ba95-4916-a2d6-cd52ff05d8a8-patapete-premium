@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Zap, Ruler, Clock, Shield, ArrowRight, Sun } from 'lucide-react'
+import { Zap, Ruler, Clock, Shield, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const specs = [
@@ -44,16 +44,9 @@ export const PatapeteMaterials = () => {
             <p className="text-lg text-muted-foreground mb-4 leading-relaxed">
               La imagen no está pintada por encima — está sublimada directamente en el material. Písalo todo lo que quieras: no se pela, no se agrieta, no pierde color con el uso diario.
             </p>
-            <p className="text-base text-muted-foreground mb-4 leading-relaxed">
+            <p className="text-base text-muted-foreground mb-8 leading-relaxed">
               La base es fibra sintética con la misma textura y carácter de la coco tradicional. Se ve premium, limpia los zapatos y aguanta lluvia, lodo y manguerazos sin pudrirse.
             </p>
-            {/* Sun care note */}
-            <div className="flex gap-3 p-4 rounded-xl bg-amber-50/60 border border-amber-200/60 mb-8">
-              <Sun className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800 leading-relaxed">
-                <strong>Para colores vibrantes por años:</strong> recomendamos colocarlo en entradas techadas, porches o pasillos, evitando la exposición directa y prolongada al sol.
-              </p>
-            </div>
 
             {/* Specs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
