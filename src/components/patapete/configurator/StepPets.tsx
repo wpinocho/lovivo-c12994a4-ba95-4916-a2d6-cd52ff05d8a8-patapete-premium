@@ -198,7 +198,7 @@ export function StepPets({
 
           {/* MOBILE: sticky preview — first thing visible */}
           <div className="lg:hidden sticky top-16 z-10 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm">
-            <div className="mx-auto max-w-[75%]">
+            <div className="mx-auto max-w-[92%]">
               <CanvasPreview
                 style={style}
                 pets={pets.slice(0, petCount)}
