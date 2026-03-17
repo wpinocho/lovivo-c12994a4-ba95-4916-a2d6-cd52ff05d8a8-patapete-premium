@@ -6,6 +6,7 @@ import { PatapeteTestimonials } from '@/components/patapete/PatapeteTestimonials
 import { PatapeteTransformation } from '@/components/patapete/PatapeteTransformation'
 import { PatapeteGallery } from '@/components/patapete/PatapeteGallery'
 import { PatapeteBenefits } from '@/components/patapete/PatapeteBenefits'
+import { PatapeteGiftSection } from '@/components/patapete/PatapeteGiftSection'
 import { PatapetePersonalization } from '@/components/patapete/PatapetePersonalization'
 import { PatapeteMaterials } from '@/components/patapete/PatapeteMaterials'
 import { PatapeteFAQ } from '@/components/patapete/PatapeteFAQ'
@@ -46,7 +47,10 @@ export const IndexUI = ({ logic: _logic }: IndexUIProps) => {
       {/* 7. Beneficios / Por qué Patapete */}
       <PatapeteBenefits />
 
-      {/* 8. Personalización */}
+      {/* 8. Sección de regalo */}
+      <PatapeteGiftSection />
+
+      {/* 9. Personalización */}
       <PatapetePersonalization />
 
       {/* 9. Materiales y detalles del producto */}

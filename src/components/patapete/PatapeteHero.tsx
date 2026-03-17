@@ -48,7 +48,7 @@ export const PatapeteHero = () => {
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-2.5 md:gap-3 mb-5 md:mb-9">
+          <div className="flex flex-col sm:flex-row gap-2.5 md:gap-3 mb-3 md:mb-4">
             <Button
               asChild
               size="lg"
@@ -68,6 +68,28 @@ export const PatapeteHero = () => {
                 ¿Cómo funciona?
               </a>
             </Button>
+          </div>
+
+          {/* Price anchor */}
+          <div className="flex items-center gap-2.5 mb-5 md:mb-9">
+            <span
+              className="text-white/55 line-through text-sm md:text-base font-medium"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+            >
+              $1,199 MXN
+            </span>
+            <span
+              className="text-white font-bold text-base md:text-lg"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+            >
+              Desde $949 MXN
+            </span>
+            <span
+              className="text-white/70 text-xs md:text-sm"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+            >
+              · Envío incluido
+            </span>
           </div>
 
           {/* Trust microcopy */}

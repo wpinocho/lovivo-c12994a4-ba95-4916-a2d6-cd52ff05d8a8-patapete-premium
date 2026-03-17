@@ -162,6 +162,14 @@ export function StepPets({
               Llega entre <span className="font-medium text-foreground ml-1">{deliveryRange}</span>
             </span>
           </div>
+
+          {/* Urgency — artisan scarcity */}
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              Hacemos pocos pedidos por semana para mantener la calidad
+            </span>
+          </div>
         </div>
 
         <div className="sm:text-right shrink-0">
