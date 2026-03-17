@@ -2,10 +2,30 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 const items = [
-  { img: '/gallery-patapete.jpg', label: 'Luna', pets: '1 mascota' },
-  { img: '/style-tattoo.jpg', label: 'Max', pets: '1 mascota' },
-  { img: '/gallery-patapete.jpg', label: 'Mochi & Nala', pets: '2 mascotas' },
-  { img: '/style-tattoo.jpg', label: 'Choco', pets: '1 mascota' },
+  {
+    img: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773708041415-a5fq7lvhm76.webp',
+    label: 'Luna, Max & Cleo',
+    pets: '3 mascotas',
+    phrase: '¡Cuidado con los pelos!',
+  },
+  {
+    img: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773708041415-gvrnbkq9sha.webp',
+    label: 'Gordo',
+    pets: '1 mascota',
+    phrase: 'El tapete es más bravo que él',
+  },
+  {
+    img: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773708041415-j77t1fh1gi.webp',
+    label: 'Michi',
+    pets: '1 mascota',
+    phrase: 'Los humanos solo pagan la renta',
+  },
+  {
+    img: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773708041415-zjk86pot9e.webp',
+    label: 'Rex & Lulú',
+    pets: '2 mascotas',
+    phrase: 'Permiso de entrada: una golosina',
+  },
 ]
 
 export const PatapeteGallery = () => {
@@ -42,15 +62,15 @@ export const PatapeteGallery = () => {
                   decoding="async"
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
                 <p className="text-xs font-semibold text-white">{item.label}</p>
                 <p className="text-xs text-white/70">{item.pets}</p>
               </div>
               {/* Static label */}
               <div className="p-3">
-                <p className="text-xs font-medium text-foreground truncate">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.pets}</p>
+                <p className="text-xs font-semibold text-foreground truncate">{item.label}</p>
+                <p className="text-xs text-muted-foreground truncate italic">&ldquo;{item.phrase}&rdquo;</p>
               </div>
             </Link>
           ))}
