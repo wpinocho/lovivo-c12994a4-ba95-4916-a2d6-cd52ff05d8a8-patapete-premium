@@ -75,9 +75,9 @@ export const PatapeteHero = () => {
             {trustItems.map((text) => (
               <span
                 key={text}
-                className="inline-flex items-center gap-1.5 text-[11px] md:text-xs font-medium px-2.5 py-1 md:px-3 md:py-1.5 rounded-full bg-background/85 text-foreground border border-border/50 backdrop-blur-sm"
+                className="inline-flex items-center gap-1.5 text-[11px] md:text-xs font-medium px-2.5 py-1 md:px-3 md:py-1.5 rounded-full bg-white/12 text-white border border-white/20 backdrop-blur-sm"
               >
-                <Check className="h-3 w-3 text-primary shrink-0" />
+                <Check className="h-3 w-3 text-white/75 shrink-0" />
                 {text}
               </span>
             ))}
