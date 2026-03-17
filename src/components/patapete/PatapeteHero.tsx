@@ -27,7 +27,7 @@ export const PatapeteHero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16 md:py-32">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-8 pb-14 md:py-32">
         <div className="max-w-2xl animate-fade-up">
           {/* Pill badge */}
           <div className="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs md:text-sm font-medium text-white mb-4 md:mb-7">
@@ -73,18 +73,18 @@ export const PatapeteHero = () => {
           </div>
 
           {/* Price anchor */}
-          <div className="flex items-center gap-2.5 mb-5 md:mb-9">
-            <span
-              className="text-white/55 line-through text-sm md:text-base font-medium"
-              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
-            >
-              $1,199 MXN
-            </span>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-5 md:mb-9">
             <span
               className="text-white font-bold text-base md:text-lg"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
             >
               Desde $949 MXN
+            </span>
+            <span
+              className="text-white/55 line-through text-sm md:text-base font-medium"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+            >
+              $1,199
             </span>
             <span
               className="text-white/70 text-xs md:text-sm"
