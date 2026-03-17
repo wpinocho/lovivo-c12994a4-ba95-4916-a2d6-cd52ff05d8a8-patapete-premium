@@ -1,52 +1,60 @@
-# Patapete Store — Plan
+# Performance Audit — Patapete
 
-## Current State
-React/TS storefront for Patapete (custom pet portrait doormats, Mexico).
-All UI lives in `src/components/patapete/` and `src/pages/ui/IndexUI.tsx`.
+## Diagnóstico
+Revisión completa de archivos de rendimiento: `index.html`, `index.css`, `PatapeteHero.tsx`, `PatapeteGallery.tsx`, `PatapeteTestimonials.tsx`.
 
-## Recent Changes
-- **Hero price anchor**: Added `~~$1,199~~ Desde $949 MXN · Envío incluido` below CTA buttons in PatapeteHero.tsx
-- **Product page urgency**: Added amber pill badge "Hacemos pocos pedidos por semana para mantener la calidad" in StepPets.tsx below delivery info
-- **Gift section**: Created `PatapeteGiftSection.tsx` with 4 occasion cards. Inserted between PatapeteBenefits and PatapetePersonalization in IndexUI.tsx
-- **Nav menu revamp**: Removed "El arte IA", added "Reseñas" (→ #testimonios). CTA has Wand2 icon + shadow-primary hover lift.
-- **Glass header effect**: Header transitions from transparent to bg-background/90 + shadow-sm on scroll.
-- **Mobile trust strip slider**: Auto-slides phrases every 2s with CSS slide animation (md:hidden).
-- **WhatsApp**: Real WhatsApp icon and number +52 55 31 21 53 86
-- **UGC Gallery REMOVED**: `PatapeteUGCGallery.tsx` still exists but is unused — can be deleted if needed.
-- **Testimonials — 5 reviews**: PatapeteTestimonials.tsx shows 5 cards (María G., Rodrigo M., Sofía V., Carlos B., Valentina R./Salem). Grid: 1 col mobile → 2 col sm → 3 col lg → 5 col xl.
-- **ProductSocialProof — 5 reviews**: Same 5 reviews as landing. Grid: 1 col → 2 col sm → 3 col lg → 5 col xl.
-- **Review polish (latest)**:
-  - Removed all "—" dashes from review texts
-  - Corrected pet names in badge & text: Buddy, Rocco, Rocco+Buddy+Coco, Milo, Salem
-  - Image height increased: Testimonials h-44→h-52, ProductSocialProof h-36→h-44
-  - Strikethrough price in configurator (StepPets.tsx): ~~$1,199~~ $949 MXN + "Envío incluido"
-- **✅ Transparent overlay header (DONE)**:
-  - `PageTemplate.tsx`: header changed from `sticky` to `fixed top-0 left-0 right-0`. Non-full-width layouts get `pt-20` to offset fixed header.
-  - `EcommerceTemplate.tsx`: added `transparentOnTop` prop (default `false`). When `true`, the `scrolled` state starts at `false` and reacts to scroll. Nav links, cart, hamburger, profile icons all switch between white (transparent) and foreground (scrolled) colors.
-  - `BrandLogoLeft.tsx`: added `transparent` prop — when true, applies `brightness(0) invert(1)` filter + white text.
-  - `ProfileMenu.tsx`: added `className` prop so EcommerceTemplate can pass color class.
-  - `IndexUI.tsx`: passes `transparentOnTop={true}` to EcommerceTemplate. All other pages default to solid header.
+## Problemas encontrados (por impacto)
 
-## UGC Photo URLs (Supabase Storage)
-Base: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/`
-- Rocco (pastor alemán + tapete en cocina): `...1773768438251-79davb2huk.webp` → Rodrigo M. review
-- 3 perros (Rocco, Buddy, Coco): `...1773768438251-kqrq9bnc2q7.webp` → Sofía V. review
-- Salem (gato negro + tapete "Prepara tu soborno en atún"): `...1773769457469-5us0oicamfm.webp` → Valentina R. review
-- Buddy (golden unboxing): `...1773768438251-il55q3miib.webp` → María G. review
-- Milo (dachshund closeup): `...1773768438251-b6cszct9tu8.webp` → Carlos B. review
+### 🔴 CRÍTICO — 16 fuentes de Google cargando en index.html (línea 11)
+El `index.html` carga UNA sola línea de Google Fonts que incluye: DM Sans, Inter, Lato, Lora, Merriweather, Montserrat, Nunito, Open Sans, Playfair Display, Plus Jakarta Sans, Poppins, Raleway, Roboto, Space Grotesk, Work Sans + todas sus variantes de peso. Patapete solo usa DOS: **Playfair Display** y **Plus Jakarta Sans**. Esto genera un CSS de ~300KB y docenas de archivos de fuente que se descargan innecesariamente. Impacto estimado: +1-2 segundos en mobile.
 
-## User Preferences
-- Store language: Spanish (Mexico)
-- Brand: warm, premium, artisan feel
-- No AI-related copy visible to end user — focus on "retrato artístico", not "IA"
-- CTAs always link to `/productos/tapete-personalizado-patapete`
-- Urgency: artisan/scarcity-based, NOT fake timers
-- Consistency: same reviews/photos in landing AND product page (no duplicate content with different text)
+### 🔴 CRÍTICO — @import duplicado en index.css (línea 1)
+`index.css` tiene un `@import url('https://fonts.googleapis.com/...')` adicional con solo Playfair Display + Plus Jakarta Sans. Este `@import` es render-blocking (bloquea el pintado de la página hasta que termina de cargar). El CSS import debe eliminarse y mantenerse solo el `<link>` en el HTML (que ya no bloquea gracias a `display=swap`).
 
-## Pending (next iteration)
-- **Before/After slider**: Replace or improve PatapeteTransformation with drag slider (low-medium difficulty)
-- **Demo configurador en landing**: Static 2-3 step animation showing the configurator flow (medium difficulty)
+### 🟡 IMPORTANTE — Sin preload del hero image (LCP)
+La imagen hero (`PatapeteHero.tsx` línea 17) es el elemento más grande visible al cargar (LCP - Largest Contentful Paint). No tiene `<link rel="preload">` en el `<head>`. Agregarlo puede mejorar LCP en ~300-500ms ya que el browser la empieza a descargar mientras procesa el HTML, antes de leer el JS.
 
-## Known Issues
-- `checkout-update` and `meta-capi` edge functions fail in preview (env issue, not blocking)
-- `PatapeteUGCGallery.tsx` file still exists but is unused — can be deleted if needed
+### 🟡 IMPORTANTE — html lang="en" incorrecto
+El `<html lang="en">` debe ser `<html lang="es">`. Afecta accesibilidad y SEO en mercados hispanohablantes.
+
+### 🟢 MENOR — Twitter meta apunta a lovable.dev
+`twitter:image` y `twitter:site` apuntan a `@lovable_dev` y logos de Lovable, no de Patapete.
+
+## Soluciones a implementar
+
+### Fix 1: index.html — Limpiar Google Fonts
+Reemplazar la línea 11 de index.html con SOLO las dos fuentes que usa Patapete:
+```html
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+```
+
+### Fix 2: index.html — Agregar preload del hero image
+Agregar después del preconnect de fonts:
+```html
+<link rel="preload" as="image" href="https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773711547270-gl2w41jlm5.webp" fetchpriority="high">
+```
+
+### Fix 3: index.html — Cambiar lang
+`<html lang="en">` → `<html lang="es">`
+
+### Fix 4: index.css — Eliminar @import de fuentes
+Eliminar la línea 1 de `src/index.css`:
+```css
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:...');
+```
+(ya está cubierta por el `<link>` en el HTML que no bloquea el render)
+
+### Fix 5: index.html — Twitter meta corregido
+```html
+<meta name="twitter:site" content="@patapete_mx" />
+<meta name="twitter:image" content="/logo.webp" />
+```
+
+## Archivos a modificar
+- `index.html`: Fixes 1, 2, 3, 5
+- `src/index.css`: Fix 4 (eliminar línea @import)
+
+## Impacto esperado
+- Reducción de ~1.5-2s en carga inicial (mobile 4G)
+- Mejora en LCP (Core Web Vital más importante para SEO/conversión)
+- ~280KB menos de CSS/fuentes descargadas innecesariamente
