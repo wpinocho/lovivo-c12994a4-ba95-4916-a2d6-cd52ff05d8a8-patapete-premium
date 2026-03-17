@@ -38,6 +38,10 @@ Tienda de tapetes personalizados con mascotas. Pipeline de generación de arte e
 - `canvasCompositing.ts` — genera el cart thumbnail (600×600 canvas) replicando exactamente el layout CSS de CanvasPreview: scale(1.12) desde center, top phrase 34.71%, pets en layout por %, nombres sobre mascotas, phrase2 70%.
 - `replicateApi.ts` — llama a la edge function `generate-tattoo`
 
+## Precios
+- Todos los estilos y cantidades de mascotas: **$949 MXN** (precio único)
+- Antes: 1 mascota = $649, 2 = $799, 3 = $949
+
 ## Cart & Checkout Preview Flow
 1. `CanvasPreview` → `compositeRug(pets, phrase, phrase2)` → `onPreviewReady(dataUrl)`
 2. `PatapeteConfigurator` → `finalPreviewRef.current = dataUrl`
