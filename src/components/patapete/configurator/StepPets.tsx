@@ -132,55 +132,52 @@ export function StepPets({
     <div className="space-y-4">
 
       {/* ── Product header — title, rating, price ── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-1">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex">
-              {[0,1,2,3,4].map(i => (
-                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-            <span className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">4.9</span>{' '}· +500 tapetes entregados
-            </span>
+      <div className="pb-1">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex">
+            {[0,1,2,3,4].map(i => (
+              <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+            ))}
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-            Tapete personalizado con tu mascota
-          </h1>
-          <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
-            Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
-          </p>
+          <span className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">4.9</span>{' '}· +500 tapetes entregados
+          </span>
+        </div>
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
+          Tapete personalizado con tu mascota
+        </h1>
+        <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
+          Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
+        </p>
 
-          {/* Social proof + delivery — below description */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Eye className="w-3.5 h-3.5 text-primary" />
-              <span className="font-medium text-foreground">{viewerCount}</span> personas lo están viendo ahora
-            </span>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Truck className="w-3.5 h-3.5 text-primary" />
-              Llega entre <span className="font-medium text-foreground ml-1">{deliveryRange}</span>
-            </span>
-          </div>
-
-          {/* Urgency — artisan scarcity */}
-          <div className="flex items-center gap-1.5 mt-2.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              Hacemos pocos pedidos por semana para mantener la calidad
-            </span>
-          </div>
+        {/* Price — below title for clear hierarchy */}
+        <div className="flex items-baseline gap-2.5 mt-3 flex-wrap">
+          <span className="text-3xl font-bold text-foreground">
+            ${price.toLocaleString('es-MX')}
+            <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
+          </span>
+          <span className="text-base text-muted-foreground line-through">$1,199 MXN</span>
+          <span className="text-xs text-muted-foreground">· Envío incluido</span>
         </div>
 
-        <div className="sm:text-right shrink-0">
-          <div className="flex sm:justify-end items-baseline gap-2 flex-wrap">
-            <span className="text-base text-muted-foreground line-through">$1,199 MXN</span>
-            <span className="text-3xl font-bold text-foreground">
-              ${price.toLocaleString('es-MX')}
-              <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Envío incluido · Hecho a pedido en México</p>
+        {/* Social proof + delivery */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Eye className="w-3.5 h-3.5 text-primary" />
+            <span className="font-medium text-foreground">{viewerCount}</span> personas lo están viendo ahora
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Truck className="w-3.5 h-3.5 text-primary" />
+            Llega entre <span className="font-medium text-foreground ml-1">{deliveryRange}</span>
+          </span>
+        </div>
+
+        {/* Urgency — artisan scarcity */}
+        <div className="flex items-center gap-1.5 mt-2.5">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+            Hacemos pocos pedidos por semana para mantener la calidad
+          </span>
         </div>
       </div>
 
