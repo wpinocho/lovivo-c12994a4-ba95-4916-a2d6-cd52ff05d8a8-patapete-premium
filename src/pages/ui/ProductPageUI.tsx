@@ -30,6 +30,17 @@ const ProductFAQ = lazy(() => import('@/components/patapete/ProductFAQ').then(m 
 const PATAPETE_SLUG = 'tapete-personalizado-patapete'
 
 /**
+ * LCP optimization: detect patapete page by URL before product data loads.
+ * The configurator's visual (CanvasPreview) is independent of product data,
+ * so we can render it immediately — the rug image appears as soon as React boots.
+ * The Add to Cart / Order Now buttons are guarded with `if (!product) return` inside
+ * the configurator, so they gracefully do nothing until product loads.
+ */
+function useIsPatapetePage() {
+  return typeof window !== 'undefined' && window.location.pathname.includes(PATAPETE_SLUG)
+}
+
+/**
  * EDITABLE UI COMPONENT - ProductPageUI
  * 
  * Este componente solo maneja la presentación de la página de producto.
@@ -77,6 +88,7 @@ interface ProductPageUIProps {
 export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const { ref: ctaRef, inView: ctaInView } = useInView({ threshold: 0 })
+  const isPatapetePage = useIsPatapetePage()
   
   // Current displayed image (selected thumbnail or variant image or first image)
   const displayImage = selectedImage || logic.displayImages?.[0] || logic.currentImage || "/placeholder.svg"
@@ -92,6 +104,18 @@ export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
   }, []);
 
   if (logic.loading) {
+    // ── LCP FIX: On the Patapete product page, render the configurator immediately ──
+    // The CanvasPreview (rug mockup) is independent of product data, so it can paint
+    // right after React boots — without waiting for the Supabase product API call.
+    // Add to Cart / Order Now are guarded inside the configurator (no-op when product=null).
+    if (isPatapetePage) {
+      return (
+        <EcommerceTemplate>
+          <PatapeteConfigurator product={null} />
+        </EcommerceTemplate>
+      )
+    }
+
     return (
       <EcommerceTemplate>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
