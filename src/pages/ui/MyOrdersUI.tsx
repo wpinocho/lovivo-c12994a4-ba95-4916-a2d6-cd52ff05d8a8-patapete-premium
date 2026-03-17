@@ -154,8 +154,8 @@ function OrderCard({ order }: { order: any }) {
                       <p className="text-xs text-muted-foreground mt-0.5">Cant: {item.quantity}</p>
                       {hasDiscount && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Tag className="h-3 w-3 text-emerald-600" />
-                          <span className="text-xs text-emerald-600 font-medium">Descuento aplicado</span>
+                          <Tag className="h-3 w-3 text-accent" />
+                          <span className="text-xs text-accent font-medium">Descuento aplicado</span>
                         </div>
                       )}
                     </div>

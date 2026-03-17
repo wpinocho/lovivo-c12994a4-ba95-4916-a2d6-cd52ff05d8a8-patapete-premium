@@ -174,7 +174,7 @@ export default function CheckoutUI() {
                                     </>
                                   )}
                                 </div>
-                                <div className="font-semibold text-green-600">GRATIS</div>
+                                <div className="font-semibold text-accent">GRATIS</div>
                               </label>
                             </div>
                           );

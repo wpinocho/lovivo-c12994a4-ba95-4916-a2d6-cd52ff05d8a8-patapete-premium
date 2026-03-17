@@ -86,11 +86,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, onClear, pho
           {petIndex + 1}
         </div>
         <span className="font-semibold text-sm text-foreground">Mascota {petIndex + 1}</span>
-        {hasResult && (
-          <span className="ml-auto text-xs font-medium text-green-600 flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-            <Sparkles className="w-3 h-3" /> Retrato listo
-          </span>
-        )}
+
       </div>
 
       {/* Compact horizontal layout: thumbnail + fields */}
@@ -127,7 +123,7 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, onClear, pho
               isProcessing
                 ? 'border-primary/70'
                 : hasResult
-                  ? 'border-green-400 shadow-sm shadow-green-100'
+                  ? 'border-accent shadow-sm shadow-accent/10'
                   : 'border-border'
             )}>
               <img
