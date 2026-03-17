@@ -19,7 +19,11 @@ import {
 import { User, LogOut, Package, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 
-export const ProfileMenu = () => {
+interface ProfileMenuProps {
+  className?: string
+}
+
+export const ProfileMenu = ({ className }: ProfileMenuProps) => {
   const { user, signOut, loading } = useAuth()
   const navigate = useNavigate()
   const [showAuthDialog, setShowAuthDialog] = useState(false)
@@ -35,7 +39,7 @@ export const ProfileMenu = () => {
 
   if (loading) {
     return (
-      <Button variant="ghost" size="icon" disabled>
+      <Button variant="ghost" size="icon" disabled className={className}>
         <User className="h-5 w-5" />
       </Button>
     )
@@ -49,6 +53,7 @@ export const ProfileMenu = () => {
           size="icon"
           onClick={() => setShowAuthDialog(true)}
           aria-label="Sign in"
+          className={className}
         >
           <User className="h-5 w-5" />
         </Button>
@@ -64,7 +69,7 @@ export const ProfileMenu = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Profile menu">
+        <Button variant="ghost" size="icon" aria-label="Profile menu" className={className}>
           <User className="h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>

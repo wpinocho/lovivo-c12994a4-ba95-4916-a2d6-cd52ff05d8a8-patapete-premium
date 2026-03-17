@@ -25,7 +25,7 @@ interface IndexUIProps {
 
 export const IndexUI = ({ logic: _logic }: IndexUIProps) => {
   return (
-    <EcommerceTemplate showCart={true} layout="full-width">
+    <EcommerceTemplate showCart={true} layout="full-width" transparentOnTop={true}>
       {/* 1. Hero principal */}
       <PatapeteHero />
 

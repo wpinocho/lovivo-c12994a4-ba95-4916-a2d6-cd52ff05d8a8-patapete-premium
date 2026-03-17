@@ -80,12 +80,12 @@ export const PageTemplate = ({
   return (
     <div className={cn("min-h-screen bg-background", className)}>
       {header && (
-        <header className={cn("sticky top-0 z-40 backdrop-blur-md transition-all duration-300", stickyHeaderClassName ?? "bg-background/95 supports-[backdrop-filter]:bg-background/60 border-b border-border/50")}>
+        <header className={cn("fixed top-0 left-0 right-0 z-40 backdrop-blur-md transition-all duration-300", stickyHeaderClassName ?? "bg-background/95 supports-[backdrop-filter]:bg-background/60 border-b border-border/50")}>
           {header}
         </header>
       )}
       
-      <div className={cn("flex-1", layout !== 'full-width' && "py-6")}>
+      <div className={cn("flex-1", layout !== 'full-width' && "pt-20 py-6")}>
         {renderContent()}
       </div>
 

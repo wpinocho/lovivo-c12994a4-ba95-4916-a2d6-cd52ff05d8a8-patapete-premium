@@ -24,6 +24,7 @@ interface EcommerceTemplateProps {
   footerClassName?: string
   layout?: 'default' | 'full-width' | 'centered'
   hideFloatingCartOnMobile?: boolean
+  transparentOnTop?: boolean
 }
 
 export const EcommerceTemplate = ({
@@ -34,21 +35,28 @@ export const EcommerceTemplate = ({
   headerClassName,
   footerClassName,
   layout = 'default',
-  hideFloatingCartOnMobile = false
+  hideFloatingCartOnMobile = false,
+  transparentOnTop = false
 }: EcommerceTemplateProps) => {
   const cartUI = useCartUISafe()
   const openCart = cartUI?.openCart ?? (() => {})
   const { getTotalItems } = useCart()
   const totalItems = getTotalItems()
 
-  const [scrolled, setScrolled] = useState(false)
+  const [scrolled, setScrolled] = useState(!transparentOnTop)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
+    if (!transparentOnTop) {
+      setScrolled(true)
+      return
+    }
     const onScroll = () => setScrolled(window.scrollY > 30)
+    // Set initial state based on current scroll position
+    setScrolled(window.scrollY > 30)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [transparentOnTop])
 
   const navLinks = [
     { label: '¿Cómo funciona?', href: '/#como-funciona' },
@@ -63,7 +71,7 @@ export const EcommerceTemplate = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <BrandLogoLeft />
+          <BrandLogoLeft transparent={!scrolled} />
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8" aria-label="Navegación principal">
@@ -71,24 +79,34 @@ export const EcommerceTemplate = ({
               <a
                 key={label}
                 href={href}
-                className="relative text-sm font-medium text-foreground/60 hover:text-foreground transition-colors duration-200 group py-1"
+                className={`relative text-sm font-medium transition-colors duration-300 group py-1 ${
+                  scrolled
+                    ? 'text-foreground/60 hover:text-foreground'
+                    : 'text-white/80 hover:text-white'
+                }`}
               >
                 {label}
-                <span className="absolute bottom-0 left-0 h-[1.5px] w-0 bg-primary rounded-full transition-all duration-300 group-hover:w-full" />
+                <span className={`absolute bottom-0 left-0 h-[1.5px] w-0 rounded-full transition-all duration-300 group-hover:w-full ${
+                  scrolled ? 'bg-primary' : 'bg-white'
+                }`} />
               </a>
             ))}
           </nav>
 
           {/* Right: profile, cart, CTA */}
           <div className="flex items-center gap-2">
-            <ProfileMenu />
+            <ProfileMenu className={`transition-colors duration-300 ${scrolled ? 'text-foreground/70 hover:text-foreground' : 'text-white/80 hover:text-white'}`} />
 
             {showCart && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={openCart}
-                className="relative text-foreground/70 hover:text-foreground"
+                className={`relative transition-colors duration-300 ${
+                  scrolled
+                    ? 'text-foreground/70 hover:text-foreground'
+                    : 'text-white/80 hover:text-white'
+                }`}
                 aria-label="Ver carrito"
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -115,7 +133,11 @@ export const EcommerceTemplate = ({
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-foreground/70 hover:text-foreground"
+              className={`md:hidden transition-colors duration-300 ${
+                scrolled
+                  ? 'text-foreground/70 hover:text-foreground'
+                  : 'text-white/80 hover:text-white'
+              }`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
             >
