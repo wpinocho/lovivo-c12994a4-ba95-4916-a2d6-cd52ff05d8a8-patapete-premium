@@ -17,8 +17,12 @@ const DEMO_URLS: Record<Style, string[]> = {
   ],
 }
 
-// Coir rug mockup (2048×2048) — stored in repo public/ folder
-const TAPETE_URL = '/tapete-mockup.webp'
+// Coir rug mockup — full (2048×2048) for desktop, sm (800×800) for mobile
+const TAPETE_URL_SM = '/tapete-mockup-sm.webp'   // 800×800, ~160KB — mobile
+const TAPETE_URL_LG = '/tapete-mockup.webp'        // 2048×2048 — desktop
+const TAPETE_URL = typeof window !== 'undefined' && window.innerWidth < 768
+  ? TAPETE_URL_SM
+  : TAPETE_URL_LG
 
 // ── Layout config — all values are % of the square container ─────────────────
 type PetCount = 1 | 2 | 3
@@ -126,8 +130,8 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
           draggable={false}
           fetchPriority="high"
           loading="eager"
-          width={2048}
-          height={2048}
+          width={800}
+          height={800}
         />
 
         {/* ── Phrase — top area of rug surface (34.71%) ──────────────────── */}

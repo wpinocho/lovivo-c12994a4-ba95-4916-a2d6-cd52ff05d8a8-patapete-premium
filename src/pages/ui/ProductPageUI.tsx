@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, lazy, Suspense } from "react"
 import { useInView } from "react-intersection-observer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,8 +24,8 @@ import { VolumeBadge } from "@/components/ui/VolumeBadge"
 import { BOGOLabel } from "@/components/ui/BOGOLabel"
 import { intervalLabel } from "@/lib/subscription-utils"
 import { PatapeteConfigurator } from "@/components/patapete/configurator/PatapeteConfigurator"
-import { ProductSocialProof } from "@/components/patapete/ProductSocialProof"
-import { ProductFAQ } from "@/components/patapete/ProductFAQ"
+const ProductSocialProof = lazy(() => import('@/components/patapete/ProductSocialProof').then(m => ({ default: m.ProductSocialProof })))
+const ProductFAQ = lazy(() => import('@/components/patapete/ProductFAQ').then(m => ({ default: m.ProductFAQ })))
 
 const PATAPETE_SLUG = 'tapete-personalizado-patapete'
 
@@ -134,16 +134,20 @@ export const ProductPageUI = ({ logic }: ProductPageUIProps) => {
           {/* Configurador — lo primero que ve el usuario */}
           <PatapeteConfigurator product={logic.product} />
 
-          {/* Testimonios — debajo del fold */}
-          <div className="mt-20 space-y-6">
-            <h2 className="text-xl font-bold text-foreground text-center">Lo que dicen nuestros clientes</h2>
-            <ProductSocialProof />
-          </div>
+          {/* Testimonios — debajo del fold, lazy loaded */}
+          <Suspense fallback={<div className="mt-20 h-64 bg-muted/40 animate-pulse rounded-2xl" />}>
+            <div className="mt-20 space-y-6">
+              <h2 className="text-xl font-bold text-foreground text-center">Lo que dicen nuestros clientes</h2>
+              <ProductSocialProof />
+            </div>
+          </Suspense>
 
-          {/* FAQ */}
-          <div className="mt-12">
-            <ProductFAQ />
-          </div>
+          {/* FAQ — lazy loaded */}
+          <Suspense fallback={<div className="mt-12 h-48 bg-muted/40 animate-pulse rounded-2xl" />}>
+            <div className="mt-12">
+              <ProductFAQ />
+            </div>
+          </Suspense>
         </div>
       </EcommerceTemplate>
     )

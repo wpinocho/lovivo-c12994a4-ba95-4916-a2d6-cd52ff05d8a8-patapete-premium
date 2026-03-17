@@ -10,8 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=optional"></noscript>
-    <!-- LCP preloads: tapete-mockup (product page) + demo illustration (always visible) -->
-    <link rel="preload" as="image" href="/tapete-mockup.webp" fetchpriority="high">
+    <!-- LCP preloads: tapete-mockup responsive (mobile=800px, desktop=2048px) + demo illustration -->
+    <link rel="preload" as="image" href="/tapete-mockup-sm.webp" media="(max-width: 767px)" fetchpriority="high">
+    <link rel="preload" as="image" href="/tapete-mockup.webp" media="(min-width: 768px)" fetchpriority="high">
     <link rel="preload" as="image" href="/demos/icono-0.webp">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patapete — Tapetes personalizados con tu mascota</title>
