@@ -14,7 +14,7 @@ export const PatapeteHero = () => {
       {/* Background image */}
       <div className="absolute inset-0 overflow-hidden">
         <img
-          src="/hero-patapete.jpg"
+          src="https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773711547270-gl2w41jlm5.webp"
           alt="Tapete personalizado Patapete con retrato de mascota en entrada de casa"
           className="w-full h-full object-cover"
           fetchPriority="high"
