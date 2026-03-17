@@ -182,8 +182,9 @@ export const EcommerceTemplate = ({
             <div className="space-y-3">
               {[
                 { label: 'Inicio', href: '/' },
-                { label: 'El arte IA', href: '/#estilos' },
                 { label: '¿Cómo funciona?', href: '/#como-funciona' },
+                { label: 'Galería', href: '/#galeria' },
+                { label: 'Reseñas', href: '/#testimonios' },
                 { label: 'Blog', href: '/blog' },
               ].map(({ label, href }) => (
                 href.startsWith('/') && !href.includes('#') ? (
