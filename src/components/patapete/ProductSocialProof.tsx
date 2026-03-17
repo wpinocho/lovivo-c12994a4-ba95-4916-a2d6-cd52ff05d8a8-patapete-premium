@@ -8,8 +8,10 @@ const REVIEWS = [
     petName: 'Buddy',
     text: 'Nunca imaginé que un tapete pudiera hacerme llorar de emoción. El de Buddy quedó perfectamente igual a él, la cara, la expresión, todo. Mis visitas siempre preguntan dónde lo compré.',
     stars: 5,
-    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-il55q3miib.webp',
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/review-buddy.webp',
     tapeteAlt: 'Tapete de Buddy el Golden Retriever recién desempacado',
+    imgWidth: 399,
+    imgHeight: 534,
   },
   {
     name: 'Rodrigo M.',
@@ -18,8 +20,10 @@ const REVIEWS = [
     petName: 'Rocco',
     text: 'Lo pedí como regalo para mi mamá y no pudo creer que fuera real. Dijo que era el regalo más bonito que le habían dado. Rocco ya tiene su trono en la entrada.',
     stars: 5,
-    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-79davb2huk.webp',
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/review-rocco.webp',
     tapeteAlt: 'Rocco el pastor alemán junto a su tapete personalizado en la cocina',
+    imgWidth: 399,
+    imgHeight: 534,
   },
   {
     name: 'Sofía V.',
@@ -28,8 +32,10 @@ const REVIEWS = [
     petName: 'Rocco, Buddy y Coco',
     text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas, la calidad del material y el nivel de detalle del diseño son increíbles.',
     stars: 5,
-    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-kqrq9bnc2q7.webp',
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/review-triple.webp',
     tapeteAlt: 'Tapete personalizado con tres perros: Rocco, Buddy y Coco',
+    imgWidth: 399,
+    imgHeight: 534,
   },
   {
     name: 'Carlos B.',
@@ -38,8 +44,10 @@ const REVIEWS = [
     petName: 'Milo',
     text: 'Mi perro falleció hace unos meses. Este tapete se convirtió en la forma más bonita de tenerlo siempre en casa. Cada vez que llego, lo primero que veo es su retrato.',
     stars: 5,
-    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-b6cszct9tu8.webp',
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/review-milo.webp',
     tapeteAlt: 'Tapete personalizado de dachshund sobre piso de madera',
+    imgWidth: 399,
+    imgHeight: 534,
   },
   {
     name: 'Valentina R.',
@@ -48,8 +56,10 @@ const REVIEWS = [
     petName: 'Salem',
     text: 'Tenía mis dudas de si quedaría bien con un gato, pero quedó PERFECTAMENTE. Salem parece molesto de que el tapete lo haga más famoso que él. El texto en el tapete es exactamente su personalidad.',
     stars: 5,
-    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773769457469-5us0oicamfm.webp',
+    tapeteImg: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/product-images/c12994a4-ba95-4916-a2d6-cd52ff05d8a8/review-salem.webp',
     tapeteAlt: 'Salem el gato negro sentado junto a su tapete personalizado que dice Prepara tu soborno en atún',
+    imgWidth: 399,
+    imgHeight: 534,
   },
 ]
 
@@ -90,12 +100,15 @@ export function ProductSocialProof() {
             key={review.name}
             className="rounded-2xl border border-border bg-card overflow-hidden"
           >
-            {/* Tapete photo */}
-            <div className="w-full h-44 overflow-hidden">
+            {/* Tapete photo — fixed container height prevents CLS */}
+            <div className="w-full h-44 overflow-hidden bg-muted">
               <img
                 src={review.tapeteImg}
                 alt={review.tapeteAlt}
                 loading="lazy"
+                decoding="async"
+                width={review.imgWidth}
+                height={review.imgHeight}
                 className="w-full h-full object-cover"
               />
             </div>

@@ -5,12 +5,14 @@
     <link rel="icon" href="/favicon.png" type="image/png">
     <link rel="apple-touch-icon" href="/logo.webp">
     
-    <!-- Google Fonts — non-blocking (saves ~1650ms on FCP) -->
+    <!-- Google Fonts — non-blocking, display=optional prevents font-swap CLS -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"></noscript>
-    <link rel="preload" as="image" href="https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773711547270-gl2w41jlm5.webp" fetchpriority="high">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=optional"></noscript>
+    <!-- LCP preloads: tapete-mockup (product page) + demo illustration (always visible) -->
+    <link rel="preload" as="image" href="/tapete-mockup.webp" fetchpriority="high">
+    <link rel="preload" as="image" href="/demos/icono-0.webp">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patapete — Tapetes personalizados con tu mascota</title>
     <meta name="description" content="Crea un tapete único con la foto de tu mascota. Diseño exclusivo, hecho a pedido en México. Envío a todo el país." />

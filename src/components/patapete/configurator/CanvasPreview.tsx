@@ -124,6 +124,10 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
           className="absolute inset-0 w-full h-full object-cover select-none"
           crossOrigin="anonymous"
           draggable={false}
+          fetchPriority="high"
+          loading="eager"
+          width={2048}
+          height={2048}
         />
 
         {/* ── Phrase — top area of rug surface (34.71%) ──────────────────── */}

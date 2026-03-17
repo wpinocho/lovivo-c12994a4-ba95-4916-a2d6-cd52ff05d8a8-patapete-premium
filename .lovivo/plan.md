@@ -4,26 +4,46 @@
 Tienda ecommerce de tapetes personalizados con mascota (Patapete). El configurador principal está en `src/components/patapete/configurator/`.
 
 ## Recent Changes
-- **PageTemplate.tsx**: Fixed `"pt-20 py-6"` → `"pt-20 pb-6"` (tailwind-merge conflicto: py-6 descartaba pt-20, dejando solo 24px top en vez de 80px → stars detrás del navbar)
-- **StepPets.tsx stars row**: Added `flex-wrap shrink-0 whitespace-nowrap` para robustez
-- **Hero image optimizada**: Comprimida de varios MB a ~166KB, servida localmente como `/hero.webp`
-- **Google Fonts**: Cambiado a patrón non-blocking preload+onload (mejora FCP)
-- **PatapeteHero.tsx**: 
-  - Actualizada a usar hero local optimizado
-  - `py-16 md:py-32` → `pt-8 pb-14 md:py-32` en el content wrapper (badge más cerca del navbar en mobile)
-  - Price anchor: `flex flex-wrap items-baseline` + reordenado ("Desde $949" primero) + "$1,199" sin "MXN" para ahorrar espacio
-- **Order summary**: Muestra "Sublimación HD" con sparkle icon
+- **PageTemplate.tsx**: Fixed `"pt-20 py-6"` → `"pt-20 pb-6"` (tailwind-merge conflicto)
+- **Hero image optimizada**: ~166KB, servida localmente como `/hero.webp`
+- **Google Fonts**: Cambiado a patrón non-blocking preload+onload
+- **PatapeteHero.tsx**: Hero local, price anchor con flex-wrap, badge más cerca del navbar en mobile
+
+### Performance Optimizations (última sesión)
+- **index.html**:
+  - Eliminado preload incorrecto a Supabase (imagen vieja del hero)
+  - Agregado `<link rel="preload" as="image" href="/tapete-mockup.webp" fetchpriority="high">` → fix LCP
+  - Agregado `<link rel="preload" as="image" href="/demos/icono-0.webp">` → demo siempre visible
+  - Google Fonts: `display=swap` → `display=optional` → elimina font-swap CLS
+- **CanvasPreview.tsx**: Agregado `fetchPriority="high"` + `loading="eager"` + `width={2048}` + `height={2048}` al tapete-mockup img → fix LCP discovery
+- **ProductSocialProof.tsx**: 5 imágenes de reseñas optimizadas 896×1200 → 399×534:
+  - Total: ~965KB → ~227KB (76% reducción)
+  - Nuevas URLs en Supabase product-images bucket
+  - Agregados `width`, `height`, `decoding="async"` para prevenir CLS
+  - Fondo `bg-muted` en contenedor para evitar layout shift durante carga
+
+## PageSpeed Baseline (pre-optimización, mobile)
+- Performance: 44
+- FCP: 3.7s
+- LCP: 9.3s
+- CLS: 0.366
+- Speed Index: 5.8s
 
 ## Known Issues Fixed
-- **Stars/rating row invisible**: tailwind-merge en PageTemplate descartaba `pt-20` cuando coexistía con `py-6`, resultando en solo 24px de padding-top. El navbar (~62px) tapaba el contenido que iniciaba a los 40px. Fix: `pt-20 pb-6`.
-- **Price anchor mobile overflow**: Tres spans en flex row sin wrap → se comprimían/cortaban. Fix: `flex-wrap items-baseline`.
-- **Badge demasiado abajo en mobile**: `py-16` daba 64px top en mobile. Fix: `pt-8 pb-14`.
+- **Stars/rating row invisible**: tailwind-merge fix en PageTemplate
+- **Price anchor mobile overflow**: flex-wrap items-baseline fix
+- **Badge demasiado abajo en mobile**: pt-8 pb-14 fix
+- **Preload apuntando a URL incorrecta**: Eliminado, reemplazado con assets correctos
 
 ## Key Files
 - `src/templates/PageTemplate.tsx` - Layout wrapper con pt-20 pb-6
 - `src/components/patapete/configurator/StepPets.tsx` - Configurador principal
 - `src/components/patapete/PatapeteHero.tsx` - Hero de landing
+- `src/components/patapete/ProductSocialProof.tsx` - Testimonios con imágenes optimizadas
+- `src/components/patapete/configurator/CanvasPreview.tsx` - Preview del tapete (LCP)
 - `public/hero.webp` - Hero image optimizada localmente
+- `/tapete-mockup.webp` - Rug mockup 2048×2048 (servido desde public/)
+- `/demos/icono-0.webp` etc. - Demo pet illustrations (servidos desde public/)
 
 ## Architecture Notes
 - 95% del tráfico real es Desktop (PostHog data)
