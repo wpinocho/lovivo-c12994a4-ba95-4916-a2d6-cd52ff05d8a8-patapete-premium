@@ -13,15 +13,20 @@ All UI lives in `src/components/patapete/` and `src/pages/ui/IndexUI.tsx`.
 - **Mobile trust strip slider**: Auto-slides phrases every 2s with CSS slide animation (md:hidden).
 - **WhatsApp**: Real WhatsApp icon and number +52 55 31 21 53 86
 - **UGC Gallery REMOVED**: `PatapeteUGCGallery.tsx` still exists but is no longer rendered in IndexUI (removed redundancy).
-- **Testimonials — 5 reviews**: PatapeteTestimonials.tsx now shows 5 cards (María G., Rodrigo M., Sofía V., Carlos B., Valentina R./Salem). Grid: 1 col mobile → 2 col sm → 3 col lg → 5 col xl.
-- **ProductSocialProof — 5 reviews**: Same 5 reviews as landing (identical photos, text, pet names, city). Grid: 1 col → 2 col sm → 3 col lg → 5 col xl.
+- **Testimonials — 5 reviews**: PatapeteTestimonials.tsx shows 5 cards (María G., Rodrigo M., Sofía V., Carlos B., Valentina R./Salem). Grid: 1 col mobile → 2 col sm → 3 col lg → 5 col xl.
+- **ProductSocialProof — 5 reviews**: Same 5 reviews as landing. Grid: 1 col → 2 col sm → 3 col lg → 5 col xl.
+- **Review polish (latest)**:
+  - Removed all "—" dashes from review texts (replaced with comma or "pero")
+  - Corrected pet names in badge & text: Buddy, Rocco, Rocco+Buddy+Coco, Milo, Salem
+  - Image height increased: Testimonials h-44→h-52, ProductSocialProof h-36→h-44
+  - Strikethrough price in configurator (StepPets.tsx): ~~$1,199~~ $949 MXN + "Envío incluido"
 - Copy cleanup: no "Usamos inteligencia artificial" → "nuestro sistema"
 
 ## UGC Photo URLs (Supabase Storage)
 Base: `https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/`
 - Rocco (pastor alemán + tapete en cocina): `...1773768438251-79davb2huk.webp` → Rodrigo M. review
 - 3 perros (Rocco, Buddy, Coco): `...1773768438251-kqrq9bnc2q7.webp` → Sofía V. review
-- Salem (gato negro + tapete "Prepara tu soborno en atún"): `...1773769457469-5us0oicamfm.webp` → Valentina R. review (NEW)
+- Salem (gato negro + tapete "Prepara tu soborno en atún"): `...1773769457469-5us0oicamfm.webp` → Valentina R. review
 - Buddy (golden unboxing): `...1773768438251-il55q3miib.webp` → María G. review
 - Milo (dachshund closeup): `...1773768438251-b6cszct9tu8.webp` → Carlos B. review
 

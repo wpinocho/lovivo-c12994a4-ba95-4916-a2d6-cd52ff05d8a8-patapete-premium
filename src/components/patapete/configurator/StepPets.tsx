@@ -173,11 +173,14 @@ export function StepPets({
         </div>
 
         <div className="sm:text-right shrink-0">
-          <div className="text-3xl font-bold text-foreground">
-            ${price.toLocaleString('es-MX')}
-            <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
+          <div className="flex sm:justify-end items-baseline gap-2 flex-wrap">
+            <span className="text-base text-muted-foreground line-through">$1,199 MXN</span>
+            <span className="text-3xl font-bold text-foreground">
+              ${price.toLocaleString('es-MX')}
+              <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Hecho a pedido en México</p>
+          <p className="text-xs text-muted-foreground mt-1">Envío incluido · Hecho a pedido en México</p>
         </div>
       </div>
 

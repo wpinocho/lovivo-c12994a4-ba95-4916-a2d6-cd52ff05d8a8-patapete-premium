@@ -4,10 +4,10 @@ const testimonials = [
   {
     name: 'María G.',
     city: 'Ciudad de México',
-    petName: 'Luna',
+    petName: 'Buddy',
     petType: 'Golden Retriever · 4 años',
     rating: 5,
-    text: 'Nunca imaginé que un tapete pudiera hacerme llorar de emoción. El de mi Luna quedó perfectamente igual a ella — la cara, la expresión, todo. Mis visitas siempre preguntan dónde lo compré.',
+    text: 'Nunca imaginé que un tapete pudiera hacerme llorar de emoción. El de Buddy quedó perfectamente igual a él, la cara, la expresión, todo. Mis visitas siempre preguntan dónde lo compré.',
     avatarInitials: 'MG',
     photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-il55q3miib.webp',
     photoAlt: 'Tapete personalizado de mascota en caja de envío',
@@ -15,10 +15,10 @@ const testimonials = [
   {
     name: 'Rodrigo M.',
     city: 'Guadalajara',
-    petName: 'Canelo',
+    petName: 'Rocco',
     petType: 'Labrador · 6 años',
     rating: 5,
-    text: 'Lo pedí como regalo para mi mamá y no pudo creer que fuera real. Dijo que era "el regalo más bonito que le habían dado". Canelo ya tiene su trono en la entrada de la casa.',
+    text: 'Lo pedí como regalo para mi mamá y no pudo creer que fuera real. Dijo que era el regalo más bonito que le habían dado. Rocco ya tiene su trono en la entrada de la casa.',
     avatarInitials: 'RM',
     photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-79davb2huk.webp',
     photoAlt: 'Pastor alemán junto a su tapete personalizado en la cocina',
@@ -26,10 +26,10 @@ const testimonials = [
   {
     name: 'Sofía V.',
     city: 'Monterrey',
-    petName: 'Mochi, Nala y Churro',
+    petName: 'Rocco, Buddy y Coco',
     petType: '3 Frenchies',
     rating: 5,
-    text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas — la calidad del material y el nivel de detalle del diseño son increíbles. Ya quiero uno para el cuarto.',
+    text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas, la calidad del material y el nivel de detalle del diseño son increíbles. Ya quiero uno para el cuarto.',
     avatarInitials: 'SV',
     photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-kqrq9bnc2q7.webp',
     photoAlt: 'Tapete personalizado con tres perros siendo sostenido',
@@ -37,7 +37,7 @@ const testimonials = [
   {
     name: 'Carlos B.',
     city: 'Puebla',
-    petName: 'Brody',
+    petName: 'Milo',
     petType: 'Dálmata · Siempre en el corazón',
     rating: 5,
     text: 'Mi perro falleció hace unos meses. Este tapete se convirtió en la forma más bonita de tenerlo siempre en casa. Cada vez que llego, lo primero que veo es su retrato. Gracias, Patapete.',
@@ -51,7 +51,7 @@ const testimonials = [
     petName: 'Salem',
     petType: 'Gato negro · 3 años',
     rating: 5,
-    text: 'Tenía mis dudas de si quedaría bien con un gato — quedó PERFECTAMENTE. Salem parece molesto de que el tapete lo haga más famoso que él. El texto "Prepara tu soborno en atún" es exactamente su personalidad.',
+    text: 'Tenía mis dudas de si quedaría bien con un gato, pero quedó PERFECTAMENTE. Salem parece molesto de que el tapete lo haga más famoso que él. El texto en el tapete es exactamente su personalidad.',
     avatarInitials: 'VR',
     photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773769457469-5us0oicamfm.webp',
     photoAlt: 'Salem el gato negro sentado junto a su tapete personalizado que dice Prepara tu soborno en atún',
@@ -107,7 +107,7 @@ export const PatapeteTestimonials = () => {
               className="card-premium flex flex-col hover:-translate-y-1 transition-transform duration-300 overflow-hidden"
             >
               {/* Real photo */}
-              <div className="w-full h-44 overflow-hidden flex-shrink-0">
+              <div className="w-full h-52 overflow-hidden flex-shrink-0">
                 <img
                   src={t.photo}
                   alt={t.photoAlt}
