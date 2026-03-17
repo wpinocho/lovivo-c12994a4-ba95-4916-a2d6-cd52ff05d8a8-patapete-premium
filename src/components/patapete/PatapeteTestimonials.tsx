@@ -45,6 +45,17 @@ const testimonials = [
     photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773768438251-b6cszct9tu8.webp',
     photoAlt: 'Tapete personalizado de dachshund sobre piso de madera',
   },
+  {
+    name: 'Valentina R.',
+    city: 'Ciudad de México',
+    petName: 'Salem',
+    petType: 'Gato negro · 3 años',
+    rating: 5,
+    text: 'Tenía mis dudas de si quedaría bien con un gato — quedó PERFECTAMENTE. Salem parece molesto de que el tapete lo haga más famoso que él. El texto "Prepara tu soborno en atún" es exactamente su personalidad.',
+    avatarInitials: 'VR',
+    photo: 'https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773769457469-5us0oicamfm.webp',
+    photoAlt: 'Salem el gato negro sentado junto a su tapete personalizado que dice Prepara tu soborno en atún',
+  },
 ]
 
 const StarRating = ({ rating }: { rating: number }) => (
@@ -89,7 +100,7 @@ export const PatapeteTestimonials = () => {
         </div>
 
         {/* Testimonials grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {testimonials.map((t) => (
             <article
               key={t.name}
