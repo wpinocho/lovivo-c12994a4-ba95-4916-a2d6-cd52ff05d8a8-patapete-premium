@@ -20,6 +20,8 @@ export const PatapeteHero = () => {
           style={{ objectPosition: 'center 30%' }}
           fetchPriority="high"
           decoding="sync"
+          width={1920}
+          height={1280}
         />
         <div className="hero-overlay absolute inset-0" />
       </div>
