@@ -10,8 +10,10 @@ Tienda de tapetes personalizados para mascotas. Material: Sublimable Synthetic C
 - Narrativa de material: sublimación HD, colores fusionados en la fibra
 - FAQ sobre colocación en secciones expandibles (no en hero)
 - Configurador Patapete con preview del tapete y carrito
+- TrustStrip (banner bajo el hero): en móvil ahora es un slider con slide cada 2s, en desktop sigue siendo marquee continuo (18s)
 
 ## Preferencias del usuario
 - Tono honesto y positivo — limitaciones como "cuidado premium"
 - Imágenes reales de clientes > mockups
 - Frases de las tarjetas de galería visibles debajo de la imagen
+- Comportamiento diferenciado móvil/desktop en componentes animados
