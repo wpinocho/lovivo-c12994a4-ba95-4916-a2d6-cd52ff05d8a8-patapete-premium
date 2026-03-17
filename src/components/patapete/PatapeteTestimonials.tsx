@@ -25,7 +25,7 @@ const testimonials = [
     petName: 'Mochi, Nala y Churro',
     petType: '3 Frenchies',
     rating: 5,
-    text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas — la calidad de la fibra de coco y el detalle del diseño son increíbles. Ya quiero uno para el cuarto.',
+    text: 'Tenemos tres perros así que pedí uno con los tres juntos. El resultado superó todas mis expectativas — la calidad del material y el nivel de detalle del diseño son increíbles. Ya quiero uno para el cuarto.',
     avatarInitials: 'SV',
   },
   {

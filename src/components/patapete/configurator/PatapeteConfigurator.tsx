@@ -215,7 +215,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
       phrase_bottom: currentState.phrase2,
       font: 'Plus Jakarta Sans 800',
       rug_size: '60x40cm',
-      material: 'fibra de coco',
+      material: 'fibra sintetica sublimacion',
     }
 
     // Store immediately with the preview dataUrl for instant display in the cart

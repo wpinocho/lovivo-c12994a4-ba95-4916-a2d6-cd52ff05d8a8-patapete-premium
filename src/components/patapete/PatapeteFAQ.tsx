@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     q: '¿El resultado final se parece al preview?',
-    a: 'Sí, el preview es muy representativo del tapete final. Puede haber pequeñas variaciones por la textura natural de la fibra de coco, pero el diseño y composición serán muy similares a lo que viste antes de comprar.',
+    a: 'Sí, el preview es muy representativo del tapete final. Puede haber pequeñas variaciones por la textura de la fibra, pero el diseño y composición serán muy similares a lo que viste antes de comprar.',
   },
   {
     q: '¿Puedo poner más de una mascota?',

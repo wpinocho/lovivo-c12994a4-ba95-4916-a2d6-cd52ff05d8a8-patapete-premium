@@ -1,11 +1,11 @@
 import { Pet, PRICES, Style, STYLE_LABELS } from './types'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, ShieldCheck, Clock, Ruler, Leaf, Zap, CheckCircle, Scissors, Truck, Home } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, Clock, Ruler, Sparkles, Zap, CheckCircle, Scissors, Truck, Home } from 'lucide-react'
 
 const PRODUCT_SPECS = [
   { icon: Ruler,  label: '60 × 40 cm' },
-  { icon: Leaf,   label: 'Fibra de coco' },
+  { icon: Sparkles, label: 'Sublimación HD' },
   { icon: Clock,  label: '5-7 días hábiles' },
 ]
 

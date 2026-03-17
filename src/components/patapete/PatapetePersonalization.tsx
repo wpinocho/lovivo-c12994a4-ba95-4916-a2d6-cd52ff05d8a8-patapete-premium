@@ -11,7 +11,7 @@ const features = [
   {
     icon: Palette,
     title: 'Su retrato artístico, hecho para ti',
-    desc: 'Cada diseño es completamente único. Trazos estilo tatuaje fino que se ven increíbles sobre fibra de coco natural.',
+    desc: 'Cada diseño es completamente único. Trazos estilo tatuaje fino impresos en alta definición — colores fusionados en la fibra, no pintados por encima.',
   },
   {
     icon: Type,

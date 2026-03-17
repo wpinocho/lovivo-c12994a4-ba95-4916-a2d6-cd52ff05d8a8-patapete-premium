@@ -168,7 +168,7 @@ export const EcommerceTemplate = ({
               <BrandLogoLeft />
             </div>
             <p className="text-sm leading-relaxed mt-3" style={{ color: 'hsl(38 25% 65%)' }}>
-              Tapetes de fibra de coco personalizados con el arte de tu mascota. Hecho a pedido en México.
+              Tapetes personalizados con el retrato de tu mascota, impresos en alta definición. Hecho a pedido en México.
             </p>
           </div>
 

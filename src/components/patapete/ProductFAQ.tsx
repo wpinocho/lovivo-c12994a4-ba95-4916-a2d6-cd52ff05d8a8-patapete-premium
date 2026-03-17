@@ -10,7 +10,8 @@ const FAQ_ITEMS = [
   {
     question: '¿Cómo queda el tapete de verdad?',
     answer:
-      'Es un tapete de fibra de coco natural, 60 × 40 cm, con base antideslizante. El diseño de tu mascota se procesa artísticamente y se transfiere al material con alta resolución. El preview que ves en pantalla es muy fiel al resultado final. La fibra de coco es firme, duradera y perfecta para la entrada de tu hogar.',
+      'Es un tapete de 60 × 40 cm con base antideslizante. Tiene la textura y el carácter de la fibra de coco tradicional, pero con una gran ventaja: el diseño de tu mascota se imprime por sublimación directamente en el material — no está pintado por encima. El resultado es muy fiel al preview que ves antes de pagar.',
+  
   },
   {
     question: '¿Qué garantía tienen?',
@@ -25,7 +26,8 @@ const FAQ_ITEMS = [
   {
     question: '¿De qué material está hecho?',
     answer:
-      'El tapete es 100% fibra de coco natural — ecológica, resistente y antideslizante. Apto para uso en interiores y entradas. Para limpiarlo, basta con sacudirlo o cepillarlo suavemente. Es un material que dura años con el uso cotidiano.',
+      'El tapete está hecho de fibra sintética premium con la misma textura tipo coco. La diferencia clave: usamos impresión por sublimación HD, que funde los colores dentro del material. No se pela, no se agrieta y aguanta lluvia, lodo y uso diario sin problema. Para mantener los colores vibrantes por más tiempo, recomendamos colocarlo en entradas techadas o interiores, lejos del sol directo prolongado.',
+  
   },
   {
     question: '¿Qué foto debo subir para el mejor resultado?',

@@ -11,7 +11,7 @@ const features = [
   {
     icon: Sparkles,
     title: 'Arte estilo tatuaje fino',
-    desc: 'Trazos botánicos, líneas detalladas y una estética única que se ve increíble sobre fibra de coco.',
+    desc: 'Trazos botánicos, líneas detalladas y una estética única impresa con sublimación HD — los colores están dentro de la fibra.',
   },
   {
     icon: Zap,

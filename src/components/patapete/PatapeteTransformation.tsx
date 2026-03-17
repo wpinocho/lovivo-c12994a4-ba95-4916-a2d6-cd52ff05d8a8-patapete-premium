@@ -16,7 +16,7 @@ export const PatapeteTransformation = () => {
               De la foto de tu mascota a una obra de arte en tu entrada.
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed mb-6">
-              Usamos inteligencia artificial para transformar la foto de tu mascota en un retrato artístico único. Luego lo trasladamos con precisión sobre fibra de coco natural.
+              Usamos inteligencia artificial para transformar la foto de tu mascota en un retrato artístico único. Luego lo imprimimos por sublimación directamente en la fibra — el resultado dura años.
             </p>
             <p className="text-base text-muted-foreground leading-relaxed mb-8">
               El resultado es un tapete que se ve como si un ilustrador lo hubiera hecho especialmente para ti — porque básicamente así fue.

@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
-import { Leaf, Ruler, Clock, Shield, ArrowRight } from 'lucide-react'
+import { Zap, Ruler, Clock, Shield, ArrowRight, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const specs = [
-  { icon: Leaf, label: 'Material', value: 'Fibra de coco natural 100%' },
-  { icon: Ruler, label: 'Uso recomendado', value: 'Entrada de casa o interior' },
-  { icon: Shield, label: 'Garantía', value: 'Por daño o defecto de producción' },
-  { icon: Clock, label: 'Tiempo de entrega', value: '5 a 10 días hábiles' },
+  { icon: Zap,    label: 'Impresión', value: 'Sublimación HD — fusionada en la fibra' },
+  { icon: Ruler,  label: 'Medidas',   value: '60 × 40 cm · Base antideslizante' },
+  { icon: Shield, label: 'Garantía',  value: 'Por daño o defecto de producción' },
+  { icon: Clock,  label: 'Entrega',   value: '5 a 10 días hábiles' },
 ]
 
 export const PatapeteMaterials = () => {
@@ -20,7 +20,7 @@ export const PatapeteMaterials = () => {
             <div className="rounded-3xl overflow-hidden shadow-warm-lg border border-border/30">
               <img
                 src="/material-coco.jpg"
-                alt="Textura de fibra de coco natural - material de los tapetes Patapete"
+                alt="Textura del tapete Patapete con impresión de alta definición"
                 className="w-full h-72 md:h-96 object-cover"
                 loading="lazy"
                 decoding="async"
@@ -28,8 +28,8 @@ export const PatapeteMaterials = () => {
             </div>
             {/* Floating badge */}
             <div className="absolute -bottom-4 -right-4 bg-card rounded-2xl border border-border/60 shadow-warm p-4 text-center">
-              <p className="font-display text-2xl font-bold text-foreground">100%</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Fibra natural</p>
+              <p className="font-display text-2xl font-bold text-foreground">HD</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Sublimación</p>
             </div>
           </div>
 
@@ -39,14 +39,21 @@ export const PatapeteMaterials = () => {
               El producto
             </p>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-5 leading-tight">
-              Un tapete que se siente tan bueno como se ve.
+              El arte de tu mascota, fusionado en cada fibra.
             </h2>
             <p className="text-lg text-muted-foreground mb-4 leading-relaxed">
-              La fibra de coco tiene una textura natural que da calidez y carácter a la entrada. Se ve premium, dura bien y se limpia fácil.
+              La imagen no está pintada por encima — está sublimada directamente en el material. Písalo todo lo que quieras: no se pela, no se agrieta, no pierde color con el uso diario.
             </p>
-            <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-              El arte se aplica directamente sobre la fibra con una técnica que resiste el uso diario. No se desprende, no se borra.
+            <p className="text-base text-muted-foreground mb-4 leading-relaxed">
+              La base es fibra sintética con la misma textura y carácter de la coco tradicional. Se ve premium, limpia los zapatos y aguanta lluvia, lodo y manguerazos sin pudrirse.
             </p>
+            {/* Sun care note */}
+            <div className="flex gap-3 p-4 rounded-xl bg-amber-50/60 border border-amber-200/60 mb-8">
+              <Sun className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800 leading-relaxed">
+                <strong>Para colores vibrantes por años:</strong> recomendamos colocarlo en entradas techadas, porches o pasillos, evitando la exposición directa y prolongada al sol.
+              </p>
+            </div>
 
             {/* Specs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
