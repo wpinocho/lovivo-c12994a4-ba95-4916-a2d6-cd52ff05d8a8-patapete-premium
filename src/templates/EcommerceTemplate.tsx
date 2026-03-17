@@ -6,7 +6,7 @@ import { FloatingCart } from '@/components/FloatingCart'
 import { ProfileMenu } from '@/components/ProfileMenu'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Menu, X } from 'lucide-react'
+import { ShoppingCart, Menu, X, Wand2 } from 'lucide-react'
 import { useCartUISafe } from '@/components/CartProvider'
 import { useCart } from '@/contexts/CartContext'
 
@@ -51,9 +51,9 @@ export const EcommerceTemplate = ({
   }, [])
 
   const navLinks = [
-    { label: 'El arte IA', href: '/#estilos' },
     { label: '¿Cómo funciona?', href: '/#como-funciona' },
     { label: 'Galería', href: '/#galeria' },
+    { label: 'Reseñas', href: '/#testimonios' },
   ]
 
   const header = (
@@ -66,14 +66,15 @@ export const EcommerceTemplate = ({
           <BrandLogoLeft />
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-7" aria-label="Navegación principal">
+          <nav className="hidden md:flex items-center gap-8" aria-label="Navegación principal">
             {navLinks.map(({ label, href }) => (
               <a
                 key={label}
                 href={href}
-                className="text-sm font-medium text-foreground/65 hover:text-foreground transition-colors duration-150"
+                className="relative text-sm font-medium text-foreground/60 hover:text-foreground transition-colors duration-200 group py-1"
               >
                 {label}
+                <span className="absolute bottom-0 left-0 h-[1.5px] w-0 bg-primary rounded-full transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
           </nav>
@@ -102,9 +103,10 @@ export const EcommerceTemplate = ({
             <Button
               asChild
               size="sm"
-              className="hidden md:inline-flex rounded-xl font-semibold ml-1"
+              className="hidden md:inline-flex rounded-xl font-semibold ml-1 gap-1.5 shadow-primary hover:-translate-y-0.5 transition-all duration-200"
             >
               <Link to="/productos/tapete-personalizado-patapete">
+                <Wand2 className="h-3.5 w-3.5" />
                 Diseña el tuyo
               </Link>
             </Button>
@@ -143,12 +145,12 @@ export const EcommerceTemplate = ({
               </a>
             ))}
             <div className="pt-3 pb-1">
-              <Button asChild className="w-full rounded-xl font-semibold">
+              <Button asChild className="w-full rounded-xl font-semibold gap-1.5">
                 <Link
                   to="/productos/tapete-personalizado-patapete"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Diseña el tuyo →
+                  <Wand2 className="h-4 w-4" /> Diseña el tuyo
                 </Link>
               </Button>
             </div>
@@ -235,6 +237,11 @@ export const EcommerceTemplate = ({
         footer={footer}
         className={className}
         layout={layout}
+        stickyHeaderClassName={
+          scrolled
+            ? 'bg-background/90 supports-[backdrop-filter]:bg-background/75 border-b border-border/40 shadow-sm'
+            : 'bg-background/0 border-b border-transparent'
+        }
       >
         {children}
       </PageTemplate>

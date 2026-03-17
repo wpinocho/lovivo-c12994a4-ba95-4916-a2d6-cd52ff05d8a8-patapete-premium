@@ -1,19 +1,21 @@
-# Patapete — Plan de Proyecto
+# Patapete Store — Plan
 
-## Estado actual
-Tienda de tapetes personalizados para mascotas. Material: Sublimable Synthetic Coir Doormats (sublimación HD). Configurador personalizado en página de producto.
+## Current State
+React/TS storefront for Patapete (custom pet portrait doormats, Mexico).
+All UI lives in `src/components/patapete/` and `src/pages/ui/IndexUI.tsx`.
 
-## Cambios recientes
-- Galería actualizada con 4 fotos reales de tapetes de clientes (Luna/Max/Cleo, Gordo el pug, Michi el gato, Rex & Lulú)
-- Sección "La magia del producto" actualizada con foto real de Canela
-- Paleta de colores: verde oliva (--accent) reemplaza verde brillante
-- Narrativa de material: sublimación HD, colores fusionados en la fibra
-- FAQ sobre colocación en secciones expandibles (no en hero)
-- Configurador Patapete con preview del tapete y carrito
-- TrustStrip (banner bajo el hero): en móvil ahora es un slider con slide cada 2s, en desktop sigue siendo marquee continuo (18s)
+## Recent Changes
+- **Nav menu revamp**: Removed "El arte IA", added "Reseñas" (→ #testimonios). Links: ¿Cómo funciona? / Galería / Reseñas. CTA now has Wand2 icon + shadow-primary hover lift.
+- **Glass header effect**: Header transitions from transparent to bg-background/90 + shadow-sm on scroll. PageTemplate now accepts `stickyHeaderClassName` prop.
+- **Mobile trust strip slider**: Auto-slides phrases every 2s with CSS slide animation (md:hidden). Desktop marquee unchanged.
+- **PatapeteTransformation image**: Updated to user-provided product texture close-up.
+- Copy cleanup: no "· Retrato IA" labels in gallery, "Retrato único" in transformation, etc.
 
-## Preferencias del usuario
-- Tono honesto y positivo — limitaciones como "cuidado premium"
-- Imágenes reales de clientes > mockups
-- Frases de las tarjetas de galería visibles debajo de la imagen
-- Comportamiento diferenciado móvil/desktop en componentes animados
+## User Preferences
+- Store language: Spanish (Mexico)
+- Brand: warm, premium, artisan feel
+- No AI-related copy visible to end user — focus on "retrato artístico", not "IA"
+- CTAs always link to `/productos/tapete-personalizado-patapete`
+
+## Known Issues
+- `checkout-update` and `meta-capi` edge functions fail in preview (env issue, not blocking)

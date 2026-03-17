@@ -15,6 +15,7 @@ interface PageTemplateProps {
   footer?: ReactNode
   className?: string
   contentClassName?: string
+  stickyHeaderClassName?: string
   layout?: 'default' | 'full-width' | 'sidebar-left' | 'sidebar-right' | 'centered'
 }
 
@@ -25,6 +26,7 @@ export const PageTemplate = ({
   footer, 
   className,
   contentClassName,
+  stickyHeaderClassName,
   layout = 'default'
 }: PageTemplateProps) => {
   const layoutClasses = {
@@ -78,7 +80,7 @@ export const PageTemplate = ({
   return (
     <div className={cn("min-h-screen bg-background", className)}>
       {header && (
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <header className={cn("sticky top-0 z-40 backdrop-blur-md transition-all duration-300", stickyHeaderClassName ?? "bg-background/95 supports-[backdrop-filter]:bg-background/60 border-b border-border/50")}>
           {header}
         </header>
       )}
