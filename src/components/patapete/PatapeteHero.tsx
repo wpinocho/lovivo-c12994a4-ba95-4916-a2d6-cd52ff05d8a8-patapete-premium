@@ -10,13 +10,14 @@ export const PatapeteHero = () => {
   ]
 
   return (
-    <section id="hero" className="relative min-h-[90vh] flex items-center">
+    <section id="hero" className="relative flex items-center" style={{ minHeight: '100svh' }}>
       {/* Background image */}
       <div className="absolute inset-0 overflow-hidden">
         <img
           src="https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773711547270-gl2w41jlm5.webp"
           alt="Tapete personalizado Patapete con retrato de mascota en entrada de casa"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-center md:object-center"
+          style={{ objectPosition: 'center 30%' }}
           fetchPriority="high"
           decoding="sync"
         />
@@ -24,15 +25,15 @@ export const PatapeteHero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-24 md:py-32">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16 md:py-32">
         <div className="max-w-2xl animate-fade-up">
           {/* Pill badge */}
-          <div className="inline-flex items-center gap-2 bg-white/15 border border-white/25 backdrop-blur-sm rounded-full px-4 py-2 text-sm font-medium text-white mb-7">
+          <div className="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs md:text-sm font-medium text-white mb-4 md:mb-7">
             🐾 <span>Tapetes personalizados · Hecho en México</span>
           </div>
 
           {/* Main headline */}
-          <h1 className="font-display text-5xl md:text-6xl lg:text-[4.25rem] font-bold text-white leading-[1.1] mb-6">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-bold text-white leading-[1.1] mb-4 md:mb-6">
             Convierte a tu mascota{' '}
             <em className="not-italic" style={{ color: 'hsl(38 60% 75%)' }}>en arte</em>
             {' '}para la entrada de tu casa.
@@ -40,18 +41,18 @@ export const PatapeteHero = () => {
 
           {/* Subheadline */}
           <p
-            className="text-xl md:text-2xl text-white mb-9 max-w-xl leading-relaxed font-light"
+            className="text-base md:text-2xl text-white mb-5 md:mb-9 max-w-xl leading-relaxed font-light"
             style={{ textShadow: '0 1px 6px rgba(0,0,0,0.55)' }}
           >
             Sube su foto. Ve cómo queda en tu tapete <strong className="font-semibold">antes de comprarlo</strong> — hecho especialmente para ti.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-9">
+          <div className="flex flex-col sm:flex-row gap-2.5 md:gap-3 mb-5 md:mb-9">
             <Button
               asChild
               size="lg"
-              className="font-semibold px-8 py-6 rounded-xl text-base shadow-primary-lg hover:-translate-y-0.5 transition-all duration-200 hover:shadow-xl"
+              className="font-semibold px-8 py-5 md:py-6 rounded-xl text-base shadow-primary-lg hover:-translate-y-0.5 transition-all duration-200 hover:shadow-xl"
             >
               <Link to="/productos/tapete-personalizado-patapete">
                 Diseña tu tapete →
@@ -60,7 +61,7 @@ export const PatapeteHero = () => {
             <Button
               asChild
               size="lg"
-              className="font-semibold px-8 py-6 rounded-xl text-base border-2 border-white/50 bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white/70 backdrop-blur-sm"
+              className="font-semibold px-8 py-5 md:py-6 rounded-xl text-base border-2 border-white/50 bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white/70 backdrop-blur-sm"
               style={{ background: 'rgba(255,255,255,0.10)' }}
             >
               <a href="#como-funciona">
@@ -70,11 +71,11 @@ export const PatapeteHero = () => {
           </div>
 
           {/* Trust microcopy */}
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap gap-2">
             {trustItems.map((text) => (
               <span
                 key={text}
-                className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-background/85 text-foreground border border-border/50 backdrop-blur-sm"
+                className="inline-flex items-center gap-1.5 text-[11px] md:text-xs font-medium px-2.5 py-1 md:px-3 md:py-1.5 rounded-full bg-background/85 text-foreground border border-border/50 backdrop-blur-sm"
               >
                 <Check className="h-3 w-3 text-primary shrink-0" />
                 {text}
@@ -84,10 +85,10 @@ export const PatapeteHero = () => {
         </div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator — hidden on mobile to save space */}
       <a
         href="#confianza"
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/50 hover:text-white/80 transition-colors animate-float"
+        className="hidden md:block absolute bottom-8 left-1/2 -translate-x-1/2 text-white/50 hover:text-white/80 transition-colors animate-float"
         aria-label="Scroll hacia abajo"
       >
         <ArrowDown className="h-6 w-6" />
