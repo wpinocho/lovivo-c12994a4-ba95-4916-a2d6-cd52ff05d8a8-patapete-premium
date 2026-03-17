@@ -165,7 +165,7 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
                 className="absolute w-full text-center pointer-events-none"
                 style={{
                   top: 0,
-                  transform: 'translateY(calc(-100% - 1.5cqw))',  /* cqw scales with container — no overlap on any screen size */
+                  transform: 'translateY(calc(-100% + 2.5cqw))',  /* slight overlap with pet top — clears top phrase on all sizes */
                   paddingBottom: '0px',
                   fontSize: FONT.name,
                   fontFamily: '"Plus Jakarta Sans", sans-serif',

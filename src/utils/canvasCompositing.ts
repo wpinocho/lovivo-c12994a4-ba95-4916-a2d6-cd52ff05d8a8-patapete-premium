@@ -169,7 +169,8 @@ export async function compositeRug(
         ctx.fillStyle    = '#000000'
         ctx.textAlign    = 'center'
         ctx.textBaseline = 'bottom'
-        ctx.fillText(pet.name.trim(), petLeftPx + petWidthPx / 2, petTopPx + 14)
+        // +2.5cqw below pet top matching CanvasPreview.tsx translateY(calc(-100% + 2.5cqw))
+        ctx.fillText(pet.name.trim(), petLeftPx + petWidthPx / 2, petTopPx + Math.round(0.025 * W))
         ctx.restore()
       }
 
