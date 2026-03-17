@@ -133,13 +133,13 @@ export function StepPets({
 
       {/* ── Product header — title, rating, price ── */}
       <div className="pb-1">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+          <div className="flex shrink-0">
             {[0,1,2,3,4].map(i => (
               <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
             ))}
           </div>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
             <span className="font-semibold text-foreground">4.9</span>{' '}· +500 tapetes entregados
           </span>
         </div>
