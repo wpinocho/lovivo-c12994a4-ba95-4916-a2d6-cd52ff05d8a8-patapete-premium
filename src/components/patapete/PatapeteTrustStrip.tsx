@@ -78,9 +78,7 @@ const DesktopTrustStrip = () => (
 )
 
 export const PatapeteTrustStrip = () => {
-  const isMobile = useIsMobile()
-
-  // Render both but toggle via CSS (avoids hydration flicker)
+  // Render both and toggle via CSS (md:hidden / hidden md:block)
   return (
     <>
       <MobileTrustStrip />
