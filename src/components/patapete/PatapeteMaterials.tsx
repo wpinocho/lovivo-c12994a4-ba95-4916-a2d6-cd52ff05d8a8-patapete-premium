@@ -19,8 +19,8 @@ export const PatapeteMaterials = () => {
             <div className="absolute -inset-4 bg-gradient-to-br from-primary/8 to-accent/8 rounded-3xl -z-10" />
             <div className="rounded-3xl overflow-hidden shadow-warm-lg border border-border/30">
               <img
-                src="/material-coco.jpg"
-                alt="Textura del tapete Patapete con impresión de alta definición"
+                src="https://ptgmltivisbtvmoxwnhd.supabase.co/storage/v1/object/public/message-images/1ccf5285-0be5-40c1-a9a6-e9894185f538/1773765683605-ownawr7uwg.webp"
+                alt="Textura real del tapete Patapete — fibra sintética premium con base antideslizante"
                 className="w-full h-72 md:h-96 object-cover"
                 loading="lazy"
                 decoding="async"
