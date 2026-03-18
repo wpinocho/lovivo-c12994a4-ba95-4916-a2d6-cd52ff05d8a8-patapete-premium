@@ -351,9 +351,80 @@ function PaymentForm({
         // Limpiar carrito
         clearCart()
         
-        // Save order details to localStorage for thank you page
-        if (result.paymentIntent) {
-          // Order details will be fetched on the thank you page
+        // Save order details to localStorage for ThankYou page
+        try {
+          const completedOrderItems = paymentItems.map((item: any) => {
+            // Find the raw item to extract image and variant info
+            const rawItem = Array.isArray(items) ? items.find((it: any) =>
+              (it.product_id || it.product?.id) === item.product_id &&
+              (it.variant_id || it.variant?.id) === item.variant_id
+            ) : undefined
+
+            // Try to get Patapete preview image from localStorage (still present at this point)
+            let productImages: string[] = []
+            const itemKey = rawItem?.key
+            if (itemKey) {
+              try {
+                const stored = localStorage.getItem(`patapete_customization:${itemKey}`)
+                if (stored) {
+                  const parsed = JSON.parse(stored)
+                  const previewUrl = parsed.preview_image_url || parsed.preview_dataurl
+                  if (previewUrl) productImages = [previewUrl]
+                }
+              } catch { /* ignore */ }
+            }
+            // Fallback to product images
+            if (productImages.length === 0) {
+              if ((rawItem as any)?.preview_image_url) productImages = [(rawItem as any).preview_image_url]
+              else if (rawItem?.product?.images?.length) productImages = rawItem.product.images
+              else if ((rawItem as any)?.product_images?.length) productImages = (rawItem as any).product_images
+            }
+
+            return {
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              product_name: item.product_name || rawItem?.product?.name || '',
+              variant_name: rawItem?.variant?.name || (rawItem as any)?.variant_name || '',
+              quantity: item.quantity,
+              price: item.price, // normal currency units (e.g. 949 MXN)
+              product_images: productImages,
+            }
+          })
+
+          const completedOrder = {
+            id: orderId,
+            order_number: orderId?.slice(-8).toUpperCase() ?? 'N/A',
+            total_amount: totalCents / 100,
+            currency_code: (currency || 'mxn').toUpperCase(),
+            status: 'paid',
+            shipping_address: shippingAddress ? {
+              first_name: shippingAddress.first_name || '',
+              last_name: shippingAddress.last_name || '',
+              address1: shippingAddress.line1 || '',
+              address2: shippingAddress.line2 || '',
+              city: shippingAddress.city || '',
+              province: shippingAddress.state || '',
+              zip: shippingAddress.postal_code || '',
+              country: shippingAddress.country || '',
+              phone: phone || '',
+            } : null,
+            billing_address: billingAddress ? {
+              first_name: billingAddress.first_name || '',
+              last_name: billingAddress.last_name || '',
+              address1: billingAddress.line1 || '',
+              city: billingAddress.city || '',
+              province: billingAddress.state || '',
+              zip: billingAddress.postal_code || '',
+              country: billingAddress.country || '',
+            } : null,
+            order_items: completedOrderItems,
+            created_at: new Date().toISOString(),
+          }
+
+          localStorage.setItem('completed_order', JSON.stringify(completedOrder))
+          console.log('✅ completed_order saved to localStorage:', completedOrder)
+        } catch (saveErr) {
+          console.error('Error saving completed_order to localStorage:', saveErr)
         }
         
         // Redirigir a thank you page
