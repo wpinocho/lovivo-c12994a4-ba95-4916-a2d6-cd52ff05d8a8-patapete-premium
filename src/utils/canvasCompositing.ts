@@ -147,8 +147,9 @@ export async function compositeRug(
     const petLeftPx = Math.round(petLayoutItem.left * W)
 
     try {
-      // Flood-fill removes outer white background while preserving interior white areas
-      const needsBgRemoval = pet.isGenerated || pet.isDemo
+      // Flood-fill removes outer white background — only needed for AI-generated JPEGs.
+      // Demo images already have transparent backgrounds, skip processing.
+      const needsBgRemoval = pet.isGenerated && !pet.isDemo
       const drawUrl = needsBgRemoval
         ? await removeBackgroundFloodFill(pet.imageUrl)
         : pet.imageUrl

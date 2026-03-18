@@ -17,12 +17,8 @@ const DEMO_URLS: Record<Style, string[]> = {
   ],
 }
 
-// Coir rug mockup — full (2048×2048) for desktop, sm (800×800) for mobile
-const TAPETE_URL_SM = '/tapete-mockup-sm.webp'   // 800×800, ~160KB — mobile
-const TAPETE_URL_LG = '/tapete-mockup.webp'        // 2048×2048 — desktop
-const TAPETE_URL = typeof window !== 'undefined' && window.innerWidth < 768
-  ? TAPETE_URL_SM
-  : TAPETE_URL_LG
+// Coir rug mockup — single optimized file for all devices
+const TAPETE_URL = '/tapete-mockup.webp'
 
 // ── Layout config — all values are % of the square container ─────────────────
 type PetCount = 1 | 2 | 3
@@ -86,7 +82,7 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
         // Generated JPEG from FLUX → remove outer white background
         newUrls[i] = await removeBackgroundFloodFill(raw).catch(() => raw)
       } else {
-        // Demo images are already transparent webp — use directly
+        // Demo images already have transparent background — use directly, no processing
         newUrls[i] = raw
       }
     })
