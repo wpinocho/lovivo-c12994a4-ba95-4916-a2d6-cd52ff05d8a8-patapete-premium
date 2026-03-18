@@ -14,16 +14,30 @@ import { PostHogProvider } from "@/contexts/PostHogContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+// ThankYou is imported statically — it's a critical post-purchase page
+// and must never fail due to stale lazy-loaded chunks after a new deploy
+import ThankYou from "./pages/ThankYou";
 
-const Product = lazy(() => import('./pages/Product'));
-const Blog = lazy(() => import('./pages/Blog'));
-const BlogPost = lazy(() => import('./pages/BlogPost'));
-const Checkout = lazy(() => import('./pages/Checkout'));
-const ThankYou = lazy(() => import('./pages/ThankYou'));
-const Cart = lazy(() => import('./pages/Cart'));
-const MyOrders = lazy(() => import('./pages/MyOrders'));
-const Bundle = lazy(() => import('./pages/Bundle'));
-const MySubscriptions = lazy(() => import('./pages/MySubscriptions'));
+// Helper: on chunk load failure (stale deploy), reload the page once
+const lazyWithReload = (importFn: () => Promise<any>) =>
+  lazy(() =>
+    importFn().catch(() => {
+      if (!sessionStorage.getItem("chunk_reload")) {
+        sessionStorage.setItem("chunk_reload", "1");
+        window.location.reload();
+      }
+      return { default: () => null };
+    })
+  );
+
+const Product = lazyWithReload(() => import('./pages/Product'));
+const Blog = lazyWithReload(() => import('./pages/Blog'));
+const BlogPost = lazyWithReload(() => import('./pages/BlogPost'));
+const Checkout = lazyWithReload(() => import('./pages/Checkout'));
+const Cart = lazyWithReload(() => import('./pages/Cart'));
+const MyOrders = lazyWithReload(() => import('./pages/MyOrders'));
+const Bundle = lazyWithReload(() => import('./pages/Bundle'));
+const MySubscriptions = lazyWithReload(() => import('./pages/MySubscriptions'));
 
 const queryClient = new QueryClient();
 
