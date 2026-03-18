@@ -150,9 +150,14 @@ export function CanvasPreview({ style, pets, phrase, phrase2, onPreviewReady }: 
         {layout.pets.map((petLayout, i) => {
           const pet = pets[i]
           if (!pet) return null
-          // Use flood-fill processed URL (outer bg removed, white chest preserved)
-          // Falls back to raw URL while processing runs, then to demo image
-          const imgUrl = processedUrls[i] || pet.generatedArtUrl || DEMO_URLS[style][i]
+          // For generated images: wait for flood-fill before rendering to avoid white flash.
+          // For demo images: show immediately (already transparent).
+          const imgUrl = pet.generatedArtUrl
+            ? processedUrls[i]           // undefined until flood-fill completes
+            : DEMO_URLS[style][i]
+
+          // Still processing — render nothing rather than showing white background
+          if (!imgUrl) return null
 
           return (
             <div
