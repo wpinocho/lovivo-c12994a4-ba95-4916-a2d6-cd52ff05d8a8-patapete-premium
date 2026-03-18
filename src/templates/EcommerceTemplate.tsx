@@ -2,7 +2,6 @@ import { useState, useEffect, ReactNode } from 'react'
 import { PageTemplate } from './PageTemplate'
 import { BrandLogoLeft } from '@/components/BrandLogoLeft'
 import { SocialLinks } from '@/components/SocialLinks'
-import { FloatingCart } from '@/components/FloatingCart'
 import { ProfileMenu } from '@/components/ProfileMenu'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -269,7 +268,6 @@ export const EcommerceTemplate = ({
         {children}
       </PageTemplate>
 
-      {showCart && <FloatingCart hideOnMobile={hideFloatingCartOnMobile} />}
     </>
   )
 }
