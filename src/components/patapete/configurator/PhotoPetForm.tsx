@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { X, RefreshCw, Sparkles, Camera } from 'lucide-react'
+import { trackCustomEvent } from '@/lib/tracking-utils'
 
 interface PhotoPetFormProps {
   petIndex: number
@@ -66,6 +67,11 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, onClear, pho
     if (!file) return
     const url = URL.createObjectURL(file)
     onChange({ photoFile: file, photoPreviewUrl: url, processedImageUrl: null, generatedArtUrl: null, progressMessage: '' })
+    trackCustomEvent('photo_uploaded', {
+      pet_index: petIndex,
+      file_type: file.type,
+      source: 'file_input',
+    })
     onGenerate(file)
   }
 
@@ -75,6 +81,11 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, onClear, pho
     if (!file || !file.type.startsWith('image/')) return
     const url = URL.createObjectURL(file)
     onChange({ photoFile: file, photoPreviewUrl: url, processedImageUrl: null, generatedArtUrl: null, progressMessage: '' })
+    trackCustomEvent('photo_uploaded', {
+      pet_index: petIndex,
+      file_type: file.type,
+      source: 'drag_and_drop',
+    })
     onGenerate(file)
   }
 

@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext'
 import { useCartUISafe } from '@/components/CartProvider'
 import { STYLE_LABELS } from './types'
 import { userSupabase } from '@/integrations/supabase/client'
+import { trackCustomEvent } from '@/lib/tracking-utils'
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
 const STORAGE_KEY = 'patapete_v1'
@@ -189,6 +190,11 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
       )
 
       updatePet({ generatedArtUrl: artUrl, isGeneratingArt: false })
+      trackCustomEvent('icon_generated', {
+        pet_index: petIndex,
+        style: styleRef.current,
+        pet_name: pet.name || 'sin_nombre',
+      })
     } catch (err) {
       console.error('Error generating art:', err)
       updatePet({ isProcessingBg: false, isGeneratingArt: false })
@@ -255,6 +261,12 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
     saveCustomizationToCart(currentState, variantId, product.id)
     addItem(product, variant)
+    trackCustomEvent('configurator_add_to_cart', {
+      pet_count: currentState.petCount,
+      style: currentState.style,
+      has_phrase: !!currentState.phrase,
+      variant_id: variantId,
+    })
     openCart()
   }, [product, state, addItem, openCart, saveCustomizationToCart])
 
@@ -266,6 +278,12 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
     saveCustomizationToCart(currentState, variantId, product.id)
     addItem(product, variant)
+    trackCustomEvent('configurator_order_now', {
+      pet_count: currentState.petCount,
+      style: currentState.style,
+      has_phrase: !!currentState.phrase,
+      variant_id: variantId,
+    })
     navigate('/pagar')
   }, [product, state, addItem, navigate, saveCustomizationToCart])
 
