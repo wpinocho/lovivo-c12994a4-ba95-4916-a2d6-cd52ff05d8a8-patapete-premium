@@ -1,7 +1,7 @@
-// v21 — Step 4 migrated from Fal.ai FLUX to Google Gemini 2.5 Flash
+// v22 — Step 4: Google Gemini 2.0 Flash Preview Image Generation
 //   Steps 1 & 5.5: fal-ai/birefnet  (real BiRefNet, ~1-2s, no GPU queue)
-//   Step 4:        Google Gemini 2.5 Flash image generation (inline_data, no queue)
-//   No more Replicate dependency.
+//   Step 4:        gemini-2.0-flash-preview-image-generation (inline_data, no queue)
+//   Note: gemini-2.5-flash does NOT support image generation. Use the dedicated model.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -321,12 +321,13 @@ async function urlToBase64(url: string): Promise<{ base64: string; mimeType: str
   return { base64: btoa(binary), mimeType }
 }
 
-// ─── STEP 4: Google Gemini 2.5 Flash → final art (inline_data, no queue) ──────
+// ─── STEP 4: Google Gemini 2.0 Flash Preview Image Generation → final art ──────
 //
 // Strategy:
 //   Both images passed as inline_data parts (base64)
 //   Image 1 = pet (normalized), Image 2 = style reference
 //   Gemini returns image as inline_data in response
+//   Model: gemini-2.0-flash-preview-image-generation (only model that supports image output)
 //
 async function generateWithGemini(
   petUrl: string,
@@ -356,9 +357,9 @@ CRITICAL COLOR RULE: Use ONLY the EXACT colors visible in the first image. DO NO
 ${haikuPrompt}`
   }
 
-  console.log(`[generate-tattoo] Step 4 INPUT — Gemini 2.5 Flash:`)
+  console.log(`[generate-tattoo] Step 4 INPUT — Gemini 2.0 Flash Preview Image Generation:`)
   console.log(`  style: ${artStyle}`)
-  console.log(`  model: gemini-2.5-flash-preview-04-17`)
+  console.log(`  model: gemini-2.0-flash-preview-image-generation`)
   console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
 
   const requestBody = {
@@ -370,13 +371,13 @@ ${haikuPrompt}`
       ],
     }],
     generationConfig: {
-      responseModalities: ['IMAGE'],
+      responseModalities: ['IMAGE', 'TEXT'],
     },
   }
 
   const t0 = Date.now()
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -442,7 +443,7 @@ serve(async (req) => {
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
-    console.log(`[generate-tattoo] ═══ PIPELINE START (v21 — Gemini 2.5 Flash) ═══`)
+    console.log(`[generate-tattoo] ═══ PIPELINE START (v22 — Gemini 2.0 Flash Image Gen) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
     // Step 1: Remove background from user photo (fal-ai/birefnet)
@@ -470,7 +471,7 @@ serve(async (req) => {
     console.log(`[generate-tattoo] Step 3 done in ${Date.now() - t3}ms`)
 
     // Step 4: Gemini 2.5 Flash → final art
-    console.log('[generate-tattoo] ─── Step 4: Gemini 2.5 Flash image generation ───')
+    console.log('[generate-tattoo] ─── Step 4: gemini-2.0-flash-preview-image-generation ───')
     const t4 = Date.now()
     const { base64: artBase64, mimeType: artMimeType } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
