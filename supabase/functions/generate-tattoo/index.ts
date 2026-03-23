@@ -199,26 +199,24 @@ async function uploadNormalizedPet(base64: string): Promise<string> {
 }
 
 // ─── STEP 3: Claude Haiku 3 → generate optimized prompt ─────────────────────
-const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen (Flux).
+const SYSTEM_PROMPT_ICONO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un modelo texto-a-imagen.
 
-Analiza la imagen y extrae lo siguiente de forma precisa:
+Analiza la imagen y extrae lo siguiente:
 
-Tipo de animal y raza aproximada.
+Tipo de animal. (ej: perro, gato, caballo, etc)
 
-Textura y longitud del pelo (ej. liso y corto, rizado, esponjoso).
+Textura del pelo (ej. liso y corto, esponjoso, alambre/scruffy).
 
-Colores principales y cómo están distribuidos (ej. base café claro con antifaz oscuro).
+Colores principales. EXACT COLORS FROM IMAGE — describe ÚNICAMENTE los colores que ves en la imagen real, NO inferir colores por raza. (ej. café chocolate, negro con manchas blancas, blanco puro, gris plateado).
 
-Expresión facial exacta, indicando explícitamente si los ojos están abiertos o cerrados (ej. ojos bien abiertos mirando al frente, boca abierta con lengua de fuera).
-
-Rasgos distintivos CRÍTICOS y accesorios (ej. oreja izquierda caída, mancha blanca en el pecho, paliacate rojo liso).
+Rasgos distintivos CRÍTICOS y accesorios (ej. ojos azul claro muy llamativos, orejas caídas, collar/paliacate simplificado a un solo color).
 
 Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
 
-A charming flat 2D cartoon illustration 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws playfully resting on a single thin black horizontal stroke line at the bottom edge. CRITICAL: the line is ONE pixel-thin stroke only — NO filled black panel, NO solid block, NO thick bar, NO black area below the line. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
-STYLE: Flat colorful vector cartoon illustration. Bold clean outlines, solid color fills with minimal cel-shading. Like a professional sticker design or mobile app character icon. NO sketchy lines, NO crosshatching, NO pencil texture, NO painterly brushstrokes, NO photorealism.
-FUR & COLORS: [TEXTURA Y LONGITUD DEL PELO]. [COLORES PRINCIPALES Y DISTRIBUCIÓN]. Use vibrant, saturated colors. Simple gradient or cel-shade highlights only.
-EXPRESSION & FEATURES: [EXPRESIÓN FACIAL EXACTA — MUST INCLUDE: eyes open or closed]. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Clean shapes, print-ready for sublimation.`
+A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
+CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
+LIMITED COLOR PALETTE: [COLORES PRINCIPALES — EXACT COLORS FROM IMAGE, copy them precisely, do NOT apply breed-typical or assumed coloring]. Solid black for outlines. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
@@ -243,14 +241,14 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   const systemPrompt = style === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
   const t0 = Date.now()
 
-  console.log(`[generate-tattoo] Step 3 INPUT — Claude Haiku:`)
+  console.log(`[generate-tattoo] Step 3 INPUT — Claude Haiku 4.5:`)
   console.log(`  style: ${style}`)
   console.log(`  model: claude-3-haiku-20240307`)
   console.log(`  image base64 length: ${normalizedBase64.length}`)
   console.log(`  system prompt (full):\n---\n${systemPrompt}\n---`)
 
   const requestBody = {
-    model: 'claude-3-haiku-20240307',
+    model: 'claude-haiku-4-5',
     max_tokens: 1024,
     system: systemPrompt,
     messages: [
@@ -322,7 +320,8 @@ ${haikuPrompt}`
   } else {
     imageUrls = [petUrl, STYLE_REFERENCE_ICONO_URL]
     finalPrompt = `<image 1> is the pet to recreate. <image 2> is the EXACT art style reference to apply.
-Generate a flat colorful 2D cartoon portrait of the pet from <image 1>. The output MUST match the style of <image 2> EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, bright vibrant colors, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
+Generate a minimalist flat vector portrait of the pet from <image 1>. The output MUST match the style of <image 2> EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
+CRITICAL COLOR RULE: Use ONLY the EXACT colors visible in <image 1>. DO NOT apply breed-typical or assumed coloring. If the animal is white, keep it white. If gray, keep it gray. Copy the real colors from the photo precisely.
 ${haikuPrompt}`
   }
 
