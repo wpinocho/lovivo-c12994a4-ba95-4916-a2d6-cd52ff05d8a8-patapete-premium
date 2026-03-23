@@ -207,16 +207,17 @@ Tipo de animal. (ej: perro, gato, caballo, etc)
 
 Textura del pelo (ej. liso y corto, esponjoso, alambre/scruffy).
 
-Colores principales. EXACT COLORS FROM IMAGE — describe ÚNICAMENTE los colores que ves en la imagen real, NO inferir colores por raza. (ej. café chocolate, negro con manchas blancas, blanco puro, gris plateado).
+Colores principales. EXACT COLORS FROM IMAGE (ej. café chocolate, negro con machas blancas).
 
 Rasgos distintivos CRÍTICOS y accesorios (ej. ojos azul claro muy llamativos, orejas caídas, collar/paliacate simplificado a un solo color).
 
 Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta (mantén la plantilla en inglés). Devuelve ÚNICAMENTE el texto de la plantilla completada, sin introducciones ni explicaciones:
 
-A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
+Plantilla:
+A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom edge. CRITICAL: the line is ONE pixel-thin stroke only — NO filled black panel, NO solid block, NO thick bar, NO black area below the line. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
 STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
 CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
-LIMITED COLOR PALETTE: [COLORES PRINCIPALES — EXACT COLORS FROM IMAGE, copy them precisely, do NOT apply breed-typical or assumed coloring]. Solid black for outlines. CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
+LIMITED COLOR PALETTE: [Colores principales]. Solid black for outlines.  CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
