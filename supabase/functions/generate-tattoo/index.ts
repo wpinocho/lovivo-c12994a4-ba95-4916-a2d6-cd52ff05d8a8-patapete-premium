@@ -1,6 +1,6 @@
-// v20 — Migrated from Replicate to Fal.ai (fal-ai/birefnet + fal-ai/flux-2-pro/edit)
+// v21 — Step 4 migrated from Fal.ai FLUX to Google Gemini 2.5 Flash
 //   Steps 1 & 5.5: fal-ai/birefnet  (real BiRefNet, ~1-2s, no GPU queue)
-//   Step 4:        fal-ai/flux-2-pro/edit  (same model via Fal's faster infra)
+//   Step 4:        Google Gemini 2.5 Flash image generation (inline_data, no queue)
 //   No more Replicate dependency.
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const FALAI_API_KEY            = Deno.env.get('FALAI_API_KEY')!
 const ANTHROPIC_API_KEY        = Deno.env.get('ANTHROPIC_API_KEY')!
+const GEMINI_API_KEY           = Deno.env.get('GEMINI_API_KEY')!
 const SUPABASE_URL             = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -298,80 +299,132 @@ async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo
   return text.trim()
 }
 
-// ─── STEP 4: fal-ai/flux-2-pro/edit → final art via image_urls[] ─────────────
+// ─── Helper: fetch URL → base64 string (chunked to avoid stack overflow) ──────
+async function urlToBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Failed to fetch image from ${url}: ${res.status}`)
+  const bytes = new Uint8Array(await res.arrayBuffer())
+
+  // Detect mime type from Content-Type header or URL extension
+  const ct = res.headers.get('content-type') || ''
+  let mimeType = 'image/jpeg'
+  if (ct.includes('png') || url.endsWith('.png')) mimeType = 'image/png'
+  else if (ct.includes('webp') || url.endsWith('.webp')) mimeType = 'image/webp'
+  else if (ct.includes('jpeg') || ct.includes('jpg') || url.endsWith('.jpg') || url.endsWith('.jpeg')) mimeType = 'image/jpeg'
+
+  // Chunked btoa to avoid stack overflow on large images
+  let binary = ''
+  const chunkSize = 32768
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return { base64: btoa(binary), mimeType }
+}
+
+// ─── STEP 4: Google Gemini 2.5 Flash → final art (inline_data, no queue) ──────
 //
-// Strategy (same as before, now via Fal):
-//   DIBUJO — image_urls = [petUrl, styleRefUrl]
-//   ICONO  — image_urls = [petUrl, styleRefIconoUrl]
-//   Prompt instructs model: first image = pet, second = style reference to apply
+// Strategy:
+//   Both images passed as inline_data parts (base64)
+//   Image 1 = pet (normalized), Image 2 = style reference
+//   Gemini returns image as inline_data in response
 //
-async function generateWithFluxFal(
+async function generateWithGemini(
   petUrl: string,
   haikuPrompt: string,
   artStyle: 'dibujo' | 'icono'
-): Promise<string> {
-  let imageUrls: string[]
-  let finalPrompt: string
+): Promise<{ base64: string; mimeType: string }> {
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY secret not configured')
 
+  const styleRefUrl = artStyle === 'dibujo' ? STYLE_REFERENCE_DIBUJO_URL : STYLE_REFERENCE_ICONO_URL
+
+  console.log(`[generate-tattoo] Step 4 — fetching images as inline_data for Gemini...`)
+  const [pet, styleRef] = await Promise.all([
+    urlToBase64(petUrl),
+    urlToBase64(styleRefUrl),
+  ])
+  console.log(`[generate-tattoo] Step 4 — pet: ${pet.mimeType} (${pet.base64.length} chars) | style: ${styleRef.mimeType} (${styleRef.base64.length} chars)`)
+
+  let finalPrompt: string
   if (artStyle === 'dibujo') {
-    imageUrls = [petUrl, STYLE_REFERENCE_DIBUJO_URL]
-    finalPrompt = `<image 1> is the pet to recreate. <image 2> is the exact art style reference to apply.
-Generate a portrait of the pet from <image 1>, applying STRICTLY the visual style, line weight, and artistic technique shown in <image 2>.
+    finalPrompt = `The first image is the pet to recreate. The second image is the exact art style reference to apply.
+Generate a portrait of the pet from the first image, applying STRICTLY the visual style, line weight, and artistic technique shown in the second image.
 ${haikuPrompt}`
   } else {
-    imageUrls = [petUrl, STYLE_REFERENCE_ICONO_URL]
-    finalPrompt = `<image 1> is the pet to recreate. <image 2> is the EXACT art style reference to apply.
-Generate a minimalist flat vector portrait of the pet from <image 1>. The output MUST match the style of <image 2> EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
-CRITICAL COLOR RULE: Use ONLY the EXACT colors visible in <image 1>. DO NOT apply breed-typical or assumed coloring. If the animal is white, keep it white. If gray, keep it gray. Copy the real colors from the photo precisely.
+    finalPrompt = `The first image is the pet to recreate. The second image is the EXACT art style reference to apply.
+Generate a minimalist flat vector portrait of the pet from the first image. The output MUST match the style of the second image EXACTLY: bold clean outlines, solid color fills, flat/cel-shaded, white background. NO sketchy lines, NO fine detail texture, NO painterly look.
+CRITICAL COLOR RULE: Use ONLY the EXACT colors visible in the first image. DO NOT apply breed-typical or assumed coloring. If the animal is white, keep it white. If gray, keep it gray. Copy the real colors from the photo precisely.
 ${haikuPrompt}`
   }
 
-  console.log(`[generate-tattoo] Step 4 INPUT — fal-ai/flux-2-pro/edit:`)
+  console.log(`[generate-tattoo] Step 4 INPUT — Gemini 2.5 Flash:`)
   console.log(`  style: ${artStyle}`)
-  console.log(`  image_urls: ${JSON.stringify(imageUrls)}`)
-  console.log(`  image_size: square_hd | output_format: jpeg | safety_tolerance: 2`)
+  console.log(`  model: gemini-2.5-flash-preview-04-17`)
   console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
 
-  const { statusUrl, responseUrl } = await submitFal('fal-ai/flux-2-pro/edit', {
-    prompt: finalPrompt,
-    image_urls: imageUrls,
-    image_size: 'square_hd',
-    output_format: 'jpeg',
-    safety_tolerance: '2',
-    enable_safety_checker: false,
-  })
+  const requestBody = {
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: pet.mimeType,      data: pet.base64      } },
+        { inline_data: { mime_type: styleRef.mimeType, data: styleRef.base64 } },
+        { text: finalPrompt },
+      ],
+    }],
+    generationConfig: {
+      responseModalities: ['IMAGE'],
+    },
+  }
 
-  console.log(`[generate-tattoo] Step 4 — FLUX submitted via Fal | polling up to 120s...`)
+  const t0 = Date.now()
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    }
+  )
 
-  const result = await pollFal(statusUrl, responseUrl, 120)
-  const url = result?.images?.[0]?.url
-  if (!url) throw new Error(`fal-ai/flux-2-pro/edit returned no image URL. Response: ${JSON.stringify(result)}`)
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Gemini API failed (${res.status}): ${err}`)
+  }
 
-  console.log(`[generate-tattoo] Step 4 OUTPUT — FLUX result URL: ${url}`)
-  return url
+  const result = await res.json()
+  const elapsed = Date.now() - t0
+  console.log(`[generate-tattoo] Step 4 — Gemini responded in ${elapsed}ms`)
+
+  const parts = result?.candidates?.[0]?.content?.parts ?? []
+  const imagePart = parts.find((p: any) => p.inline_data?.mime_type?.startsWith('image/'))
+
+  if (!imagePart) {
+    throw new Error(`Gemini returned no image. Response: ${JSON.stringify(result).slice(0, 500)}`)
+  }
+
+  const mimeType = imagePart.inline_data.mime_type as string
+  const base64 = imagePart.inline_data.data as string
+  console.log(`[generate-tattoo] Step 4 OUTPUT — Gemini image: ${mimeType} (${base64.length} chars)`)
+  return { base64, mimeType }
 }
 
-// ─── STEP 6: Upload FLUX JPEG to permanent Supabase Storage ──────────────────
-// Note: We skip server-side BiRefNet on the FLUX output (step 5.5) because
+// ─── STEP 6: Upload Gemini output to permanent Supabase Storage ───────────────
+// Note: We skip server-side BiRefNet on the Gemini output because
 // BiRefNet cannot distinguish the white background from white chest/interior areas.
-// Background removal is handled client-side via flood-fill which preserves interior
-// white regions by only removing pixels connected to the image edges.
-async function uploadFinalArt(artUrl: string): Promise<string> {
+// Background removal is handled client-side via flood-fill.
+async function uploadFinalArt(artBase64: string, mimeType: string): Promise<string> {
+  const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg'
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  const res = await fetch(artUrl)
-  if (!res.ok) throw new Error(`Failed to download FLUX art: ${res.status}`)
-  const bytes = new Uint8Array(await res.arrayBuffer())
-  const filename = `finals/${Date.now()}.jpg`
+  const bytes = Uint8Array.from(atob(artBase64), c => c.charCodeAt(0))
+  const filename = `finals/${Date.now()}.${ext}`
 
-  console.log(`[generate-tattoo] Step 6 INPUT — uploading FLUX JPEG to Storage: ${filename}`)
+  console.log(`[generate-tattoo] Step 6 INPUT — uploading Gemini art to Storage: ${filename} (${mimeType})`)
 
   const { error } = await supabase.storage
     .from('pet-tattoos')
-    .upload(filename, bytes, { contentType: 'image/jpeg', upsert: false })
+    .upload(filename, bytes, { contentType: mimeType, upsert: false })
 
   if (error) throw new Error(`Storage upload (finals) failed: ${error.message}`)
   const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
-  console.log(`[generate-tattoo] Step 6 OUTPUT — permanent JPEG URL: ${data.publicUrl}`)
+  console.log(`[generate-tattoo] Step 6 OUTPUT — permanent art URL: ${data.publicUrl}`)
   return data.publicUrl
 }
 
@@ -382,13 +435,14 @@ serve(async (req) => {
   try {
     if (!FALAI_API_KEY) throw new Error('FALAI_API_KEY secret not configured')
     if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')
+    if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY secret not configured')
 
     const { imageBase64, petName, style } = await req.json()
     if (!imageBase64) throw new Error('imageBase64 is required')
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
-    console.log(`[generate-tattoo] ═══ PIPELINE START (v20 — Fal.ai) ═══`)
+    console.log(`[generate-tattoo] ═══ PIPELINE START (v21 — Gemini 2.5 Flash) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
     // Step 1: Remove background from user photo (fal-ai/birefnet)
@@ -415,19 +469,19 @@ serve(async (req) => {
     const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
     console.log(`[generate-tattoo] Step 3 done in ${Date.now() - t3}ms`)
 
-    // Step 4: fal-ai/flux-2-pro/edit → final art
-    console.log('[generate-tattoo] ─── Step 4: fal-ai/flux-2-pro/edit generation ───')
+    // Step 4: Gemini 2.5 Flash → final art
+    console.log('[generate-tattoo] ─── Step 4: Gemini 2.5 Flash image generation ───')
     const t4 = Date.now()
-    const artUrl = await generateWithFluxFal(petUrl, optimizedPrompt, artStyle)
+    const { base64: artBase64, mimeType: artMimeType } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
 
-    // Step 5.5 SKIPPED — BiRefNet on FLUX output was removing white chest/interior areas.
-    // Background removal now happens client-side via flood-fill (only removes edge-connected bg).
+    // Step 5.5 SKIPPED — BiRefNet cannot distinguish white background from white interior areas.
+    // Background removal handled client-side via flood-fill.
 
-    // Step 6: Upload FLUX JPEG to permanent Storage
-    console.log('[generate-tattoo] ─── Step 6: Upload FLUX JPEG to permanent Storage ───')
+    // Step 6: Upload Gemini art to permanent Storage
+    console.log('[generate-tattoo] ─── Step 6: Upload Gemini art to permanent Storage ───')
     const t6 = Date.now()
-    const permanentArtUrl = await uploadFinalArt(artUrl)
+    const permanentArtUrl = await uploadFinalArt(artBase64, artMimeType)
     console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t6}ms | permanent URL: ${permanentArtUrl}`)
 
     const totalMs = Date.now() - t1
