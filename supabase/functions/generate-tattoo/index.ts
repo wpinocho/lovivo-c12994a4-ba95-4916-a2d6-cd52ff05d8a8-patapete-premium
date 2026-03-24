@@ -333,7 +333,7 @@ async function generateWithGemini(
   petUrl: string,
   haikuPrompt: string,
   artStyle: 'dibujo' | 'icono'
-): Promise<{ base64: string; mimeType: string }> {
+): Promise<{ base64: string; mimeType: string; promptUsed: string }> {
   if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY secret not configured')
 
   const styleRefUrl = artStyle === 'dibujo' ? STYLE_REFERENCE_DIBUJO_URL : STYLE_REFERENCE_ICONO_URL
@@ -408,7 +408,7 @@ ${haikuPrompt}`
   const mimeType = (imagePart.inlineData?.mimeType ?? imagePart.inline_data?.mime_type) as string
   const base64 = (imagePart.inlineData?.data ?? imagePart.inline_data?.data) as string
   console.log(`[generate-tattoo] Step 4 OUTPUT — Gemini image: ${mimeType} (${base64.length} chars)`)
-  return { base64, mimeType }
+  return { base64, mimeType, promptUsed: finalPrompt }
 }
 
 // ─── STEP 6: Upload Gemini output to permanent Supabase Storage ───────────────
@@ -447,6 +447,8 @@ serve(async (req) => {
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
+    const tStart = Date.now()
+
     console.log(`[generate-tattoo] ═══ PIPELINE START (v24 — gemini-2.5-flash-image stable) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
@@ -454,7 +456,8 @@ serve(async (req) => {
     console.log('[generate-tattoo] ─── Step 1: fal-ai/birefnet background removal (user photo) ───')
     const t1 = Date.now()
     const transparentPngUrl = await removeBackgroundFal(`data:image/png;base64,${imageBase64}`, 'Step 1')
-    console.log(`[generate-tattoo] Step 1 done in ${Date.now() - t1}ms`)
+    const latencyBirefnet = Date.now() - t1
+    console.log(`[generate-tattoo] Step 1 done in ${latencyBirefnet}ms`)
 
     // Step 2: Smart crop + normalize
     console.log('[generate-tattoo] ─── Step 2: Smart crop & normalize ───')
@@ -470,15 +473,18 @@ serve(async (req) => {
 
     // Step 3: Claude Haiku → optimized prompt
     console.log('[generate-tattoo] ─── Step 3: Claude Haiku 3 prompt generation ───')
+    const haikuInputPrompt = artStyle === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
     const t3 = Date.now()
     const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
-    console.log(`[generate-tattoo] Step 3 done in ${Date.now() - t3}ms`)
+    const latencyHaiku = Date.now() - t3
+    console.log(`[generate-tattoo] Step 3 done in ${latencyHaiku}ms`)
 
     // Step 4: Gemini 2.5 Flash → final art
     console.log('[generate-tattoo] ─── Step 4: gemini-2.5-flash-image ───')
     const t4 = Date.now()
-    const { base64: artBase64, mimeType: artMimeType } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
-    console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
+    const { base64: artBase64, mimeType: artMimeType, promptUsed: geminiPrompt } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
+    const latencyGemini = Date.now() - t4
+    console.log(`[generate-tattoo] Step 4 done in ${latencyGemini}ms`)
 
     // Step 5.5 SKIPPED — BiRefNet cannot distinguish white background from white interior areas.
     // Background removal handled client-side via flood-fill.
@@ -489,9 +495,26 @@ serve(async (req) => {
     const permanentArtUrl = await uploadFinalArt(artBase64, artMimeType)
     console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t6}ms | permanent URL: ${permanentArtUrl}`)
 
-    const totalMs = Date.now() - t1
-    console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${totalMs}ms ═══`)
+    const latencyTotal = Date.now() - tStart
+    console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${latencyTotal}ms ═══`)
     console.log(`[generate-tattoo] FINAL OUTPUT URL: ${permanentArtUrl}`)
+
+    // 🔥 FIRE AND FORGET — insert log sin bloquear la respuesta al usuario
+    const supabaseLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    supabaseLog.from('generation_logs').insert({
+      pet_name:            petName || null,
+      style:               artStyle,
+      haiku_input_prompt:  haikuInputPrompt,
+      haiku_output_prompt: optimizedPrompt,
+      gemini_prompt:       geminiPrompt,
+      gemini_output_url:   permanentArtUrl,
+      latency_birefnet_ms: latencyBirefnet,
+      latency_haiku_ms:    latencyHaiku,
+      latency_gemini_ms:   latencyGemini,
+      latency_total_ms:    latencyTotal,
+    })
+      .then(() => console.log('[generate-tattoo] ✓ Log saved to generation_logs'))
+      .catch((e: Error) => console.error('[generate-tattoo] Log save failed:', e.message))
 
     return new Response(JSON.stringify({ url: permanentArtUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
