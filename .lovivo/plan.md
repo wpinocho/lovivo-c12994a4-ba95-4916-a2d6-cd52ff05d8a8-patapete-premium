@@ -85,3 +85,105 @@
 - FALAI_API_KEY aún necesaria para BiRefNet (step 1)
 - GEMINI_API_KEY para step 4 (ya configurada)
 - ANTHROPIC_API_KEY para step 3 (Haiku)
+
+---
+
+## 🐛 BUG: "Ordenar ahora" llega al checkout con carrito vacío
+
+### Diagnóstico del problema
+**Root cause:** `handleOrderNow` en `PatapeteConfigurator.tsx` solo llama `addItem()` (actualiza CartContext local) y luego `navigate('/pagar')` inmediatamente. El checkout page (`/pagar`) requiere un **backend order activo** (orderId + checkoutToken en sessionStorage) para mostrar los items — sin eso, `useOrderItems` retorna vacío y se ve "Tu carrito está vacío".
+
+El flujo correcto (que sí funciona con "Agregar al carrito" → ir al carrito → proceder al pago) es:
+1. `addItem()` → CartContext
+2. `checkout()` desde `useCheckout` → llama `createCheckoutFromCart` → crea orden en backend
+3. Guarda `checkout_order` y `checkout_order_id` en sessionStorage
+4. `navigate('/pagar')` → checkout page encuentra el orderId → carga items
+
+### Decisión de tracking (opción B del usuario)
+Disparar **ambos eventos**: `AddToCart` + `InitiateCheckout` para funnel completo en PostHog y Meta.
+
+### Fix a implementar en `src/components/patapete/configurator/PatapeteConfigurator.tsx`
+
+**Nuevos imports:**
+```ts
+import { useCheckout } from '@/hooks/useCheckout'
+import { useSettings } from '@/contexts/SettingsContext'
+import { trackAddToCart, trackInitiateCheckout } from '@/lib/tracking-utils'
+```
+
+**Nuevo hook en el componente:**
+```ts
+const { checkout, isLoading: isCreatingOrder } = useCheckout()
+const { currencyCode } = useSettings()
+```
+
+**`handleOrderNow` reescrito:**
+```ts
+const handleOrderNow = useCallback(async () => {
+  if (!product) return
+  const currentState = state
+  const variantId = VARIANT_IDS[currentState.petCount]
+  const variant = product?.variants?.find((v: any) => v.id === variantId)
+
+  saveCustomizationToCart(currentState, variantId, product.id)
+  addItem(product, variant)
+
+  // Tracking: AddToCart (estándar Meta funnel)
+  trackAddToCart({
+    products: [{ id: product.id, name: product.title, price: variant?.price ?? product.price, variant_id: variantId }],
+    value: variant?.price ?? product.price,
+    currency: currencyCode,
+    num_items: 1,
+  })
+
+  // Tracking: custom event Patapete
+  trackCustomEvent('configurator_order_now', {
+    pet_count: currentState.petCount,
+    style: currentState.style,
+    has_phrase: !!currentState.phrase,
+    variant_id: variantId,
+  })
+
+  try {
+    // Crear la orden en el backend (como hace CartAdapter.handleCreateCheckout)
+    try {
+      sessionStorage.setItem('checkout_cart', JSON.stringify({ items: [{ product, variant, quantity: 1 }], total: variant?.price ?? product.price }))
+    } catch {}
+
+    const order = await checkout({ currencyCode })
+
+    try {
+      sessionStorage.setItem('checkout_order', JSON.stringify(order))
+      sessionStorage.setItem('checkout_order_id', String(order.order_id))
+    } catch {}
+
+    // Tracking: InitiateCheckout (estándar Meta funnel)
+    trackInitiateCheckout({
+      products: [{ id: product.id, name: product.title, price: variant?.price ?? product.price, variant_id: variantId }],
+      value: order.total_amount ?? (variant?.price ?? product.price),
+      currency: currencyCode,
+      num_items: 1,
+    })
+
+    navigate('/pagar')
+  } catch (error) {
+    console.error('Error creating checkout from configurator:', error)
+    // Fallback: igual navegar al checkout, el usuario verá el error
+    navigate('/pagar')
+  }
+}, [product, state, addItem, navigate, saveCustomizationToCart, checkout, currencyCode])
+```
+
+**También:** Exponer `isCreatingOrder` para desactivar el botón mientras se crea la orden:
+- El botón "Ordenar ahora" debe estar disabled cuando `isCreatingOrder` es true
+- Texto durante loading: "Procesando..." o similar
+- Pasar `isCreatingOrder` como prop hasta `StepPets` → CTA buttons
+
+### Archivos a modificar
+- `src/components/patapete/configurator/PatapeteConfigurator.tsx`: Reescribir `handleOrderNow` con checkout completo
+- `src/components/patapete/configurator/StepPets.tsx`: Recibir y manejar `isCreatingOrder` prop para deshabilitar botones mientras se procesa
+
+### Notas importantes
+- `checkout()` internamente llama `createCheckoutFromCart(cart.items, ...)` — y `cart.items` ya tendrá el item que acabamos de agregar con `addItem()` porque ambos comparten el mismo CartContext
+- El `checkout()` también llama `clearCart()` después de crear la orden — esto es correcto
+- `handleAddToCart` NO necesita cambios (ese flujo ya funciona correctamente)
