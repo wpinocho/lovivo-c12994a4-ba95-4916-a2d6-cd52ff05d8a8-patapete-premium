@@ -457,6 +457,9 @@ async function uploadFinalArt(artBase64: string, mimeType: string): Promise<stri
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  // Mutable log object — filled progressively so we can always insert it, even on error
+  const log: Record<string, unknown> = {}
+
   try {
     if (!FALAI_API_KEY) throw new Error('FALAI_API_KEY secret not configured')
     if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')
@@ -466,6 +469,9 @@ serve(async (req) => {
     if (!imageBase64) throw new Error('imageBase64 is required')
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
+
+    log.pet_name = petName || null
+    log.style    = artStyle
 
     const tStart = Date.now()
 
@@ -480,6 +486,8 @@ serve(async (req) => {
       uploadUserImage(imageBase64),
     ])
     const latencyBirefnet = Date.now() - t1
+    log.user_image_url      = userImageUrl
+    log.latency_birefnet_ms = latencyBirefnet
     console.log(`[generate-tattoo] Step 0.5 + Step 1 done in ${latencyBirefnet}ms`)
 
     // Step 2: Smart crop + normalize
@@ -492,14 +500,18 @@ serve(async (req) => {
     console.log('[generate-tattoo] ─── Step 2.5: Upload pet to Supabase Storage ───')
     const t25 = Date.now()
     const petUrl = await uploadNormalizedPet(normalizedBase64)
+    log.pet_normalized_url = petUrl
     console.log(`[generate-tattoo] Step 2.5 done in ${Date.now() - t25}ms`)
 
     // Step 3: Claude Haiku → optimized prompt
     console.log('[generate-tattoo] ─── Step 3: Claude Haiku 3 prompt generation ───')
     const haikuInputPrompt = artStyle === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
+    log.haiku_input_prompt = haikuInputPrompt
     const t3 = Date.now()
     const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
     const latencyHaiku = Date.now() - t3
+    log.haiku_output_prompt = optimizedPrompt
+    log.latency_haiku_ms    = latencyHaiku
     console.log(`[generate-tattoo] Step 3 done in ${latencyHaiku}ms`)
 
     // Step 4: Gemini 2.5 Flash → final art
@@ -507,6 +519,8 @@ serve(async (req) => {
     const t4 = Date.now()
     const { base64: artBase64, mimeType: artMimeType, promptUsed: geminiPrompt } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
     const latencyGemini = Date.now() - t4
+    log.gemini_prompt    = geminiPrompt
+    log.latency_gemini_ms = latencyGemini
     console.log(`[generate-tattoo] Step 4 done in ${latencyGemini}ms`)
 
     // Step 5.5 SKIPPED — BiRefNet cannot distinguish white background from white interior areas.
@@ -516,28 +530,19 @@ serve(async (req) => {
     console.log('[generate-tattoo] ─── Step 6: Upload Gemini art to permanent Storage ───')
     const t6 = Date.now()
     const permanentArtUrl = await uploadFinalArt(artBase64, artMimeType)
+    log.gemini_output_url = permanentArtUrl
     console.log(`[generate-tattoo] Step 6 done in ${Date.now() - t6}ms | permanent URL: ${permanentArtUrl}`)
 
     const latencyTotal = Date.now() - tStart
+    log.latency_total_ms = latencyTotal
+    log.status           = 'success'
+
     console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${latencyTotal}ms ═══`)
     console.log(`[generate-tattoo] FINAL OUTPUT URL: ${permanentArtUrl}`)
 
     // 🔥 FIRE AND FORGET — insert log sin bloquear la respuesta al usuario
     const supabaseLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    supabaseLog.from('generation_logs').insert({
-      pet_name:            petName || null,
-      style:               artStyle,
-      user_image_url:      userImageUrl,
-      pet_normalized_url:  petUrl,
-      haiku_input_prompt:  haikuInputPrompt,
-      haiku_output_prompt: optimizedPrompt,
-      gemini_prompt:       geminiPrompt,
-      gemini_output_url:   permanentArtUrl,
-      latency_birefnet_ms: latencyBirefnet,
-      latency_haiku_ms:    latencyHaiku,
-      latency_gemini_ms:   latencyGemini,
-      latency_total_ms:    latencyTotal,
-    })
+    supabaseLog.from('generation_logs').insert(log)
       .then(() => console.log('[generate-tattoo] ✓ Log saved to generation_logs'))
       .catch((e: Error) => console.error('[generate-tattoo] Log save failed:', e.message))
 
@@ -547,6 +552,15 @@ serve(async (req) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[generate-tattoo] ═══ ERROR ═══', message)
+
+    // 🔥 FIRE AND FORGET — también guardamos el log en caso de error con status='error'
+    log.status        = 'error'
+    log.error_message = message
+    const supabaseLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    supabaseLog.from('generation_logs').insert(log)
+      .then(() => console.log('[generate-tattoo] ✓ Error log saved to generation_logs'))
+      .catch((e: Error) => console.error('[generate-tattoo] Error log save failed:', e.message))
+
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

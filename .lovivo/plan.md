@@ -18,7 +18,14 @@
    - Responde con imagen en `candidates[0].content.parts[].inlineData` (camelCase)
    - Sin cola / sin polling — respuesta directa
 6. **Step 6:** Upload Gemini output a Supabase Storage → URL permanente
-7. **🔥 FIRE AND FORGET:** Insert a `generation_logs` sin await — cero latencia agregada
+7. **🔥 FIRE AND FORGET:** Insert a `generation_logs` sin await — cero latencia agregada al usuario
+
+## Error conocido: imagen de personas (no mascota)
+- Claude Haiku detecta que la imagen no es una mascota y devuelve texto explicativo en lugar del prompt
+- Gemini recibe ese texto como prompt y también rechaza generar la imagen
+- Error final: `Gemini returned no image`
+- **No hay validación client-side para este caso** — el usuario ve un error genérico
+- Posible mejora futura: validar output de Haiku antes de pasar a Gemini
 
 ## Historial de modelos probados
 - `gemini-2.5-flash-preview-04-17` → 404 (modelo de texto, no genera imágenes)
@@ -34,17 +41,21 @@
 - Input token limit: 65,536 | Output token limit: 32,768
 - **Respuesta usa camelCase:** `inlineData.mimeType` y `inlineData.data` (NO snake_case)
 
-## Tabla generation_logs ✅ IMPLEMENTADA
+## Tabla generation_logs ✅ COMPLETA
 - Migración original: `supabase/migrations/20260324012833_create_generation_logs.sql`
 - Migración columnas imagen: `supabase/migrations/20260324152816_add_image_urls_to_generation_logs.sql`
+- Migración status/error: `supabase/migrations/20260324194609_add_status_and_error_to_generation_logs.sql`
 - Columnas completas:
   - `id`, `created_at`
   - `pet_name`, `style`
+  - **`status`** — 'success' | 'error' (default 'success')
+  - **`error_message`** — mensaje de error si status='error' (nullable)
   - **`user_image_url`** — foto original del usuario en Storage (`user-uploads/`)
   - **`pet_normalized_url`** — pet tras BiRefNet + normalización 800×800 (step 2.5, `petUrl`)
   - `haiku_input_prompt`, `haiku_output_prompt`, `gemini_prompt`, `gemini_output_url`
   - `latency_birefnet_ms`, `latency_haiku_ms`, `latency_gemini_ms`, `latency_total_ms`
 - **Estrategia fire-and-forget:** insert sin `await` antes del `return new Response(...)` → cero latencia agregada al usuario
+- **Siempre se inserta:** el objeto `log` se llena progresivamente y se inserta tanto en éxito como en error (catch block)
 - `latency_total_ms` mide desde `tStart` (inicio del handler) hasta antes del return
 - `generateWithGemini` retorna `{ base64, mimeType, promptUsed }` para capturar el prompt exacto enviado a Gemini (sin las imágenes en base64)
 - **Upload usuario paralelo:** `uploadUserImage()` corre en `Promise.all` junto a BiRefNet → cero latencia extra
@@ -53,6 +64,7 @@
 - Probar con diferentes razas/colores para verificar calidad Gemini 2.5
 - Monitorear logs step 4: tiempo de respuesta
 - Revisar tabla `generation_logs` en Supabase Dashboard para validar que los 3 URLs se guardan correctamente
+- Considerar validación del output de Claude Haiku para detectar imágenes no-mascota antes de llamar a Gemini
 
 ## Eventos de PostHog implementados
 - `photo_uploaded`, `icon_generated`, `configurator_add_to_cart`, `configurator_order_now`
