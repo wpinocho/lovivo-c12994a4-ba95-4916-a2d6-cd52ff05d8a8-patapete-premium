@@ -4,11 +4,15 @@ import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
 import { StepPets } from './StepPets'
 import { compressAndResizeImage } from '@/utils/imagePreprocessing'
 import { generateTattooArt } from '@/utils/replicateApi'
-import { useCart } from '@/contexts/CartContext'
+import { useCart, CartProductItem } from '@/contexts/CartContext'
 import { useCartUISafe } from '@/components/CartProvider'
 import { STYLE_LABELS } from './types'
 import { userSupabase } from '@/integrations/supabase/client'
-import { trackCustomEvent } from '@/lib/tracking-utils'
+import { trackCustomEvent, trackAddToCart, trackInitiateCheckout } from '@/lib/tracking-utils'
+import { createCheckoutFromCart } from '@/lib/checkout'
+import { useCheckoutState } from '@/hooks/useCheckoutState'
+import { useSettings } from '@/contexts/SettingsContext'
+import { STORE_ID } from '@/lib/config'
 
 // ─── localStorage persistence ─────────────────────────────────────────────────
 const STORAGE_KEY = 'patapete_v1'
@@ -95,6 +99,9 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
   const { addItem } = useCart()
   const cartUI = useCartUISafe()
   const openCart = cartUI?.openCart ?? (() => {})
+  const { saveCheckoutState } = useCheckoutState()
+  const { currencyCode } = useSettings()
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false)
   const saved = loadFromStorage()
 
   const [state, setState] = useState<ConfiguratorState>({
@@ -270,22 +277,75 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     openCart()
   }, [product, state, addItem, openCart, saveCustomizationToCart])
 
-  const handleOrderNow = useCallback(() => {
+  const handleOrderNow = useCallback(async () => {
     if (!product) return
     const currentState = state
     const variantId = VARIANT_IDS[currentState.petCount]
     const variant = product?.variants?.find((v: any) => v.id === variantId)
+    const price = variant?.price ?? product.price ?? 0
 
-    saveCustomizationToCart(currentState, variantId, product.id)
-    addItem(product, variant)
+    // 1. Guardar customización en localStorage (lo necesita cartToApiItems internamente)
+    const itemKey = saveCustomizationToCart(currentState, variantId, product.id)
+
+    // 2. Track AddToCart — opción B: ambos eventos para funnel completo
+    trackAddToCart({
+      products: [{ id: product.id, name: product.title || product.name, price, variant_id: variantId }],
+      value: price,
+      currency: currencyCode,
+      num_items: 1,
+    })
+
+    // 3. Track evento custom Patapete
     trackCustomEvent('configurator_order_now', {
       pet_count: currentState.petCount,
       style: currentState.style,
       has_phrase: !!currentState.phrase,
       variant_id: variantId,
     })
-    navigate('/pagar')
-  }, [product, state, addItem, navigate, saveCustomizationToCart])
+
+    // 4. Crear orden en el backend directamente (sin pasar por CartContext, que aún no se actualizó)
+    setIsCreatingOrder(true)
+    try {
+      // Construir CartItem manualmente — cartToApiItems leerá la customización de localStorage
+      const cartItem: CartProductItem = {
+        type: 'product',
+        key: itemKey,
+        product,
+        variant,
+        quantity: 1,
+      }
+
+      const order = await createCheckoutFromCart(
+        [cartItem],
+        undefined, undefined, undefined, undefined, undefined,
+        currencyCode
+      )
+
+      // Guardar estado de checkout (igual que hace useCheckout internamente)
+      saveCheckoutState({
+        order_id: order.order_id,
+        checkout_token: order.checkout_token,
+        store_id: STORE_ID,
+        order: order.order,
+      })
+
+      // 5. Track InitiateCheckout — con total real del backend
+      trackInitiateCheckout({
+        products: [{ id: product.id, name: product.title || product.name, price, variant_id: variantId }],
+        value: order.total_amount ?? price,
+        currency: currencyCode,
+        num_items: 1,
+      })
+
+      navigate('/pagar')
+    } catch (error) {
+      console.error('[Patapete] Error creando checkout desde configurador:', error)
+      // Fallback: navegar de todos modos, el checkout mostrará el error
+      navigate('/pagar')
+    } finally {
+      setIsCreatingOrder(false)
+    }
+  }, [product, state, navigate, saveCustomizationToCart, saveCheckoutState, currencyCode])
 
   // Use a ref for style so handleGenerate always reads the latest value
   const styleRef = useRef(state.style)
@@ -328,6 +388,7 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
           onAddToCart={handleAddToCart}
           onOrderNow={handleOrderNow}
           onPreviewReady={handlePreviewReady}
+          isCreatingOrder={isCreatingOrder}
         />
       )}
     </div>

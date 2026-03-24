@@ -25,6 +25,7 @@ interface StepPetsProps {
   onAddToCart: () => void
   onOrderNow: () => void
   onPreviewReady: (dataUrl: string) => void
+  isCreatingOrder?: boolean
 }
 
 // ── Calculates a delivery range of 7-10 business days from today ──
@@ -51,6 +52,7 @@ export function StepPets({
   style, petCount, pets, phrase, phrase2,
   onStyleChange, onPetCountChange, onPetChange, onPhraseChange, onPhrase2Change,
   onGenerate, onClearPet, onAddToCart, onOrderNow, onPreviewReady,
+  isCreatingOrder = false,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
 
@@ -302,19 +304,21 @@ export function StepPets({
             {/* Primary CTA: Order now */}
             <Button
               onClick={() => validateAndProceed('order')}
-              disabled={isProcessing}
+              disabled={isProcessing || isCreatingOrder}
               className="w-full rounded-xl"
               size="lg"
             >
-              {isProcessing
-                ? 'Generando tu retrato...'
-                : `⚡ ¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
+              {isCreatingOrder
+                ? 'Preparando tu pedido...'
+                : isProcessing
+                  ? 'Generando tu retrato...'
+                  : `⚡ ¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
             </Button>
 
             {/* Secondary CTA: Add to cart */}
             <Button
               onClick={() => validateAndProceed('cart')}
-              disabled={isProcessing}
+              disabled={isProcessing || isCreatingOrder}
               variant="outline"
               className="w-full rounded-xl"
               size="lg"
@@ -401,6 +405,7 @@ export function StepPets({
                 onClick={() => validateAndProceed('cart')}
                 size="default"
                 variant="outline"
+                disabled={isProcessing || isCreatingOrder}
                 className="rounded-xl font-semibold px-4 hidden sm:flex"
               >
                 <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
@@ -409,9 +414,10 @@ export function StepPets({
               <Button
                 onClick={() => validateAndProceed('order')}
                 size="default"
+                disabled={isProcessing || isCreatingOrder}
                 className="rounded-xl font-semibold px-5"
               >
-                Ordenar →
+                {isCreatingOrder ? 'Procesando...' : 'Ordenar →'}
               </Button>
             </div>
           </div>
