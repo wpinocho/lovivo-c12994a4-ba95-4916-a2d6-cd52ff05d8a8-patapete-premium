@@ -95,29 +95,183 @@
 - Si recargas **a mitad** de la generación → `autoRetryDoneRef` useEffect detecta foto sin ícono y arranca automáticamente
 - Mismo comportamiento al cambiar de app en móvil, bloquear pantalla, o Safari matar la conexión
 
-### Implementación
-```tsx
-const autoRetryDoneRef = useRef(false)
+---
 
-useEffect(() => {
-  if (autoRetryDoneRef.current) return
-  autoRetryDoneRef.current = true
+## 🔧 PENDIENTE: Arquitectura Async (Job Queue) — Anti-loop en móvil
 
-  state.pets.forEach((pet, i) => {
-    if (
-      i < state.petCount &&
-      pet.photoBase64 &&
-      !pet.generatedArtUrl &&
-      !pet.isProcessingBg &&
-      !pet.isGeneratingArt
-    ) {
-      handleGenerate(i)
-    }
-  })
-}, []) // corre solo una vez al montar
+### El problema real
+El auto-retry resuelve UNA reconexión, pero no el loop infinito:
+1. User sube foto → generación empieza (conexión HTTP abierta)
+2. Cambia de app en iOS → Safari mata la conexión HTTP (~30s en background)
+3. Vuelve → auto-retry arranca generación de nuevo (nueva conexión HTTP)
+4. Sale de nuevo → conexión muere otra vez
+5. Repite → user dice "esto no funciona" y abandona
+
+### La solución: Job Queue + Polling
+En lugar de esperar la respuesta HTTP durante 30 segundos, el cliente:
+1. Manda la foto → recibe un `job_id` en <1 segundo
+2. El servidor procesa en background (sin mantener la conexión del cliente)
+3. El cliente hace polling cada 3-5 segundos preguntando "¿ya terminó el job X?"
+4. Si el user cierra la app 10 veces, cuando regresa → el resultado ya está guardado en DB → lo ve al instante
+
+### Implementación detallada
+
+#### 1. Nueva tabla `generation_jobs` (migración SQL)
+```sql
+CREATE TABLE generation_jobs (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  status        text NOT NULL DEFAULT 'processing', -- 'processing' | 'done' | 'error'
+  result_url    text,
+  error_message text,
+  style         text,
+  pet_name      text,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+-- RLS: anónimos pueden leer sus propios jobs (por job_id, no hay auth aquí)
+-- Service role puede insertar/actualizar
+ALTER TABLE generation_jobs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_read_by_id" ON generation_jobs
+  FOR SELECT USING (true);
+CREATE POLICY "service_role_all" ON generation_jobs
+  FOR ALL USING (auth.role() = 'service_role');
+```
+Nombre sugerido de migración: `20260325000000_create_generation_jobs.sql`
+
+#### 2. Modificar `supabase/functions/generate-tattoo/index.ts`
+- Aceptar `jobId` (uuid) opcional en el request body
+- Al inicio: si `jobId` proporcionado → upsert row en `generation_jobs` con `status='processing'`
+- Al final exitoso: UPDATE `generation_jobs` SET `status='done', result_url=permanentArtUrl, updated_at=now()`
+- En error: UPDATE `generation_jobs` SET `status='error', error_message=..., updated_at=now()`
+- Si NO se pasa `jobId` → comportamiento actual (backward compatible)
+- El response sigue siendo `{ url: permanentArtUrl }` — igual que antes para compatibilidad
+
+**CRÍTICO:** El UPDATE de `generation_jobs` se hace con `await` (NO fire-and-forget) porque es esencial que el cliente pueda leer el resultado. El UPDATE de `generation_logs` sigue siendo fire-and-forget.
+
+#### 3. Nueva edge function `supabase/functions/poll-generation/index.ts`
+```typescript
+// GET ?job_id=xxx
+// Returns: { status: 'processing' | 'done' | 'error', result_url?: string, error_message?: string }
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  
+  const url = new URL(req.url)
+  const jobId = url.searchParams.get('job_id')
+  if (!jobId) return new Response(JSON.stringify({ error: 'job_id required' }), { status: 400, headers: corsHeaders })
+  
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const { data, error } = await supabase
+    .from('generation_jobs')
+    .select('status, result_url, error_message')
+    .eq('id', jobId)
+    .single()
+  
+  if (error || !data) return new Response(JSON.stringify({ status: 'not_found' }), { headers: corsHeaders })
+  
+  return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+})
 ```
 
-### Por qué funciona
-- `handleGenerate` con `fileOverride=undefined` + `pet.photoBase64` disponible → salta compresión, va directo al backend con la foto guardada
-- `useRef` flag evita que corra en re-renders
-- El user solo ve la barra de progreso normal, sin botón "Reintentar"
+#### 4. Modificar `src/utils/replicateApi.ts`
+- Exportar nueva función `generateTattooArtAsync(imageBase64, petName, style, jobId, onProgress)` que:
+  1. Llama a `generate-tattoo` con el `jobId`
+  2. La llamada SÍ puede morir sin problema (el servidor sigue procesando)
+  3. Inicia polling cada 3 segundos a `poll-generation?job_id={jobId}`
+  4. Cuando `status='done'` → retorna `result_url`
+  5. Cuando `status='error'` → lanza error
+  6. Timeout después de 3 minutos (60 polls × 3s) → lanza error
+- Mantener la función original `generateTattooArt` para compatibilidad temporal
+
+```typescript
+// Lógica de polling
+async function pollForResult(jobId: string, onProgress?: TattooProgressCallback): Promise<string> {
+  const maxAttempts = 60 // 3 minutos
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 3000))
+    const { data } = await userSupabase.functions.invoke('poll-generation', {
+      // Use GET with query params via custom fetch
+    })
+    if (data?.status === 'done') return data.result_url
+    if (data?.status === 'error') throw new Error(data.error_message || 'Error generando imagen')
+  }
+  throw new Error('Tiempo de espera agotado. Intenta de nuevo.')
+}
+```
+
+**NOTA:** `userSupabase.functions.invoke` no soporta GET params directamente. Usar `fetch` con la URL directa del edge function:
+```typescript
+const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/poll-generation?job_id=${jobId}`, {
+  headers: { 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY }
+})
+```
+
+Leer SUPABASE_URL y ANON_KEY desde `src/integrations/supabase/client.ts`.
+
+#### 5. Modificar `PatapeteConfigurator.tsx` — Job ID persistence
+- Agregar al tipo de `Pet` (en `types.ts`): `jobId?: string`
+- Antes de llamar `handleGenerate`, generar un UUID v4 con `crypto.randomUUID()`
+- Pasar el `jobId` a `handleGenerate(petIndex, file, jobId)`
+- Guardar `jobId` en el estado del pet y en localStorage (ya persiste automáticamente via `saveToStorage`)
+- Modificar `loadFromStorage` para restaurar `jobId` desde localStorage
+
+**Lógica de auto-resume en `useEffect` al montar:**
+```typescript
+// En lugar de llamar handleGenerate directamente (que haría una nueva llamada HTTP),
+// primero verificar si hay un job en curso:
+state.pets.forEach(async (pet, i) => {
+  if (i < state.petCount && pet.photoBase64 && !pet.generatedArtUrl && pet.jobId) {
+    // Verificar si el job ya terminó en el servidor
+    const result = await pollJobOnce(pet.jobId)
+    if (result.status === 'done') {
+      handlePetChange(i, { generatedArtUrl: result.result_url })
+    } else if (result.status === 'processing') {
+      // El servidor aún está procesando — solo iniciar polling, NO llamar generate-tattoo de nuevo
+      startPollingForJob(i, pet.jobId)
+    } else {
+      // Error o not_found → retry completo con nuevo jobId
+      handleGenerate(i)
+    }
+  } else if (i < state.petCount && pet.photoBase64 && !pet.generatedArtUrl && !pet.jobId) {
+    // Sin jobId (primera vez) → llamar generate normalmente
+    handleGenerate(i)
+  }
+})
+```
+
+#### 6. Modificar `PersistedState` en `PatapeteConfigurator.tsx`
+```typescript
+interface PersistedPet {
+  name: string
+  photoBase64: string | null
+  generatedArtUrl: string | null
+  jobId: string | null  // NEW
+}
+```
+
+Y en `loadFromStorage` y `saveToStorage` incluir `jobId`.
+
+#### 7. Modificar `src/components/patapete/configurator/types.ts`
+Agregar `jobId?: string` al tipo `Pet`.
+
+### Archivos a crear/modificar
+| Archivo | Acción |
+|---------|--------|
+| `supabase/migrations/20260325000000_create_generation_jobs.sql` | CREAR |
+| `supabase/functions/generate-tattoo/index.ts` | MODIFICAR (aceptar jobId, actualizar DB) |
+| `supabase/functions/poll-generation/index.ts` | CREAR |
+| `src/utils/replicateApi.ts` | MODIFICAR (añadir polling async) |
+| `src/components/patapete/configurator/types.ts` | MODIFICAR (añadir jobId a Pet) |
+| `src/components/patapete/configurator/PatapeteConfigurator.tsx` | MODIFICAR (job ID persistence + smart resume) |
+
+### Comportamiento final esperado
+1. User sube foto → UUID generado → `generate-tattoo` llamado → respuesta <1s con job_id → polling inicia
+2. User cambia de app durante 30s → iOS mata la conexión HTTP → **el servidor SIGUE procesando** (30s es suficiente para el pipeline)
+3. User vuelve → auto-resume detecta jobId sin resultado → llama poll-generation → ya está done → muestra resultado ✅
+4. User vuelve antes de que el server termine → polling reanuda desde donde estaba → sin doble llamada al pipeline
+5. User regresa después de 2 minutos → resultado esperando, se muestra al instante ✅
+
+### UX (sin cambios visibles)
+- Misma barra de progreso animada
+- Mismos mensajes "Analizando tu mascota..." etc
+- El user no nota la diferencia — simplemente funciona siempre
