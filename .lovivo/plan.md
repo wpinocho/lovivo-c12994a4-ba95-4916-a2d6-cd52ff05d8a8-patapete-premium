@@ -3,6 +3,7 @@
 ## Estado actual
 - Tienda activa con campaña de Meta en curso
 - Pipeline de IA: BiRefNet (Fal) → Normalización → Claude Haiku → **Gemini 2.5 Flash Image (stable)**
+- Bug "Ordenar ahora → carrito vacío" ✅ CORREGIDO
 
 ## Pipeline actual (v24)
 1. **Step 0.5 + Step 1 (paralelo):** Upload imagen original usuario a Storage (`user-uploads/`) + `fal-ai/birefnet` — background removal (foto usuario) → corren en `Promise.all` para cero latencia extra
@@ -21,26 +22,13 @@
 
 ## ✅ Fix implementado: imágenes de personas (no mascota)
 - Haiku ahora tiene instrucción al final de ambos prompts para tratar humanos como sujetos válidos
-- `SYSTEM_PROMPT_ICONO`: NOTE al final → usa "person" como tipo, cabello = fur texture, colores de piel/ropa = main colors
-- `SYSTEM_PROMPT_DIBUJO`: NOTE al final → usa "person" + rasgos estructurales equivalentes
-- Cambio mínimo: 2 líneas de texto, sin tocar nada más del pipeline
-- Gemini acepta "person" perfectamente y genera retratos en estilo flat vector / linocut
 
 ## Tabla generation_logs ✅ COMPLETA
 - Migración original: `supabase/migrations/20260324012833_create_generation_logs.sql`
 - Migración columnas imagen: `supabase/migrations/20260324152816_add_image_urls_to_generation_logs.sql`
 - Migración status/error: `supabase/migrations/20260324194609_add_status_and_error_to_generation_logs.sql`
-- Columnas completas:
-  - `id`, `created_at`
-  - `pet_name`, `style`
-  - **`status`** — 'success' | 'error' (default 'success')
-  - **`error_message`** — mensaje de error si status='error' (nullable)
-  - **`user_image_url`** — foto original del usuario en Storage (`user-uploads/`)
-  - **`pet_normalized_url`** — pet tras BiRefNet + normalización 800×800 (step 2.5, `petUrl`)
-  - `haiku_input_prompt`, `haiku_output_prompt`, `gemini_prompt`, `gemini_output_url`
-  - `latency_birefnet_ms`, `latency_haiku_ms`, `latency_gemini_ms`, `latency_total_ms`
+- Columnas completas: `id`, `created_at`, `pet_name`, `style`, `status`, `error_message`, `user_image_url`, `pet_normalized_url`, `haiku_input_prompt`, `haiku_output_prompt`, `gemini_prompt`, `gemini_output_url`, `latency_birefnet_ms`, `latency_haiku_ms`, `latency_gemini_ms`, `latency_total_ms`
 - **Estrategia fire-and-forget:** insert sin `await` antes del `return new Response(...)` → cero latencia agregada al usuario
-- **Siempre se inserta:** el objeto `log` se llena progresivamente y se inserta tanto en éxito como en error (catch block)
 
 ## Historial de modelos probados
 - `gemini-2.5-flash-preview-04-17` → 404 (modelo de texto, no genera imágenes)
@@ -50,10 +38,7 @@
 
 ## Notas críticas del modelo
 - Nombre estable: `gemini-2.5-flash-image`
-- Nombre deprecado: `gemini-2.5-flash-image-preview`
 - Alias: "Nano Banana"
-- Última actualización: October 2025
-- Input token limit: 65,536 | Output token limit: 32,768
 - **Respuesta usa camelCase:** `inlineData.mimeType` y `inlineData.data` (NO snake_case)
 
 ## Eventos de PostHog implementados
@@ -74,8 +59,6 @@
 | `configurator_add_to_cart` | `configurator_add_to_cart` (non-standard) | Botón carrito configurador |
 | `configurator_order_now` | `configurator_order_now` (non-standard) | Botón ordenar configurador |
 
-**Nota:** Los custom events de Patapete van como `trackCustom` en Meta Pixel.
-
 ## Notas técnicas
 - PostHog en modo `identified_only` — eventos anónimos visibles en "Events", no en "Activity"
 - User's Supabase: `vqmqdhsajdldsraxsqba`
@@ -87,26 +70,60 @@
 
 ---
 
-## 🐛 BUG "Ordenar ahora" → checkout vacío — ANÁLISIS COMPLETO
+## ✅ Bug "Ordenar ahora" → checkout vacío — RESUELTO
 
-### Root cause definitivo
-`useOrderItems.loadOrderItems` es un hook de stale-while-revalidate que SOLO lee del cache localStorage. Cuando NO encuentra `order_items` en el cache (porque `checkout-create` devuelve `order.order` sin `order_items`, o lo devuelve vacío), NO hace ningún API call fallback — simplemente establece `isInitialized = true` con `items = []` y muestra "Tu carrito está vacío".
-
-**Flujo normal del carrito (funciona):** El usuario llena campos de dirección → triggerea `updateShippingAddress` → llama `checkout-update` con `include_product_details: true` → RESPUESTA incluye `order_items` → `updateOrderCache` llena el cache → items aparecen.
-
-**Flujo "Ordenar ahora" (estaba roto):** Navega directo a `/pagar` sin haber llenado ningún campo de dirección → `checkout-update` nunca se llama → cache sin `order_items` → carrito vacío.
+### Root cause
+`useOrderItems.loadOrderItems` es un hook stale-while-revalidate que SOLO lee del cache localStorage. Si no hay `order_items`, simplemente muestra "Tu carrito está vacío".
 
 ### Fix implementado (v2) — `PatapeteConfigurator.tsx`
-**Estrategia:** Garantizar `order_items` en cache ANTES de navegar (igual que Shopify: completar estado del checkout server-side antes de mostrar UI).
-
 1. Después de `createCheckoutFromCart`, verificar si `order.order.order_items` tiene items
 2. Si está vacío/undefined → llamar `updateCheckout({ include_product_details: true })` para forzar carga
-3. Guardar el resultado (con `order_items`) en `checkoutState` vía `saveCheckoutState`
+3. Guardar el resultado en `checkoutState` vía `saveCheckoutState`
 4. Mirror de CartAdapter: también guardar `checkout_order` y `checkout_order_id` en sessionStorage
-5. **Error handling mejorado:** Si `createCheckoutFromCart` falla → mostrar error al usuario (NO navegar silenciosamente)
-6. Los logs `[Patapete]` permiten trazar exactamente qué está pasando
+5. **Error handling mejorado:** Si falla → mostrar error al usuario (NO navegar silenciosamente)
 
-### Archivos modificados (v2)
+---
+
+## 🔧 PRÓXIMO FIX: Auto-retry generación IA al recargar
+
+### Problema
+Si el usuario sube una foto y recarga/cierra la app mientras se está generando el ícono:
+- `photoBase64` está guardado en localStorage ✅
+- `generatedArtUrl` es null (generación fue interrumpida)
+- Al recargar: `isProcessingBg = false`, `isGeneratingArt = false` (no se persisten)
+- Resultado: aparece botón "Reintentar con IA" → UX confusa
+- En móvil: usuario cierra app, vuelve, ve "Reintentar con IA" y no entiende qué pasó
+
+### Fix a implementar — `PatapeteConfigurator.tsx`
+Agregar un `useEffect` que corre **una sola vez al montar** el componente. Usa un `useRef` flag para garantizar que solo corre una vez (no en re-renders).
+
+El código ya soporta la generación sin `File`, usando el `photoBase64` guardado (`handleGenerate` ya tiene el branch "Retry after refresh"). Solo falta llamarlo automáticamente.
+
+```tsx
+// In PatapeteConfigurator.tsx, after all useCallback definitions:
+
+const autoRetryDoneRef = useRef(false)
+
+useEffect(() => {
+  if (autoRetryDoneRef.current) return
+  autoRetryDoneRef.current = true
+
+  // Auto-restart generation for pets that have a photo but no art yet
+  // (handles reload/close-app mid-generation scenario)
+  state.pets.forEach((pet, i) => {
+    if (pet.photoBase64 && !pet.generatedArtUrl && !pet.isProcessingBg && !pet.isGeneratingArt) {
+      handleGenerate(i)
+    }
+  })
+}, []) // eslint-disable-line react-hooks/exhaustive-deps — intentionally run once on mount
+```
+
+### Por qué funciona
+- `handleGenerate` capturado en el closure inicial tiene el estado correcto de localStorage
+- El branch existente en `handleGenerate` ya maneja este caso: `compressedBase64 = pet.photoBase64!` → salta la compresión, va directo al backend
+- El `useRef` flag evita que corra múltiples veces por re-renders
+
+### Archivo a modificar
 - `src/components/patapete/configurator/PatapeteConfigurator.tsx`
-  - Import `updateCheckout` añadido
-  - `handleOrderNow` con fallback API call + sessionStorage + error handling sin silent navigate
+  - Importar `useRef` (ya importado)
+  - Agregar `autoRetryDoneRef` + `useEffect` de auto-retry después de los handlers existentes
