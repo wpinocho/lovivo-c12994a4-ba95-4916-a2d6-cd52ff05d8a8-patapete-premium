@@ -386,6 +386,31 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     }
   }, [product, state, navigate, saveCustomizationToCart, saveCheckoutState, currencyCode])
 
+  // ─── Auto-retry: si hay foto sin ícono al montar (reload / cambio de app) ────
+  // Escenario: user sube foto → IA empieza a generar → sale de la app / recarga
+  // → la conexión HTTP se corta → al volver, detectamos foto sin ícono y
+  //   arrancamos sola la generación sin que el usuario haga nada.
+  const autoRetryDoneRef = useRef(false)
+
+  useEffect(() => {
+    if (autoRetryDoneRef.current) return
+    autoRetryDoneRef.current = true
+
+    state.pets.forEach((pet, i) => {
+      // Solo mascotas activas con foto pero sin ícono y que no estén procesando
+      if (
+        i < state.petCount &&
+        pet.photoBase64 &&
+        !pet.generatedArtUrl &&
+        !pet.isProcessingBg &&
+        !pet.isGeneratingArt
+      ) {
+        console.log(`[Patapete] Auto-retry generación para mascota ${i + 1}`)
+        handleGenerate(i)
+      }
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps — corre solo una vez al montar
+
   // Use a ref for style so handleGenerate always reads the latest value
   const styleRef = useRef(state.style)
   styleRef.current = state.style
