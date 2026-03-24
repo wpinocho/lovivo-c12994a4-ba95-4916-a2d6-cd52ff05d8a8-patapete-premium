@@ -6,7 +6,7 @@
 - Pipeline de IA: BiRefNet (Fal) → Normalización → Claude Haiku → **Gemini 2.5 Flash Image (stable)**
 
 ## Pipeline actual (v24)
-1. **Step 1:** `fal-ai/birefnet` — background removal (foto usuario)
+1. **Step 0.5 + Step 1 (paralelo):** Upload imagen original usuario a Storage (`user-uploads/`) + `fal-ai/birefnet` — background removal (foto usuario) → corren en `Promise.all` para cero latencia extra
 2. **Step 2:** Smart crop + normalize 800×800 canvas blanco (imagescript)
 3. **Step 2.5:** Upload pet normalizado a Supabase Storage → URL pública
 4. **Step 3:** Claude Haiku 4.5 → genera prompt optimizado según estilo
@@ -35,20 +35,44 @@
 - **Respuesta usa camelCase:** `inlineData.mimeType` y `inlineData.data` (NO snake_case)
 
 ## Tabla generation_logs ✅ IMPLEMENTADA
-- Migración: `supabase/migrations/20260324012833_create_generation_logs.sql`
-- Columnas: `id`, `created_at`, `pet_name`, `style`, `haiku_input_prompt`, `haiku_output_prompt`, `gemini_prompt`, `gemini_output_url`, `latency_birefnet_ms`, `latency_haiku_ms`, `latency_gemini_ms`, `latency_total_ms`
+- Migración original: `supabase/migrations/20260324012833_create_generation_logs.sql`
+- Migración columnas imagen: `supabase/migrations/20260324152816_add_image_urls_to_generation_logs.sql`
+- Columnas completas:
+  - `id`, `created_at`
+  - `pet_name`, `style`
+  - **`user_image_url`** — foto original del usuario en Storage (`user-uploads/`)
+  - **`pet_normalized_url`** — pet tras BiRefNet + normalización 800×800 (step 2.5, `petUrl`)
+  - `haiku_input_prompt`, `haiku_output_prompt`, `gemini_prompt`, `gemini_output_url`
+  - `latency_birefnet_ms`, `latency_haiku_ms`, `latency_gemini_ms`, `latency_total_ms`
 - **Estrategia fire-and-forget:** insert sin `await` antes del `return new Response(...)` → cero latencia agregada al usuario
 - `latency_total_ms` mide desde `tStart` (inicio del handler) hasta antes del return
-- `generateWithGemini` ahora retorna `{ base64, mimeType, promptUsed }` para capturar el prompt exacto enviado a Gemini (sin las imágenes en base64)
+- `generateWithGemini` retorna `{ base64, mimeType, promptUsed }` para capturar el prompt exacto enviado a Gemini (sin las imágenes en base64)
+- **Upload usuario paralelo:** `uploadUserImage()` corre en `Promise.all` junto a BiRefNet → cero latencia extra
 
 ## Próximos pasos pendientes
 - Probar con diferentes razas/colores para verificar calidad Gemini 2.5
 - Monitorear logs step 4: tiempo de respuesta
-- Revisar tabla `generation_logs` en Supabase Dashboard para validar que el insert funciona
+- Revisar tabla `generation_logs` en Supabase Dashboard para validar que los 3 URLs se guardan correctamente
 
 ## Eventos de PostHog implementados
 - `photo_uploaded`, `icon_generated`, `configurator_add_to_cart`, `configurator_order_now`
 - Archivos: `PhotoPetForm.tsx` y `PatapeteConfigurator.tsx`
+
+## Eventos Meta Pixel + CAPI (completos)
+| Evento PostHog (lowercase) | Evento Meta (PascalCase) | Cuándo |
+|---|---|---|
+| `$pageview` | `PageView` | Cada cambio de página |
+| `viewcontent` | `ViewContent` | Ver un producto |
+| `addtocart` | `AddToCart` | Agregar al carrito |
+| `initiatecheckout` | `InitiateCheckout` | Entrar al checkout |
+| `purchase` | `Purchase` | Pago exitoso |
+| `search_performed` | `Search` | Al buscar |
+| `photo_uploaded` | `photo_uploaded` (non-standard) | Subir foto mascota |
+| `icon_generated` | `icon_generated` (non-standard) | Ícono generado |
+| `configurator_add_to_cart` | `configurator_add_to_cart` (non-standard) | Botón carrito configurador |
+| `configurator_order_now` | `configurator_order_now` (non-standard) | Botón ordenar configurador |
+
+**Nota:** Los custom events de Patapete van como `trackCustom` en Meta Pixel.
 
 ## Notas técnicas
 - PostHog en modo `identified_only` — eventos anónimos visibles en "Events", no en "Activity"

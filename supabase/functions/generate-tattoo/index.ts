@@ -180,6 +180,26 @@ async function normalizeImage(transparentPngUrl: string): Promise<string> {
   return base64
 }
 
+// ─── STEP 0.5: Upload original user image to Supabase Storage → public URL ─────
+// Runs in parallel with Step 1 (BiRefNet) to add zero latency
+async function uploadUserImage(base64: string): Promise<string> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+  const filename = `user-uploads/${Date.now()}.png`
+
+  console.log(`[generate-tattoo] Step 0.5 INPUT — uploading user original to Storage: ${filename}`)
+
+  const { error } = await supabase.storage
+    .from('pet-tattoos')
+    .upload(filename, bytes, { contentType: 'image/png', upsert: true })
+
+  if (error) throw new Error(`Storage upload (user image) failed: ${error.message}`)
+
+  const { data } = supabase.storage.from('pet-tattoos').getPublicUrl(filename)
+  console.log(`[generate-tattoo] Step 0.5 OUTPUT — user image URL: ${data.publicUrl}`)
+  return data.publicUrl
+}
+
 // ─── STEP 2.5: Upload normalized pet image to Supabase Storage → public URL ──
 async function uploadNormalizedPet(base64: string): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -452,12 +472,15 @@ serve(async (req) => {
     console.log(`[generate-tattoo] ═══ PIPELINE START (v24 — gemini-2.5-flash-image stable) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
-    // Step 1: Remove background from user photo (fal-ai/birefnet)
-    console.log('[generate-tattoo] ─── Step 1: fal-ai/birefnet background removal (user photo) ───')
+    // Step 0.5 + Step 1 in parallel: upload user image to Storage AND remove background simultaneously
+    console.log('[generate-tattoo] ─── Step 0.5 + Step 1: upload user image & BiRefNet in parallel ───')
     const t1 = Date.now()
-    const transparentPngUrl = await removeBackgroundFal(`data:image/png;base64,${imageBase64}`, 'Step 1')
+    const [transparentPngUrl, userImageUrl] = await Promise.all([
+      removeBackgroundFal(`data:image/png;base64,${imageBase64}`, 'Step 1'),
+      uploadUserImage(imageBase64),
+    ])
     const latencyBirefnet = Date.now() - t1
-    console.log(`[generate-tattoo] Step 1 done in ${latencyBirefnet}ms`)
+    console.log(`[generate-tattoo] Step 0.5 + Step 1 done in ${latencyBirefnet}ms`)
 
     // Step 2: Smart crop + normalize
     console.log('[generate-tattoo] ─── Step 2: Smart crop & normalize ───')
@@ -504,6 +527,8 @@ serve(async (req) => {
     supabaseLog.from('generation_logs').insert({
       pet_name:            petName || null,
       style:               artStyle,
+      user_image_url:      userImageUrl,
+      pet_normalized_url:  petUrl,
       haiku_input_prompt:  haikuInputPrompt,
       haiku_output_prompt: optimizedPrompt,
       gemini_prompt:       geminiPrompt,
