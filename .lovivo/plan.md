@@ -49,3 +49,104 @@
 - FALAI_API_KEY aún necesaria para BiRefNet (step 1)
 - GEMINI_API_KEY para step 4 (ya configurada)
 - ANTHROPIC_API_KEY para step 3 (Haiku)
+
+---
+
+## 📋 FEATURE PENDIENTE: Tabla de logs de generación
+
+### Qué queremos lograr
+Guardar en Supabase cada generación de imagen con todos los datos relevantes para debugging y análisis, **sin agregar ninguna latencia al flujo principal**.
+
+### Estrategia: Fire and Forget
+Lanzar el insert a Supabase SIN await justo antes del `return new Response(...)`. El usuario recibe su imagen inmediatamente. La promesa del insert se resuelve en background.
+
+```typescript
+// Insert sin await = zero latency para el usuario
+supabase.from('generation_logs').insert({...})
+  .then(() => console.log('[generate-tattoo] Log saved'))
+  .catch(e => console.error('[generate-tattoo] Log failed:', e.message))
+
+return new Response(JSON.stringify({ url: permanentArtUrl }), { ... })
+```
+
+### Tabla a crear: `generation_logs`
+
+```sql
+CREATE TABLE generation_logs (
+  id                   uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at           timestamptz DEFAULT now(),
+  pet_name             text,
+  style                text,
+  haiku_input_prompt   text,
+  haiku_output_prompt  text,
+  gemini_prompt        text,
+  gemini_output_url    text,
+  latency_birefnet_ms  integer,
+  latency_haiku_ms     integer,
+  latency_gemini_ms    integer,
+  latency_total_ms     integer
+);
+```
+
+### Cambios en `supabase/functions/generate-tattoo/index.ts`
+
+#### 1. Modificar `generateWithGemini` para devolver también el prompt de texto
+
+Cambiar la firma de retorno:
+```typescript
+async function generateWithGemini(...): Promise<{ base64: string; mimeType: string; promptUsed: string }>
+```
+Al final de la función, devolver también `promptUsed: finalPrompt`.
+
+#### 2. En el main handler, capturar latencias y prompts
+
+```typescript
+const tStart = Date.now()  // para tiempo total
+
+// Step 1 - capturar latencia
+const t1 = Date.now()
+const transparentPngUrl = await removeBackgroundFal(...)
+const latencyBirefnet = Date.now() - t1
+
+// Steps 2, 2.5 (sin cambios)
+
+// Step 3 - capturar latencia y el prompt de input (system prompt)
+const haikuInputPrompt = artStyle === 'icono' ? SYSTEM_PROMPT_ICONO : SYSTEM_PROMPT_DIBUJO
+const t3 = Date.now()
+const optimizedPrompt = await generatePromptWithVision(normalizedBase64, artStyle)
+const latencyHaiku = Date.now() - t3
+
+// Step 4 - capturar latencia y prompt de Gemini
+const t4 = Date.now()
+const { base64: artBase64, mimeType: artMimeType, promptUsed: geminiPrompt } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
+const latencyGemini = Date.now() - t4
+
+// Step 6
+const permanentArtUrl = await uploadFinalArt(artBase64, artMimeType)
+const latencyTotal = Date.now() - tStart
+
+// 🔥 FIRE AND FORGET — NO await, zero latency para el usuario
+const supabaseLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+supabaseLog.from('generation_logs').insert({
+  pet_name: petName || null,
+  style: artStyle,
+  haiku_input_prompt: haikuInputPrompt,
+  haiku_output_prompt: optimizedPrompt,
+  gemini_prompt: geminiPrompt,
+  gemini_output_url: permanentArtUrl,
+  latency_birefnet_ms: latencyBirefnet,
+  latency_haiku_ms: latencyHaiku,
+  latency_gemini_ms: latencyGemini,
+  latency_total_ms: latencyTotal,
+}).then(() => console.log('[generate-tattoo] ✓ Log saved to generation_logs'))
+  .catch(e => console.error('[generate-tattoo] Log save failed:', e.message))
+
+// Retornar al usuario INMEDIATAMENTE
+return new Response(JSON.stringify({ url: permanentArtUrl }), {
+  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+})
+```
+
+### Archivos a modificar
+1. **Nuevo migration**: `supabase/migrations/TIMESTAMP_create_generation_logs.sql` — crear tabla
+2. **`supabase/functions/generate-tattoo/index.ts`** — capturar datos + fire-and-forget insert
