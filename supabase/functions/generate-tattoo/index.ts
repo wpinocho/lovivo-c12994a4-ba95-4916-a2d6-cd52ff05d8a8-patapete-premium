@@ -238,7 +238,8 @@ Plantilla:
 A standardized minimalist 'peekaboo' portrait of a [TIPO DE ANIMAL], head and upper chest ONLY, centered, paws resting on a solid, thick black horizontal line at the bottom edge. CRITICAL: the line is ONE pixel-thin stroke only — NO filled black panel, NO solid block, NO thick bar, NO black area below the line. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
 STYLE: Minimalist flat vector illustration, highly simplified graphic art. The entire portrait is constructed using thick, clean, bold black outlines.
 CRITICAL: The fur texture is [TEXTURA DEL PELO], represented using simplified, defined shapes of color. DO NOT USE stippling, dots, or hatching lines. Use ONLY SOLID, FLAT COLORS (cell-shaded style). Strictly simplify all accessories to solid colors with NO complex patterns.
-LIMITED COLOR PALETTE: [Colores principales]. Solid black for outlines.  CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.`
+LIMITED COLOR PALETTE: [Colores principales]. Solid black for outlines.  CRITICAL IDENTIFYING FEATURES TO PRESERVE: [RASGOS DISTINTIVOS CRÍTICOS Y ACCESORIOS]. Print-ready, stencil-like simplicity for coarse materials.
+NOTE: If the image does not contain a pet but a person or other subject, analyze it the same way. Adapt the fields to the subject present: use "person" as the type, describe hair as the equivalent of fur texture, skin/clothing colors as main colors, and facial features/accessories as distinctive traits. Fill in the template regardless.`
 
 const SYSTEM_PROMPT_DIBUJO = `Eres un director de arte experto. Tu tarea es analizar la foto de esta mascota y generar un prompt de generación de imagen para un retrato en puro blanco y negro, estilo sello o grabado de líneas gruesas.
 
@@ -255,7 +256,8 @@ Ahora, toma esa información y REEMPLAZA los corchetes en esta plantilla exacta 
 A standardized 'peekaboo' portrait of a [TIPO DE ANIMAL Y RAZA APROXIMADA], head and upper chest ONLY, centered, paws resting on a single thin black horizontal stroke line at the bottom edge. CRITICAL: the line is ONE thin stroke only — NO filled black panel, NO solid block below the line. ISOLATED SUBJECT on a PURE ABSOLUTE WHITE BACKGROUND (#FFFFFF).
 STYLE: Pure black and white minimalist line art. ONLY black ink on white background. NO grayscale, NO shading, NO fine details.
 CRITICAL: The entire portrait is constructed using ONLY extremely thick, chunky, bold black lines. The drawing lines should be slightly imperfect and heavy, resembling a bold linocut, rubber stamp, or stencil print.
-PRESERVE KEY STRUCTURAL FEATURES: [RASGOS FÍSICOS ESTRUCTURALES Y ACCESORIOS — MUST INCLUDE: eyes open or closed], but strictly abstract and simplify them into this chunky, heavy-line graphic execution. No thin strokes. Stencil-like simplicity ready for coarse material printing.`
+PRESERVE KEY STRUCTURAL FEATURES: [RASGOS FÍSICOS ESTRUCTURALES Y ACCESORIOS — MUST INCLUDE: eyes open or closed], but strictly abstract and simplify them into this chunky, heavy-line graphic execution. No thin strokes. Stencil-like simplicity ready for coarse material printing.
+NOTE: If the image does not contain a pet but a person or other subject, analyze it the same way. Adapt the fields to the subject present: use "person" as the type and approximate descriptor, describe equivalent structural physical features (face shape, hair, eyes open/closed), and any visible accessories. Fill in the template regardless.`
 
 async function generatePromptWithVision(normalizedBase64: string, style: 'dibujo' | 'icono'): Promise<string> {
   if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')

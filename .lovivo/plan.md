@@ -20,52 +20,12 @@
 6. **Step 6:** Upload Gemini output a Supabase Storage → URL permanente
 7. **🔥 FIRE AND FORGET:** Insert a `generation_logs` sin await — cero latencia agregada al usuario
 
-## Error conocido: imagen de personas (no mascota)
-- Claude Haiku detecta que la imagen no es una mascota y devuelve texto explicativo en lugar del prompt
-- Gemini recibe ese texto como prompt y también rechaza generar la imagen
-- Error final: `Gemini returned no image`
-- **SOLUCIÓN PENDIENTE:** Modificar ambos system prompts de Haiku para que si la imagen no es una mascota, trate al sujeto como un "personaje" y llene el template de todas formas — cambio mínimo descrito abajo
-
-## ✅ PLAN PENDIENTE: Fix prompt Haiku para imágenes de humanos
-
-### Cambio a realizar en `supabase/functions/generate-tattoo/index.ts`
-
-**`SYSTEM_PROMPT_ICONO`:** Agregar esta instrucción justo antes de la frase "Ahora, toma esa información...":
-
-```
-IMPORTANTE: Si la imagen no contiene una mascota sino una persona u otro sujeto, analízala de la misma manera. Adapta los campos al sujeto presente: usa "person" como tipo, describe el cabello como textura equivalente al pelo, los colores de piel/ropa como colores principales, y los rasgos faciales/accesorios como rasgos distintivos. Llena el template de todas formas.
-```
-
-**`SYSTEM_PROMPT_DIBUJO`:** Agregar la misma instrucción equivalente antes de "Ahora, toma esa información...":
-
-```
-IMPORTANTE: Si la imagen no contiene una mascota sino una persona u otro sujeto, analízala de la misma manera. Adapta los campos al sujeto presente: usa "person" como tipo y raza aproximada, describe rasgos físicos estructurales equivalentes (forma de cara, cabello, ojos abiertos/cerrados), y accesorios visibles. Llena el template de todas formas.
-```
-
-### Por qué funciona
-- Haiku ya recibe la imagen y sabe leerla, solo necesita permiso explícito para procesar sujetos no-mascota
-- El template de Gemini es genérico (acepta cualquier [TIPO DE ANIMAL] — "person" funciona perfectamente)
-- Gemini ya genera retratos de personas en estilo flat vector / linocut sin problema
-- Cambio mínimo: solo 2 líneas de texto en los prompts, sin tocar nada más del pipeline
-
-### Archivos a modificar
-- `supabase/functions/generate-tattoo/index.ts`: Modificar `SYSTEM_PROMPT_ICONO` y `SYSTEM_PROMPT_DIBUJO`
-
----
-
-## Historial de modelos probados
-- `gemini-2.5-flash-preview-04-17` → 404 (modelo de texto, no genera imágenes)
-- `gemini-2.0-flash-preview-image-generation` → funcionaba pero deprecado
-- `gemini-2.5-flash-preview-image` → 404 (nombre incorrecto, orden erróneo)
-- `gemini-2.5-flash-image` → **CORRECTO** (stable, doc oficial: ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-image)
-
-## Notas críticas del modelo
-- Nombre estable: `gemini-2.5-flash-image`
-- Nombre deprecado: `gemini-2.5-flash-image-preview`
-- Alias: "Nano Banana"
-- Última actualización: October 2025
-- Input token limit: 65,536 | Output token limit: 32,768
-- **Respuesta usa camelCase:** `inlineData.mimeType` y `inlineData.data` (NO snake_case)
+## ✅ Fix implementado: imágenes de personas (no mascota)
+- Haiku ahora tiene instrucción al final de ambos prompts para tratar humanos como sujetos válidos
+- `SYSTEM_PROMPT_ICONO`: NOTE al final → usa "person" como tipo, cabello = fur texture, colores de piel/ropa = main colors
+- `SYSTEM_PROMPT_DIBUJO`: NOTE al final → usa "person" + rasgos estructurales equivalentes
+- Cambio mínimo: 2 líneas de texto, sin tocar nada más del pipeline
+- Gemini acepta "person" perfectamente y genera retratos en estilo flat vector / linocut
 
 ## Tabla generation_logs ✅ COMPLETA
 - Migración original: `supabase/migrations/20260324012833_create_generation_logs.sql`
@@ -82,15 +42,20 @@ IMPORTANTE: Si la imagen no contiene una mascota sino una persona u otro sujeto,
   - `latency_birefnet_ms`, `latency_haiku_ms`, `latency_gemini_ms`, `latency_total_ms`
 - **Estrategia fire-and-forget:** insert sin `await` antes del `return new Response(...)` → cero latencia agregada al usuario
 - **Siempre se inserta:** el objeto `log` se llena progresivamente y se inserta tanto en éxito como en error (catch block)
-- `latency_total_ms` mide desde `tStart` (inicio del handler) hasta antes del return
-- `generateWithGemini` retorna `{ base64, mimeType, promptUsed }` para capturar el prompt exacto enviado a Gemini (sin las imágenes en base64)
-- **Upload usuario paralelo:** `uploadUserImage()` corre en `Promise.all` junto a BiRefNet → cero latencia extra
 
-## Próximos pasos pendientes
-- Probar con diferentes razas/colores para verificar calidad Gemini 2.5
-- Monitorear logs step 4: tiempo de respuesta
-- Revisar tabla `generation_logs` en Supabase Dashboard para validar que los 3 URLs se guardan correctamente
-- Considerar validación del output de Claude Haiku para detectar imágenes no-mascota antes de llamar a Gemini
+## Historial de modelos probados
+- `gemini-2.5-flash-preview-04-17` → 404 (modelo de texto, no genera imágenes)
+- `gemini-2.0-flash-preview-image-generation` → funcionaba pero deprecado
+- `gemini-2.5-flash-preview-image` → 404 (nombre incorrecto, orden erróneo)
+- `gemini-2.5-flash-image` → **CORRECTO** (stable, doc oficial: ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-image)
+
+## Notas críticas del modelo
+- Nombre estable: `gemini-2.5-flash-image`
+- Nombre deprecado: `gemini-2.5-flash-image-preview`
+- Alias: "Nano Banana"
+- Última actualización: October 2025
+- Input token limit: 65,536 | Output token limit: 32,768
+- **Respuesta usa camelCase:** `inlineData.mimeType` y `inlineData.data` (NO snake_case)
 
 ## Eventos de PostHog implementados
 - `photo_uploaded`, `icon_generated`, `configurator_add_to_cart`, `configurator_order_now`
