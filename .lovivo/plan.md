@@ -3,28 +3,33 @@
 ## Estado actual
 - Tienda activa con campaña de Meta en curso
 - 0% conversión en móvil (100% del tráfico de Meta)
-- Pipeline de IA: BiRefNet (Fal) → Normalización → Claude Haiku → **Gemini 2.5 Flash Preview Image**
+- Pipeline de IA: BiRefNet (Fal) → Normalización → Claude Haiku → **Gemini 2.5 Flash Image (stable)**
 
-## Pipeline actual (v23)
+## Pipeline actual (v24)
 1. **Step 1:** `fal-ai/birefnet` — background removal (foto usuario)
 2. **Step 2:** Smart crop + normalize 800×800 canvas blanco (imagescript)
 3. **Step 2.5:** Upload pet normalizado a Supabase Storage → URL pública
 4. **Step 3:** Claude Haiku 4.5 → genera prompt optimizado según estilo
-5. **Step 4:** Google Gemini `gemini-2.5-flash-preview-image`
-   - Endpoint: `v1beta/models/gemini-2.5-flash-preview-image:generateContent`
+5. **Step 4:** Google Gemini `gemini-2.5-flash-image` (**stable, "Nano Banana"**)
+   - Endpoint: `v1beta/models/gemini-2.5-flash-image:generateContent`
    - Imágenes pasadas como `inline_data` (base64, no URLs)
    - `responseModalities: ['IMAGE', 'TEXT']` (ambos requeridos)
    - Responde con imagen en `candidates[0].content.parts[].inline_data` o `inlineData`
    - Sin cola / sin polling — respuesta directa
 6. **Step 6:** Upload Gemini output a Supabase Storage → URL permanente
 
-## Cambios aplicados (v23)
-- Modelo: `gemini-2.0-flash-preview-image-generation` → `gemini-2.5-flash-preview-image`
-- Endpoint actualizado acorde al nuevo modelo
+## Historial de modelos probados
+- `gemini-2.5-flash-preview-04-17` → 404 (modelo de texto, no genera imágenes)
+- `gemini-2.0-flash-preview-image-generation` → funcionaba pero deprecado
+- `gemini-2.5-flash-preview-image` → 404 (nombre incorrecto, orden erróneo)
+- `gemini-2.5-flash-image` → **CORRECTO** (stable, doc oficial: ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-image)
 
-## Cambios anteriores (v22)
-- Fix crítico: modelo `gemini-2.5-flash-preview-04-17` → `gemini-2.0-flash-preview-image-generation`
-- responseModalities cambiado de `['IMAGE']` a `['IMAGE', 'TEXT']`
+## Notas críticas del modelo
+- Nombre estable: `gemini-2.5-flash-image`
+- Nombre deprecado: `gemini-2.5-flash-image-preview`
+- Alias: "Nano Banana"
+- Última actualización: October 2025
+- Input token limit: 65,536 | Output token limit: 32,768
 
 ## Próximos pasos pendientes
 - Probar con diferentes razas/colores para verificar calidad Gemini 2.5
@@ -43,4 +48,3 @@
 - FALAI_API_KEY aún necesaria para BiRefNet (step 1)
 - GEMINI_API_KEY para step 4 (ya configurada)
 - ANTHROPIC_API_KEY para step 3 (Haiku)
-- **IMPORTANTE:** gemini-2.5-flash NO genera imágenes — usar `gemini-2.5-flash-preview-image`

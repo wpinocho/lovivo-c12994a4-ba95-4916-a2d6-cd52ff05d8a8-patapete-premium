@@ -1,7 +1,7 @@
-// v22 — Step 4: Google Gemini 2.0 Flash Preview Image Generation
+// v24 — Step 4: Google Gemini 2.5 Flash Image (Nano Banana — stable)
 //   Steps 1 & 5.5: fal-ai/birefnet  (real BiRefNet, ~1-2s, no GPU queue)
-//   Step 4:        gemini-2.0-flash-preview-image-generation (inline_data, no queue)
-//   Note: gemini-2.5-flash does NOT support image generation. Use the dedicated model.
+//   Step 4:        gemini-2.5-flash-image (stable model, supports image output)
+//   Model ID: gemini-2.5-flash-image  (NOT gemini-2.5-flash-preview-image)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -357,9 +357,9 @@ CRITICAL COLOR RULE: Use ONLY the EXACT colors visible in the first image. DO NO
 ${haikuPrompt}`
   }
 
-  console.log(`[generate-tattoo] Step 4 INPUT — Gemini 2.0 Flash Preview Image Generation:`)
+  console.log(`[generate-tattoo] Step 4 INPUT — Gemini 2.5 Flash Image (gemini-2.5-flash-image):`)
   console.log(`  style: ${artStyle}`)
-  console.log(`  model: gemini-2.5-flash-preview-image`)
+  console.log(`  model: gemini-2.5-flash-image`)
   console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
 
   const requestBody = {
@@ -377,7 +377,7 @@ ${haikuPrompt}`
 
   const t0 = Date.now()
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -443,7 +443,7 @@ serve(async (req) => {
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
-    console.log(`[generate-tattoo] ═══ PIPELINE START (v23 — Gemini 2.5 Flash Preview Image) ═══`)
+    console.log(`[generate-tattoo] ═══ PIPELINE START (v24 — gemini-2.5-flash-image stable) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
     // Step 1: Remove background from user photo (fal-ai/birefnet)
@@ -471,7 +471,7 @@ serve(async (req) => {
     console.log(`[generate-tattoo] Step 3 done in ${Date.now() - t3}ms`)
 
     // Step 4: Gemini 2.5 Flash → final art
-    console.log('[generate-tattoo] ─── Step 4: gemini-2.0-flash-preview-image-generation ───')
+    console.log('[generate-tattoo] ─── Step 4: gemini-2.5-flash-image ───')
     const t4 = Date.now()
     const { base64: artBase64, mimeType: artMimeType } = await generateWithGemini(petUrl, optimizedPrompt, artStyle)
     console.log(`[generate-tattoo] Step 4 done in ${Date.now() - t4}ms`)
