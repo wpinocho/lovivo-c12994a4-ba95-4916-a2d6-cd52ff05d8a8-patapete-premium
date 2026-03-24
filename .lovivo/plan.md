@@ -84,23 +84,19 @@
 
 ---
 
-## 🔧 PRÓXIMO FIX: Auto-retry generación IA al recargar
+## 🔧 PRÓXIMO FIX: Auto-retry generación IA al recargar (sin botón)
 
-### Problema
-Si el usuario sube una foto y recarga/cierra la app mientras se está generando el ícono:
-- `photoBase64` está guardado en localStorage ✅
-- `generatedArtUrl` es null (generación fue interrumpida)
-- Al recargar: `isProcessingBg = false`, `isGeneratingArt = false` (no se persisten)
-- Resultado: aparece botón "Reintentar con IA" → UX confusa
-- En móvil: usuario cierra app, vuelve, ve "Reintentar con IA" y no entiende qué pasó
+### Contexto / comportamiento esperado
+- Si el ícono YA terminó de generarse antes del reload → ya funciona, `generatedArtUrl` está en localStorage y se restaura automáticamente ✅
+- Si el user recarga/cierra la app MIENTRAS se estaba generando → la conexión HTTP con el edge function se corta. El resultado se pierde. Al recargar: hay `photoBase64` en localStorage pero `generatedArtUrl` es null → actualmente muestra el botón "Reintentar con IA"
+- **Objetivo:** eliminar ese botón y que la generación arranque SOLA automáticamente al detectar foto sin ícono
 
-### Fix a implementar — `PatapeteConfigurator.tsx`
+### Fix a implementar — `src/components/patapete/configurator/PatapeteConfigurator.tsx`
+
 Agregar un `useEffect` que corre **una sola vez al montar** el componente. Usa un `useRef` flag para garantizar que solo corre una vez (no en re-renders).
 
-El código ya soporta la generación sin `File`, usando el `photoBase64` guardado (`handleGenerate` ya tiene el branch "Retry after refresh"). Solo falta llamarlo automáticamente.
-
 ```tsx
-// In PatapeteConfigurator.tsx, after all useCallback definitions:
+// After all useCallback definitions, before the return statement:
 
 const autoRetryDoneRef = useRef(false)
 
@@ -122,8 +118,12 @@ useEffect(() => {
 - `handleGenerate` capturado en el closure inicial tiene el estado correcto de localStorage
 - El branch existente en `handleGenerate` ya maneja este caso: `compressedBase64 = pet.photoBase64!` → salta la compresión, va directo al backend
 - El `useRef` flag evita que corra múltiples veces por re-renders
+- El user verá la barra de progreso normal, no el botón "Reintentar"
+
+### Nota importante
+No es posible recuperar una generación interrumpida mid-flight. La conexión HTTP al edge function se corta al recargar. Lo que sí hacemos es auto-retomar enviando de nuevo la misma foto guardada (sin que el user haga nada).
 
 ### Archivo a modificar
 - `src/components/patapete/configurator/PatapeteConfigurator.tsx`
-  - Importar `useRef` (ya importado)
+  - `useRef` ya está importado ✅
   - Agregar `autoRetryDoneRef` + `useEffect` de auto-retry después de los handlers existentes
