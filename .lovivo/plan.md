@@ -14,7 +14,8 @@
    - Endpoint: `v1beta/models/gemini-2.5-flash-image:generateContent`
    - Imágenes pasadas como `inline_data` (base64, no URLs)
    - `responseModalities: ['IMAGE', 'TEXT']` (ambos requeridos)
-   - Responde con imagen en `candidates[0].content.parts[].inline_data` o `inlineData`
+   - **BUG CORREGIDO:** Gemini responde con camelCase `inlineData.mimeType` pero código buscaba snake_case `inline_data.mime_type` → fix: buscar ambos formatos
+   - Responde con imagen en `candidates[0].content.parts[].inlineData` (camelCase)
    - Sin cola / sin polling — respuesta directa
 6. **Step 6:** Upload Gemini output a Supabase Storage → URL permanente
 
@@ -30,11 +31,11 @@
 - Alias: "Nano Banana"
 - Última actualización: October 2025
 - Input token limit: 65,536 | Output token limit: 32,768
+- **Respuesta usa camelCase:** `inlineData.mimeType` y `inlineData.data` (NO snake_case)
 
 ## Próximos pasos pendientes
 - Probar con diferentes razas/colores para verificar calidad Gemini 2.5
 - Monitorear logs step 4: tiempo de respuesta
-- Verificar calidad vs versión anterior
 
 ## Eventos de PostHog implementados
 - `photo_uploaded`, `icon_generated`, `configurator_add_to_cart`, `configurator_order_now`

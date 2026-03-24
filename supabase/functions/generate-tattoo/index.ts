@@ -395,14 +395,18 @@ ${haikuPrompt}`
   console.log(`[generate-tattoo] Step 4 — Gemini responded in ${elapsed}ms`)
 
   const parts = result?.candidates?.[0]?.content?.parts ?? []
-  const imagePart = parts.find((p: any) => p.inline_data?.mime_type?.startsWith('image/'))
+  // Gemini may return camelCase (inlineData/mimeType) or snake_case (inline_data/mime_type)
+  const imagePart = parts.find((p: any) =>
+    p.inlineData?.mimeType?.startsWith('image/') ||
+    p.inline_data?.mime_type?.startsWith('image/')
+  )
 
   if (!imagePart) {
     throw new Error(`Gemini returned no image. Response: ${JSON.stringify(result).slice(0, 500)}`)
   }
 
-  const mimeType = imagePart.inline_data.mime_type as string
-  const base64 = imagePart.inline_data.data as string
+  const mimeType = (imagePart.inlineData?.mimeType ?? imagePart.inline_data?.mime_type) as string
+  const base64 = (imagePart.inlineData?.data ?? imagePart.inline_data?.data) as string
   console.log(`[generate-tattoo] Step 4 OUTPUT — Gemini image: ${mimeType} (${base64.length} chars)`)
   return { base64, mimeType }
 }
