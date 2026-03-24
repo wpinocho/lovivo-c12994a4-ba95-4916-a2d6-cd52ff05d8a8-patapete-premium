@@ -359,7 +359,7 @@ ${haikuPrompt}`
 
   console.log(`[generate-tattoo] Step 4 INPUT — Gemini 2.0 Flash Preview Image Generation:`)
   console.log(`  style: ${artStyle}`)
-  console.log(`  model: gemini-2.0-flash-preview-image-generation`)
+  console.log(`  model: gemini-2.5-flash-preview-image`)
   console.log(`  prompt (full text):\n---\n${finalPrompt}\n---`)
 
   const requestBody = {
@@ -377,7 +377,7 @@ ${haikuPrompt}`
 
   const t0 = Date.now()
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-image:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -443,7 +443,7 @@ serve(async (req) => {
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
-    console.log(`[generate-tattoo] ═══ PIPELINE START (v22 — Gemini 2.0 Flash Image Gen) ═══`)
+    console.log(`[generate-tattoo] ═══ PIPELINE START (v23 — Gemini 2.5 Flash Preview Image) ═══`)
     console.log(`[generate-tattoo] INPUT — petName: "${petName || 'unnamed'}" | style: ${artStyle} | imageBase64 length: ${imageBase64.length}`)
 
     // Step 1: Remove background from user photo (fal-ai/birefnet)
