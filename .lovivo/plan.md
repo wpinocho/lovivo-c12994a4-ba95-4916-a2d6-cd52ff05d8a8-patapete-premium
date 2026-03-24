@@ -24,8 +24,34 @@
 - Claude Haiku detecta que la imagen no es una mascota y devuelve texto explicativo en lugar del prompt
 - Gemini recibe ese texto como prompt y también rechaza generar la imagen
 - Error final: `Gemini returned no image`
-- **No hay validación client-side para este caso** — el usuario ve un error genérico
-- Posible mejora futura: validar output de Haiku antes de pasar a Gemini
+- **SOLUCIÓN PENDIENTE:** Modificar ambos system prompts de Haiku para que si la imagen no es una mascota, trate al sujeto como un "personaje" y llene el template de todas formas — cambio mínimo descrito abajo
+
+## ✅ PLAN PENDIENTE: Fix prompt Haiku para imágenes de humanos
+
+### Cambio a realizar en `supabase/functions/generate-tattoo/index.ts`
+
+**`SYSTEM_PROMPT_ICONO`:** Agregar esta instrucción justo antes de la frase "Ahora, toma esa información...":
+
+```
+IMPORTANTE: Si la imagen no contiene una mascota sino una persona u otro sujeto, analízala de la misma manera. Adapta los campos al sujeto presente: usa "person" como tipo, describe el cabello como textura equivalente al pelo, los colores de piel/ropa como colores principales, y los rasgos faciales/accesorios como rasgos distintivos. Llena el template de todas formas.
+```
+
+**`SYSTEM_PROMPT_DIBUJO`:** Agregar la misma instrucción equivalente antes de "Ahora, toma esa información...":
+
+```
+IMPORTANTE: Si la imagen no contiene una mascota sino una persona u otro sujeto, analízala de la misma manera. Adapta los campos al sujeto presente: usa "person" como tipo y raza aproximada, describe rasgos físicos estructurales equivalentes (forma de cara, cabello, ojos abiertos/cerrados), y accesorios visibles. Llena el template de todas formas.
+```
+
+### Por qué funciona
+- Haiku ya recibe la imagen y sabe leerla, solo necesita permiso explícito para procesar sujetos no-mascota
+- El template de Gemini es genérico (acepta cualquier [TIPO DE ANIMAL] — "person" funciona perfectamente)
+- Gemini ya genera retratos de personas en estilo flat vector / linocut sin problema
+- Cambio mínimo: solo 2 líneas de texto en los prompts, sin tocar nada más del pipeline
+
+### Archivos a modificar
+- `supabase/functions/generate-tattoo/index.ts`: Modificar `SYSTEM_PROMPT_ICONO` y `SYSTEM_PROMPT_DIBUJO`
+
+---
 
 ## Historial de modelos probados
 - `gemini-2.5-flash-preview-04-17` → 404 (modelo de texto, no genera imágenes)
