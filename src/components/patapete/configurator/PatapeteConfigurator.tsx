@@ -9,7 +9,7 @@ import { useCartUISafe } from '@/components/CartProvider'
 import { STYLE_LABELS } from './types'
 import { userSupabase } from '@/integrations/supabase/client'
 import { trackCustomEvent, trackAddToCart, trackInitiateCheckout } from '@/lib/tracking-utils'
-import { createCheckoutFromCart } from '@/lib/checkout'
+import { createCheckoutFromCart, updateCheckout } from '@/lib/checkout'
 import { useCheckoutState } from '@/hooks/useCheckoutState'
 import { useSettings } from '@/contexts/SettingsContext'
 import { STORE_ID } from '@/lib/config'
@@ -321,13 +321,49 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
         currencyCode
       )
 
-      // Guardar estado de checkout (igual que hace useCheckout internamente)
+      console.log('[Patapete] checkout-create response:', {
+        order_id: order.order_id,
+        has_order: !!order.order,
+        order_items_count: order.order?.order_items?.length ?? 'missing',
+      })
+
+      // Ensure order_items are in cache before navigating.
+      // checkout-create may return order.order without order_items (empty or missing).
+      // We call checkout-update with include_product_details to guarantee items are present
+      // (same pattern used by cart flow: address update triggers checkout-update which populates items).
+      let orderData = order.order ?? null
+      if (!orderData?.order_items?.length) {
+        console.log('[Patapete] order_items missing/empty — fetching via checkout-update...')
+        try {
+          const updateResponse = await updateCheckout({
+            order_id: order.order_id,
+            checkout_token: order.checkout_token,
+            include_product_details: true,
+          })
+          if (updateResponse?.order?.order_items?.length) {
+            orderData = updateResponse.order
+            console.log('[Patapete] Got order_items via update:', orderData.order_items.length)
+          } else {
+            console.warn('[Patapete] checkout-update also returned no order_items')
+          }
+        } catch (updateErr) {
+          console.warn('[Patapete] checkout-update failed:', updateErr)
+        }
+      }
+
+      // Guardar estado de checkout — con order_items garantizados
       saveCheckoutState({
         order_id: order.order_id,
         checkout_token: order.checkout_token,
         store_id: STORE_ID,
-        order: order.order,
+        order: orderData ?? undefined,
       })
+
+      // Mirror what CartAdapter does: also persist to sessionStorage
+      try {
+        sessionStorage.setItem('checkout_order', JSON.stringify(order))
+        sessionStorage.setItem('checkout_order_id', String(order.order_id))
+      } catch { /* ignore */ }
 
       // 5. Track InitiateCheckout — con total real del backend
       trackInitiateCheckout({
@@ -339,9 +375,12 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
 
       navigate('/pagar')
     } catch (error) {
+      // Do NOT silently navigate — show error so user can retry
       console.error('[Patapete] Error creando checkout desde configurador:', error)
-      // Fallback: navegar de todos modos, el checkout mostrará el error
-      navigate('/pagar')
+      setState(s => ({
+        ...s,
+        error: 'No se pudo iniciar el pedido. Inténtalo de nuevo.',
+      }))
     } finally {
       setIsCreatingOrder(false)
     }

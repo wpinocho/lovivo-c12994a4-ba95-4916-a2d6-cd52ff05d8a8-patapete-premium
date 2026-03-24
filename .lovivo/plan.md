@@ -87,23 +87,26 @@
 
 ---
 
-## ✅ BUG CORREGIDO: "Ordenar ahora" llegaba al checkout con carrito vacío
+## 🐛 BUG "Ordenar ahora" → checkout vacío — ANÁLISIS COMPLETO
 
-### Root cause (resuelto)
-`handleOrderNow` en `PatapeteConfigurator.tsx` solo llamaba `addItem()` (actualiza CartContext local) y luego `navigate('/pagar')` inmediatamente. El checkout page (`/pagar`) requiere un **backend order activo** (orderId + checkoutToken en sessionStorage) para mostrar los items — sin eso, `useOrderItems` retornaba vacío.
+### Root cause definitivo
+`useOrderItems.loadOrderItems` es un hook de stale-while-revalidate que SOLO lee del cache localStorage. Cuando NO encuentra `order_items` en el cache (porque `checkout-create` devuelve `order.order` sin `order_items`, o lo devuelve vacío), NO hace ningún API call fallback — simplemente establece `isInitialized = true` con `items = []` y muestra "Tu carrito está vacío".
 
-El problema adicional: llamar `checkout()` desde `useCheckout` inmediatamente después de `addItem()` tampoco funciona porque `cart.items` en el hook tiene el valor stale (React no actualiza el estado síncronamente dentro de la misma función).
+**Flujo normal del carrito (funciona):** El usuario llena campos de dirección → triggerea `updateShippingAddress` → llama `checkout-update` con `include_product_details: true` → RESPUESTA incluye `order_items` → `updateOrderCache` llena el cache → items aparecen.
 
-### Solución implementada
-**Bypass del CartContext:** `handleOrderNow` construye un `CartProductItem` directamente y llama `createCheckoutFromCart([cartItem], ...)` sin pasar por el CartContext. Luego llama `saveCheckoutState(...)` para persistir la orden en sessionStorage — exactamente lo que hace `useCheckout.checkout()` internamente.
+**Flujo "Ordenar ahora" (estaba roto):** Navega directo a `/pagar` sin haber llenado ningún campo de dirección → `checkout-update` nunca se llama → cache sin `order_items` → carrito vacío.
 
-**Tracking opción B (ambos eventos):**
-1. `trackAddToCart` — al momento de iniciar (para funnel Meta/PostHog)
-2. `trackCustomEvent('configurator_order_now', ...)` — evento custom Patapete
-3. `trackInitiateCheckout` — después de que la orden es creada en backend, con el total real
+### Fix implementado (v2) — `PatapeteConfigurator.tsx`
+**Estrategia:** Garantizar `order_items` en cache ANTES de navegar (igual que Shopify: completar estado del checkout server-side antes de mostrar UI).
 
-**Loading state:** `isCreatingOrder` prop en `StepPets` → botones deshabilitados con texto "Preparando tu pedido..." / "Procesando..." mientras se crea la orden en backend.
+1. Después de `createCheckoutFromCart`, verificar si `order.order.order_items` tiene items
+2. Si está vacío/undefined → llamar `updateCheckout({ include_product_details: true })` para forzar carga
+3. Guardar el resultado (con `order_items`) en `checkoutState` vía `saveCheckoutState`
+4. Mirror de CartAdapter: también guardar `checkout_order` y `checkout_order_id` en sessionStorage
+5. **Error handling mejorado:** Si `createCheckoutFromCart` falla → mostrar error al usuario (NO navegar silenciosamente)
+6. Los logs `[Patapete]` permiten trazar exactamente qué está pasando
 
-### Archivos modificados
+### Archivos modificados (v2)
 - `src/components/patapete/configurator/PatapeteConfigurator.tsx`
-- `src/components/patapete/configurator/StepPets.tsx`
+  - Import `updateCheckout` añadido
+  - `handleOrderNow` con fallback API call + sessionStorage + error handling sin silent navigate
