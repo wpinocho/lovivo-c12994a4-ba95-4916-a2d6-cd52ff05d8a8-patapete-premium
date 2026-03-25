@@ -138,8 +138,8 @@ export function PhotoPetForm({ petIndex, pet, onChange, onGenerate, onClear, pho
                   : 'border-border'
             )}>
               <img
-                src={hasResult ? pet.generatedArtUrl! : pet.photoPreviewUrl}
-                alt={hasResult ? `Retrato IA mascota ${petIndex + 1}` : `Foto mascota ${petIndex + 1}`}
+                src={pet.photoPreviewUrl}
+                alt={`Foto mascota ${petIndex + 1}`}
                 className="w-full h-full object-cover"
               />
             </div>
