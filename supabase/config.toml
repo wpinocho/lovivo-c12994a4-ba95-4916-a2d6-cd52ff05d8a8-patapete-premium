@@ -9,3 +9,6 @@ max_duration = 300
 
 [functions.upload-patapete-preview]
 verify_jwt = false
+
+[functions.poll-generation]
+verify_jwt = false

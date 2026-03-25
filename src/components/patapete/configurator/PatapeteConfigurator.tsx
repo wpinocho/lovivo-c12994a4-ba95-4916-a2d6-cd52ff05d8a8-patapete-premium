@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ConfiguratorState, DEFAULT_PET, Pet, Style } from './types'
 import { StepPets } from './StepPets'
 import { compressAndResizeImage } from '@/utils/imagePreprocessing'
-import { generateTattooArt } from '@/utils/replicateApi'
+import { generateTattooArt, resumePollingForJob, checkJobStatus } from '@/utils/replicateApi'
 import { useCart, CartProductItem } from '@/contexts/CartContext'
 import { useCartUISafe } from '@/components/CartProvider'
 import { STYLE_LABELS } from './types'
@@ -21,6 +21,7 @@ interface PersistedPet {
   name: string
   photoBase64: string | null
   generatedArtUrl: string | null
+  jobId: string | null
 }
 
 interface PersistedState {
@@ -48,6 +49,7 @@ function loadFromStorage(): Partial<ConfiguratorState> | null {
           ? `data:image/png;base64,${p.photoBase64}`
           : null,
         generatedArtUrl: p.generatedArtUrl || null,
+        jobId: p.jobId || null,
       }
     })
     return {
@@ -74,6 +76,7 @@ function saveToStorage(state: ConfiguratorState) {
         name: p.name,
         photoBase64: p.photoBase64 || null,
         generatedArtUrl: p.generatedArtUrl || null,
+        jobId: p.jobId || null,
       })),
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
@@ -174,25 +177,29 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
       })
     }
 
+    // Generate a fresh job ID — saved to pet immediately for persistence across reloads
+    const jobId = crypto.randomUUID()
+
     try {
       let compressedBase64: string
 
       if (fileToUse) {
         // Fresh upload: compress client-side and store base64 for persistence
-        updatePet({ isProcessingBg: true, isGeneratingArt: false, generatedArtUrl: null })
+        updatePet({ isProcessingBg: true, isGeneratingArt: false, generatedArtUrl: null, jobId })
         compressedBase64 = await compressAndResizeImage(fileToUse)
         updatePet({ isProcessingBg: false, isGeneratingArt: true, photoBase64: compressedBase64 })
       } else {
         // Retry after refresh: reuse stored base64 (skip re-compression)
         compressedBase64 = pet.photoBase64!
-        updatePet({ isGeneratingArt: true, generatedArtUrl: null })
+        updatePet({ isGeneratingArt: true, generatedArtUrl: null, jobId })
       }
 
-      // Full backend pipeline (BiRefNet → smart crop → FLUX 2 Pro)
+      // Full backend pipeline — fires HTTP + polls until done (async job queue)
       const artUrl = await generateTattooArt(
         compressedBase64,
         pet.name || 'mascota',
         styleRef.current,
+        jobId,
         (status) => updatePet({ progressMessage: status })
       )
 
@@ -386,29 +393,76 @@ export function PatapeteConfigurator({ product }: PatapeteConfiguratorProps) {
     }
   }, [product, state, navigate, saveCustomizationToCart, saveCheckoutState, currencyCode])
 
-  // ─── Auto-retry: si hay foto sin ícono al montar (reload / cambio de app) ────
-  // Escenario: user sube foto → IA empieza a generar → sale de la app / recarga
-  // → la conexión HTTP se corta → al volver, detectamos foto sin ícono y
-  //   arrancamos sola la generación sin que el usuario haga nada.
+  // ─── Smart resume al recargar / volver de background ────────────────────────
+  // Lógica de 3 casos:
+  //   1. Pet tiene jobId + status='done'       → mostrar resultado (sin re-generar)
+  //   2. Pet tiene jobId + status='processing' → solo polling (servidor sigue cocinando)
+  //   3. Sin jobId o job expirado/error        → nueva generación completa
   const autoRetryDoneRef = useRef(false)
+  // Ref estable para usar handleGenerate dentro del useEffect sin dependencias
+  const handleGenerateRef = useRef(handleGenerate)
+  handleGenerateRef.current = handleGenerate
 
   useEffect(() => {
     if (autoRetryDoneRef.current) return
     autoRetryDoneRef.current = true
 
-    state.pets.forEach((pet, i) => {
-      // Solo mascotas activas con foto pero sin ícono y que no estén procesando
-      if (
-        i < state.petCount &&
-        pet.photoBase64 &&
-        !pet.generatedArtUrl &&
-        !pet.isProcessingBg &&
-        !pet.isGeneratingArt
-      ) {
-        console.log(`[Patapete] Auto-retry generación para mascota ${i + 1}`)
-        handleGenerate(i)
+    const initialPets     = state.pets
+    const initialPetCount = state.petCount
+
+    const resumeOrRetry = async (pet: Pet, i: number) => {
+      if (i >= initialPetCount) return
+      if (!pet.photoBase64 || pet.generatedArtUrl) return
+      if (pet.isProcessingBg || pet.isGeneratingArt) return
+
+      const updatePet = (updates: Partial<Pet>) => {
+        setState(s => {
+          const pets = [...s.pets]
+          pets[i] = { ...pets[i], ...updates }
+          return { ...s, pets }
+        })
       }
-    })
+
+      if (pet.jobId) {
+        console.log(`[Patapete] Checking job ${pet.jobId} for pet ${i + 1}...`)
+        const jobStatus = await checkJobStatus(pet.jobId)
+
+        if (jobStatus.status === 'done' && jobStatus.result_url) {
+          // ✅ Caso 1: ya terminó — mostrar al instante sin re-generar
+          console.log(`[Patapete] Job done — restoring result instantly`)
+          updatePet({ generatedArtUrl: jobStatus.result_url })
+          return
+        }
+
+        if (jobStatus.status === 'processing') {
+          // ⏳ Caso 2: servidor aún procesando — solo polling, sin nueva llamada
+          console.log(`[Patapete] Job still processing — resuming poll only`)
+          updatePet({ isGeneratingArt: true, progressMessage: 'Retomando generación...' })
+          try {
+            const artUrl = await resumePollingForJob(
+              pet.jobId,
+              (msg) => updatePet({ progressMessage: msg })
+            )
+            updatePet({ generatedArtUrl: artUrl, isGeneratingArt: false })
+            trackCustomEvent('icon_generated', { pet_index: i, style: styleRef.current, resumed: true })
+          } catch (err) {
+            console.warn(`[Patapete] Resume polling failed — starting fresh:`, err)
+            updatePet({ isGeneratingArt: false })
+            handleGenerateRef.current(i)
+          }
+          return
+        }
+
+        // Caso 3a: job con error o no encontrado → nueva generación
+        console.log(`[Patapete] Job status=${jobStatus.status} — starting fresh generation`)
+      }
+
+      // Caso 3b: sin jobId → nueva generación
+      console.log(`[Patapete] Auto-retry: no job found for pet ${i + 1}`)
+      handleGenerateRef.current(i)
+    }
+
+    initialPets.forEach((pet, i) => resumeOrRetry(pet, i))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps — corre solo una vez al montar
 
   // Use a ref for style so handleGenerate always reads the latest value

@@ -10,6 +10,7 @@ export interface Pet {
   isGeneratingArt: boolean
   name: string
   progressMessage: string
+  jobId: string | null             // async job ID for polling — persisted to localStorage
 }
 
 export interface ConfiguratorState {
@@ -34,6 +35,7 @@ export const DEFAULT_PET: Pet = {
   isGeneratingArt: false,
   name: '',
   progressMessage: '',
+  jobId: null,
 }
 
 export const STYLE_LABELS: Record<Style, string> = {

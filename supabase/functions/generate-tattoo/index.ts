@@ -467,13 +467,26 @@ serve(async (req) => {
     if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret not configured')
     if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY secret not configured')
 
-    const { imageBase64, petName, style } = await req.json()
+    const { imageBase64, petName, style, jobId } = await req.json()
     if (!imageBase64) throw new Error('imageBase64 is required')
 
     const artStyle: 'dibujo' | 'icono' = style === 'icono' ? 'icono' : 'dibujo'
 
     log.pet_name = petName || null
     log.style    = artStyle
+
+    // ── Mark job as processing (if jobId provided) ──────────────────────────────
+    const supabaseJobs = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    if (jobId) {
+      console.log(`[generate-tattoo] Job ${jobId} — writing status=processing to generation_jobs`)
+      await supabaseJobs.from('generation_jobs').upsert({
+        id:         jobId,
+        status:     'processing',
+        style:      artStyle,
+        pet_name:   petName || null,
+        updated_at: new Date().toISOString(),
+      })
+    }
 
     const tStart = Date.now()
 
@@ -542,6 +555,16 @@ serve(async (req) => {
     console.log(`[generate-tattoo] ═══ PIPELINE COMPLETE — total time: ${latencyTotal}ms ═══`)
     console.log(`[generate-tattoo] FINAL OUTPUT URL: ${permanentArtUrl}`)
 
+    // ── Mark job as done ─────────────────────────────────────────────────────────
+    if (jobId) {
+      console.log(`[generate-tattoo] Job ${jobId} — writing status=done to generation_jobs`)
+      await supabaseJobs.from('generation_jobs').update({
+        status:     'done',
+        result_url: permanentArtUrl,
+        updated_at: new Date().toISOString(),
+      }).eq('id', jobId)
+    }
+
     // 🔥 FIRE AND FORGET — insert log sin bloquear la respuesta al usuario
     const supabaseLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     supabaseLog.from('generation_logs').insert(log)
@@ -558,6 +581,19 @@ serve(async (req) => {
     // 🔥 FIRE AND FORGET — también guardamos el log en caso de error con status='error'
     log.status        = 'error'
     log.error_message = message
+
+    // ── Mark job as error (fire-and-forget — don't block the error response) ──
+    if (jobId) {
+      const supabaseJobs = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      supabaseJobs.from('generation_jobs').update({
+        status:        'error',
+        error_message: message,
+        updated_at:    new Date().toISOString(),
+      }).eq('id', jobId)
+        .then(() => console.log(`[generate-tattoo] Job ${jobId} marked as error`))
+        .catch((e: Error) => console.error('[generate-tattoo] Failed to mark job as error:', e.message))
+    }
+
     const supabaseLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     supabaseLog.from('generation_logs').insert(log)
       .then(() => console.log('[generate-tattoo] ✓ Error log saved to generation_logs'))
