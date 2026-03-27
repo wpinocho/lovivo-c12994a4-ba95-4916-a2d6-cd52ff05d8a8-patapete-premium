@@ -176,7 +176,7 @@ export function StepPets({
       </div>
 
       {/* ── MOBILE PREVIEW — sticky, full-width, after title, before price/description ── */}
-      <div className="lg:hidden sticky top-16 z-10 bg-background pt-1 pb-2">
+      <div className="lg:hidden sticky top-16 z-10 bg-background pt-1 pb-2 relative">
         <CanvasPreview
           style={style}
           pets={pets.slice(0, petCount)}
@@ -184,6 +184,14 @@ export function StepPets({
           phrase2={phrase2}
           onPreviewReady={onPreviewReady}
         />
+        {isProcessing && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/90 backdrop-blur-sm border border-border shadow-md text-xs font-medium text-foreground whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+              Generando tu retrato...
+            </span>
+          </div>
+        )}
       </div>
       {/* Badges — NOT sticky, se van con el scroll */}
       <div className="lg:hidden flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -405,40 +413,44 @@ export function StepPets({
         </div>
       </div>
 
-      {/* ── Sticky CTA bar ── */}
-      {/* No photo: always visible — nudge to upload. Has photo: shows when in-page CTA is out of view */}
-      {!isProcessing && (
-        <div
-          className={cn(
-            'fixed bottom-0 left-0 right-0 z-50 bg-background/97 backdrop-blur-md border-t shadow-lg transition-all duration-300 ease-out pb-[env(safe-area-inset-bottom)]',
-            (!hasAnyPhoto || !ctaInView) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-          )}
-        >
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      {/* ── Sticky CTA bar — 3 estados ── */}
+      {/* Estado 1: sin foto | Estado 2: procesando | Estado 3: foto lista y CTA fuera de vista */}
+      <div
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-50 bg-background/97 backdrop-blur-md border-t shadow-lg transition-all duration-300 ease-out pb-[env(safe-area-inset-bottom)]',
+          (!hasAnyPhoto || isProcessing || !ctaInView) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
 
-            {/* Left */}
-            <div className="flex items-center gap-3 min-w-0">
-              {hasAnyPhoto ? (
-                <>
-                  <div className="hidden sm:flex">
-                    {[0,1,2,3,4].map(i => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm text-foreground truncate">Tapete personalizado</p>
-                    <p className="text-xs text-muted-foreground hidden sm:block">¡Ya puedes ordenar!</p>
-                  </div>
-                </>
-              ) : (
+          {isProcessing ? (
+            /* ── Estado 2: Procesando ── */
+            <>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm text-foreground leading-tight">Falta la foto de tu mascota</p>
+                  <p className="font-semibold text-sm text-foreground leading-tight">Creando la imagen de tu mascota</p>
+                  <p className="text-xs text-muted-foreground">Solo tarda unos segundos</p>
                 </div>
-              )}
-            </div>
-
-            {/* Right */}
-            {hasAnyPhoto ? (
+              </div>
+              <div className="shrink-0 w-8 h-8 flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin block" />
+              </div>
+            </>
+          ) : hasAnyPhoto ? (
+            /* ── Estado 3: Foto lista, CTA fuera de vista ── */
+            <>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="hidden sm:flex">
+                  {[0,1,2,3,4].map(i => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate">Tapete personalizado</p>
+                  <p className="text-xs text-muted-foreground hidden sm:block">¡Ya puedes ordenar!</p>
+                </div>
+              </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-lg font-bold text-foreground">
                   ${price.toLocaleString('es-MX')}
@@ -448,7 +460,7 @@ export function StepPets({
                   onClick={() => validateAndProceed('cart')}
                   size="default"
                   variant="outline"
-                  disabled={isProcessing || isCreatingOrder}
+                  disabled={isCreatingOrder}
                   className="rounded-xl font-semibold px-4 hidden sm:flex"
                 >
                   <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
@@ -457,13 +469,19 @@ export function StepPets({
                 <Button
                   onClick={() => validateAndProceed('order')}
                   size="default"
-                  disabled={isProcessing || isCreatingOrder}
+                  disabled={isCreatingOrder}
                   className="rounded-xl font-semibold px-5"
                 >
                   {isCreatingOrder ? 'Procesando...' : 'Ordenar →'}
                 </Button>
               </div>
-            ) : (
+            </>
+          ) : (
+            /* ── Estado 1: Sin foto ── */
+            <>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm text-foreground leading-tight">Falta la foto de tu mascota</p>
+              </div>
               <Button
                 onClick={() => {
                   triggerPet0FileInput.current?.()
@@ -474,10 +492,10 @@ export function StepPets({
               >
                 📸 Sube tu foto
               </Button>
-            )}
-          </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
