@@ -175,8 +175,8 @@ export function StepPets({
         </h1>
       </div>
 
-      {/* ── MOBILE PREVIEW — static, full-width, after title, before price/description ── */}
-      <div className="lg:hidden">
+      {/* ── MOBILE PREVIEW — sticky, full-width, after title, before price/description ── */}
+      <div className="lg:hidden sticky top-16 z-10 bg-background pt-1 pb-2">
         <CanvasPreview
           style={style}
           pets={pets.slice(0, petCount)}
@@ -184,11 +184,12 @@ export function StepPets({
           phrase2={phrase2}
           onPreviewReady={onPreviewReady}
         />
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-3">
-          <span className="bg-muted rounded-lg px-2 py-1">🇲🇽 Hecho en México</span>
-          <span className="bg-muted rounded-lg px-2 py-1">📦 Envío a todo el país</span>
-          <span className="bg-muted rounded-lg px-2 py-1">⭐ Garantía de satisfacción</span>
-        </div>
+      </div>
+      {/* Badges — NOT sticky, se van con el scroll */}
+      <div className="lg:hidden flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <span className="bg-muted rounded-lg px-2 py-1">🇲🇽 Hecho en México</span>
+        <span className="bg-muted rounded-lg px-2 py-1">📦 Envío a todo el país</span>
+        <span className="bg-muted rounded-lg px-2 py-1">⭐ Garantía de satisfacción</span>
       </div>
 
       {/* ── Main layout: 2-col sticky on desktop, single col on mobile ── */}
@@ -213,12 +214,8 @@ export function StepPets({
         {/* ── RIGHT: form (mobile: full-width, desktop: right col) ── */}
         <div className="space-y-6">
 
-          {/* ── PART B: description + price + social proof + urgency ── */}
+          {/* ── PART B: price + social proof + urgency ── */}
           <div className="pb-1">
-            <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
-              Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
-            </p>
-
             {/* Price */}
             <div className="flex items-baseline gap-2.5 mt-3 flex-wrap">
               <span className="text-3xl font-bold text-foreground">

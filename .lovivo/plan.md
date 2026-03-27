@@ -2,38 +2,31 @@
 
 ## Cambios recientes implementados
 
+### Fix sticky mobile preview (✅ completado)
+Separado el bloque `lg:hidden` en dos divs:
+1. `<div className="lg:hidden sticky top-16 z-10 bg-background pt-1 pb-2">` — solo el `CanvasPreview` (sticky)
+2. `<div className="lg:hidden flex flex-wrap gap-2 ...">` — solo los badges (no sticky, se van con el scroll)
+
+También eliminado el texto descriptivo redundante en PART B:
+- ❌ "Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo."
+- Razón: ya lo dicen el upload zone y el sticky bar de abajo — era ruido visual
+
 ### Layout mobile en StepPets (✅ completado)
 Nuevo orden visual en mobile:
 1. ⭐ Estrellas + título (contexto rápido)
 2. 🖼️ Preview del tapete (full-width, sticky — el gancho visual)
-3. 💰 Precio + social proof + urgencia
-4. 📸 Formulario de foto y textos
-5. 🛒 Botones de compra
+3. 🏷️ Badges ("Hecho en México", etc.) — no sticky, se van con scroll
+4. 💰 Precio + social proof + urgencia
+5. 📸 Formulario de foto y textos
+6. 🛒 Botones de compra
 
 Desktop: sin cambios — 2 columnas con preview sticky a la izquierda.
 
 **Decisiones técnicas:**
-- `onPreviewReady` solo se pasa al `CanvasPreview` mobile
-- El preview mobile es `sticky top-16 z-10 bg-background` — se queda arriba al hacer scroll PERO el título/estrellas NO son sticky (se van con el scroll)
-- Los badges ("Hecho en México", etc.) van FUERA del div sticky, en su propio div no-sticky debajo
-- Se eliminó el texto descriptivo "Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo." — es redundante con el upload zone y el sticky bar
-
-### Fix pendiente: sticky mobile preview (🔧 por implementar)
-**Problema:** Al reordenar el layout mobile, el `div.lg:hidden` del preview quedó sin clase `sticky`.
-
-**Solución en `src/components/patapete/configurator/StepPets.tsx`:**
-
-Separar el bloque `lg:hidden` en DOS divs:
-1. `<div className="lg:hidden sticky top-16 z-10 bg-background pt-1 pb-2">` — solo contiene el `CanvasPreview`
-2. `<div className="lg:hidden flex flex-wrap gap-2 ...">` — solo contiene los badges (no sticky)
-
-También eliminar el párrafo de descripción en la sección PART B:
-```tsx
-// ELIMINAR esta línea:
-<p className="text-muted-foreground text-sm leading-relaxed max-w-md">
-  Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
-</p>
-```
+- `onPreviewReady` solo se pasa al `CanvasPreview` mobile (sticky div)
+- El preview mobile usa `sticky top-16 z-10 bg-background` — se queda arriba al hacer scroll
+- Los badges van en div separado (no sticky)
+- El texto descriptivo fue eliminado
 
 ### Upload zone full-width mobile (✅ completado antes)
 - Upload zone full-width reemplaza el cuadrito 88px
