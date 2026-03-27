@@ -7,6 +7,7 @@
 - Auto-retry generación IA al montar ✅ IMPLEMENTADO
 - **Async Job Queue (anti-loop móvil) ✅ IMPLEMENTADO (v25)**
 - **Bug thumbnail rota + remove background ✅ CORREGIDO (v26)**
+- **Mejoras de conversión UX ✅ IMPLEMENTADAS (v27)**
 
 ## Pipeline actual (v24)
 1. **Step 0.5 + Step 1 (paralelo):** Upload imagen original usuario a Storage (`user-uploads/`) + `fal-ai/birefnet` — background removal (foto usuario) → corren en `Promise.all` para cero latencia extra
@@ -35,103 +36,58 @@
 
 ---
 
-## 🚀 Plan v27 — Mejora conversión upload foto (PENDIENTE)
+## ✅ Mejoras de conversión UX (v27 — IMPLEMENTADAS)
 
-### Contexto / problema
-- Funnel: 285 visitantes reales de Meta → solo ~14 suben foto (~5%)
-- La velocidad de página NO es el problema (LCP móvil promedio ~1s, excelente)
-- El problema es UX: en mobile el upload form está 2+ scrolls abajo del fold
-- No hay tracking de si el usuario llega a ver el upload form o se va antes
+### Problema
+- 285 visitantes reales de Meta → solo ~4-5% suben foto
+- Upload form estaba 2+ scrolls abajo del fold en mobile
+- No había tracking para saber si el problema era "no ven el upload" vs "lo ven pero no actúan"
 
-### Cambios a implementar
+### Cambios implementados
 
-#### 1. Sticky CTA inteligente — `StepPets.tsx`
-El sticky bottom bar actualmente siempre dice "Ordenar →".
-Cambiar a comportamiento contextual:
+#### 1. Upload zone full-width en mobile — `PhotoPetForm.tsx` ✅
+- Cuando no hay foto: zona full-width con `min-h-[120px]`, icono de cámara grande, texto claro "Sube la foto de tu mascota" + "Toca aquí · JPG, PNG, WEBP" + "Mejor si se ve bien la carita 🐾"
+- Borde dashed `border-primary/40`, fondo `bg-primary/5`, hover más oscuro
+- Animación `animate-in fade-in-0 zoom-in-95`
+- Cuando hay foto: vuelve al layout horizontal compacto (thumbnail 88x88 + nombre)
 
-**Sin foto subida:**
-- Texto: `📸 Sube la foto de tu mascota`
-- Color: más prominente / diferente al CTA de compra (ej. outline o secondary)
-- Al clicar: llama a `petUploadRef` (ref al input file del primer pet) para abrir el file picker directamente
-  - Esto requiere exponer una función `triggerFileInput()` desde `PhotoPetForm` hacia arriba via ref o callback
-  - Alternativa más simple: hacer scroll al upload zone Y añadir clase `animate-pulse` temporal al border del upload box
+#### 2. `onRegisterTrigger` prop — `PhotoPetForm.tsx` ✅
+- Prop `onRegisterTrigger?: (fn: () => void) => void`
+- `useEffect` en mount: llama `onRegisterTrigger?.(() => fileInputRef.current?.click())`
+- Permite al padre abrir el file picker programáticamente
 
-**Con foto subida pero procesando:**
-- Mantener disabled / loading state actual
+#### 3. Sticky CTA inteligente — `StepPets.tsx` ✅
+- `hasAnyPhoto = pets.slice(0, petCount).some(p => !!p.photoPreviewUrl || !!p.photoBase64 || !!p.generatedArtUrl)`
+- **Sin foto:** sticky SIEMPRE visible (ignora ctaInView), muestra "Falta la foto de tu mascota" + botón "📸 Sube tu foto" con `animate-pulse-subtle`
+  - Al clicar: `triggerPet0FileInput.current?.()` → abre file picker directamente
+  - Trackea evento `sticky_cta_upload_tap`
+- **Con foto:** comportamiento anterior (aparece cuando CTA de compra sale del viewport, muestra precio + "Ordenar →")
 
-**Con foto lista:**
-- Volver al "Ordenar →" / "$949 Ordenar" normal
+#### 4. Tracking `upload_zone_viewed` — `PhotoPetForm.tsx` ✅
+- `useInView({ threshold: 0.5, triggerOnce: true })` en el upload zone full-width
+- Dispara `trackCustomEvent('upload_zone_viewed', { pet_index })` solo para pet 0
+- Nos da el dato clave: ¿cuántos ven el upload vs cuántos suben?
 
-#### 2. Upload zone más grande en mobile — `PhotoPetForm.tsx`
-Actualmente: cuadrito 88x88px con ícono de cámara y "Subir foto"
+#### 5. Scroll depth tracking — `StepPets.tsx` ✅
+- `useEffect` con `window.addEventListener('scroll', ...)` passive
+- Eventos `page_scroll_depth` al 50% y 90%
+- `scrollDepthFiredRef` evita duplicados
 
-En mobile hacer la zona de upload FULL WIDTH cuando no hay foto:
-```
-┌──────────────────────────────────────┐
-│   📷  Sube la foto de tu mascota     │
-│   Toca aquí · JPG, PNG, WEBP         │
-│   Mejor si se ve bien la carita 🐾   │
-└──────────────────────────────────────┘
-```
-- Altura mínima: `min-h-[120px]` en mobile (sm: vuelve al layout horizontal compacto si hay espacio)
-- Borde dashed más ancho, color primary/50
-- Fondo: `bg-primary/5`
-- Toda la zona es clickable (ya lo es, mantener)
-- Animación subtle de entrada (fade-in o scale-in)
+#### 6. Animación `animate-pulse-subtle` — `tailwind.config.ts` ✅
+- Keyframe: 0%,100% scale(1) opacity(1), 50% scale(0.97) opacity(0.88)
+- 2s ease-in-out infinite
 
-Cuando hay foto: vuelve al layout compacto horizontal actual (thumbnail 88x88 + nombre)
+### Archivos modificados
+- `src/components/patapete/configurator/PhotoPetForm.tsx`
+- `src/components/patapete/configurator/StepPets.tsx`
+- `tailwind.config.ts`
 
-#### 3. Nuevo evento tracking `upload_zone_viewed` — `PhotoPetForm.tsx`
-Usar `useInView` (react-intersection-observer, ya instalado) en el upload zone para detectar cuando el usuario lo ve:
-
-```tsx
-const { ref: uploadRef, inView } = useInView({ threshold: 0.5, triggerOnce: true })
-useEffect(() => {
-  if (inView && petIndex === 0) { // solo pet 0 para no duplicar
-    trackCustomEvent('upload_zone_viewed', { pet_index: petIndex })
-  }
-}, [inView])
-```
-
-Esto nos dará el dato clave: ¿cuántos usuarios VEN el upload form vs cuántos lo usan?
-
-#### 4. Evento `page_scroll_depth` — `StepPets.tsx` o `PatapeteConfigurator.tsx`
-Trackear al 50% y 90% del scroll de la página para entender bounce vs engagement:
-
-```tsx
-useEffect(() => {
-  const handleScroll = () => {
-    const scrollPct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100
-    if (scrollPct > 50 && !firedRef.current['50']) {
-      firedRef.current['50'] = true
-      trackCustomEvent('page_scroll_depth', { depth: 50 })
-    }
-    if (scrollPct > 90 && !firedRef.current['90']) {
-      firedRef.current['90'] = true
-      trackCustomEvent('page_scroll_depth', { depth: 90 })
-    }
-  }
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  return () => window.removeEventListener('scroll', handleScroll)
-}, [])
-```
-
-### Archivos a modificar
-- `src/components/patapete/configurator/PhotoPetForm.tsx`:
-  - Upload zone full-width en mobile cuando no hay foto
-  - Exponer ref/callback para triggerFileInput desde afuera
-  - Añadir `upload_zone_viewed` tracking via useInView
-- `src/components/patapete/configurator/StepPets.tsx`:
-  - Sticky CTA bar: lógica contextual (sin foto → "Sube tu foto", con foto → "Ordenar")
-  - Al clicar sticky sin foto: abrir file picker del pet[0] directamente
-  - Añadir scroll depth tracking
-  - Ref a `triggerFileInput` de PhotoPetForm[0]
-
-### Prioridad de impacto esperado
-1. **Sticky CTA inteligente** → mayor impacto, reduce fricción del CTA principal
-2. **Upload zone grande** → mayor visibilidad del paso clave
-3. **Tracking upload_zone_viewed** → nos da el dato faltante para diagnosticar mejor
-4. **Scroll depth** → contexto adicional para análisis
+### Próximos pasos (análisis)
+Una vez activo ~1 semana con tráfico, revisar en PostHog:
+- Ratio `upload_zone_viewed` / `$pageview` → % que llegan a ver el upload
+- Ratio `photo_uploaded` / `upload_zone_viewed` → % que suben habiendo visto el upload
+- `sticky_cta_upload_tap` → cuántos tapan directamente desde el sticky
+- `page_scroll_depth` 50% / 90% → engagement del contenido
 
 ---
 

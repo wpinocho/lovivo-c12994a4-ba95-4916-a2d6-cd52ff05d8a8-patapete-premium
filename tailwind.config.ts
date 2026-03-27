@@ -122,6 +122,10 @@ export default {
 				'shimmer': {
 					from: { backgroundPosition: '-200% 0' },
 					to: { backgroundPosition: '200% 0' }
+				},
+				'pulse-subtle': {
+					'0%, 100%': { opacity: '1', transform: 'scale(1)' },
+					'50%': { opacity: '0.88', transform: 'scale(0.97)' }
 				}
 			},
 			animation: {
@@ -133,6 +137,7 @@ export default {
 				'scale-in': 'scale-in 0.4s ease-out',
 				'slide-in-right': 'slide-in-right 0.5s ease-out',
 				'float': 'float 3s ease-in-out infinite',
+				'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
 			},
 			boxShadow: {
 				'warm': '0 4px 24px -4px hsl(20 20% 12% / 0.12)',

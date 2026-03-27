@@ -1,6 +1,7 @@
-import { useMemo, useState, useRef } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { Pet, PRICES, Style } from './types'
+import { trackCustomEvent } from '@/lib/tracking-utils'
 import { PhotoPetForm } from './PhotoPetForm'
 import { CanvasPreview } from './CanvasPreview'
 import { Button } from '@/components/ui/button'
@@ -55,6 +56,30 @@ export function StepPets({
   isCreatingOrder = false,
 }: StepPetsProps) {
   const isProcessing = pets.some(p => p.isProcessingBg || p.isGeneratingArt)
+  const hasAnyPhoto = pets.slice(0, petCount).some(p => !!p.photoPreviewUrl || !!p.photoBase64 || !!p.generatedArtUrl)
+
+  // ── Ref to trigger file picker from sticky bar ───────────────────────────
+  const triggerPet0FileInput = useRef<(() => void) | null>(null)
+
+  // ── Scroll depth tracking ─────────────────────────────────────────────────
+  const scrollDepthFiredRef = useRef<Record<string, boolean>>({})
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollable = document.body.scrollHeight - window.innerHeight
+      if (scrollable <= 0) return
+      const pct = (window.scrollY / scrollable) * 100
+      if (pct > 50 && !scrollDepthFiredRef.current['50']) {
+        scrollDepthFiredRef.current['50'] = true
+        trackCustomEvent('page_scroll_depth', { depth: 50 })
+      }
+      if (pct > 90 && !scrollDepthFiredRef.current['90']) {
+        scrollDepthFiredRef.current['90'] = true
+        trackCustomEvent('page_scroll_depth', { depth: 90 })
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // ── Validation state ──
   const [fieldErrors, setFieldErrors] = useState<{
@@ -259,6 +284,7 @@ export function StepPets({
                 onClear={() => handleClearPet(i)}
                 photoError={fieldErrors[i]?.photo}
                 nameError={fieldErrors[i]?.name}
+                onRegisterTrigger={i === 0 ? (fn) => { triggerPet0FileInput.current = fn } : undefined}
               />
             </div>
           ))}
@@ -376,50 +402,77 @@ export function StepPets({
         </div>
       </div>
 
-      {/* ── Sticky CTA bar — appears when CTA button is out of view ── */}
+      {/* ── Sticky CTA bar ── */}
+      {/* No photo: always visible — nudge to upload. Has photo: shows when in-page CTA is out of view */}
       {!isProcessing && (
         <div
           className={cn(
             'fixed bottom-0 left-0 right-0 z-50 bg-background/97 backdrop-blur-md border-t shadow-lg transition-all duration-300 ease-out pb-[env(safe-area-inset-bottom)]',
-            ctaInView ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+            (!hasAnyPhoto || !ctaInView) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
           )}
         >
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+
+            {/* Left */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className="hidden sm:flex">
-                {[0,1,2,3,4].map(i => (
-                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">Tapete personalizado</p>
-                <p className="text-xs text-muted-foreground hidden sm:block">¡Tu retrato está listo!</p>
-              </div>
+              {hasAnyPhoto ? (
+                <>
+                  <div className="hidden sm:flex">
+                    {[0,1,2,3,4].map(i => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-foreground truncate">Tapete personalizado</p>
+                    <p className="text-xs text-muted-foreground hidden sm:block">¡Ya puedes ordenar!</p>
+                  </div>
+                </>
+              ) : (
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm text-foreground leading-tight">Falta la foto de tu mascota</p>
+                  <p className="text-xs text-muted-foreground">Es el primer paso para crear tu tapete</p>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-lg font-bold text-foreground">
-                ${price.toLocaleString('es-MX')}
-                <span className="text-xs font-normal text-muted-foreground ml-1">MXN</span>
-              </span>
+
+            {/* Right */}
+            {hasAnyPhoto ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-lg font-bold text-foreground">
+                  ${price.toLocaleString('es-MX')}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">MXN</span>
+                </span>
+                <Button
+                  onClick={() => validateAndProceed('cart')}
+                  size="default"
+                  variant="outline"
+                  disabled={isProcessing || isCreatingOrder}
+                  className="rounded-xl font-semibold px-4 hidden sm:flex"
+                >
+                  <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                  Agregar al carrito
+                </Button>
+                <Button
+                  onClick={() => validateAndProceed('order')}
+                  size="default"
+                  disabled={isProcessing || isCreatingOrder}
+                  className="rounded-xl font-semibold px-5"
+                >
+                  {isCreatingOrder ? 'Procesando...' : 'Ordenar →'}
+                </Button>
+              </div>
+            ) : (
               <Button
-                onClick={() => validateAndProceed('cart')}
+                onClick={() => {
+                  triggerPet0FileInput.current?.()
+                  trackCustomEvent('sticky_cta_upload_tap', { pet_count: petCount })
+                }}
                 size="default"
-                variant="outline"
-                disabled={isProcessing || isCreatingOrder}
-                className="rounded-xl font-semibold px-4 hidden sm:flex"
+                className="rounded-xl font-semibold px-5 shrink-0 animate-pulse-subtle"
               >
-                <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
-                Agregar al carrito
+                📸 Sube tu foto
               </Button>
-              <Button
-                onClick={() => validateAndProceed('order')}
-                size="default"
-                disabled={isProcessing || isCreatingOrder}
-                className="rounded-xl font-semibold px-5"
-              >
-                {isCreatingOrder ? 'Procesando...' : 'Ordenar →'}
-              </Button>
-            </div>
+            )}
           </div>
         </div>
       )}
