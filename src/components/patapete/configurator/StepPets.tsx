@@ -158,8 +158,8 @@ export function StepPets({
   return (
     <div className="space-y-4">
 
-      {/* ── Product header — title, rating, price ── */}
-      <div className="pb-1">
+      {/* ── PART A: Stars + title — always on top ── */}
+      <div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
           <div className="flex shrink-0">
             {[0,1,2,3,4].map(i => (
@@ -173,38 +173,21 @@ export function StepPets({
         <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
           Tapete personalizado con tu mascota
         </h1>
-        <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
-          Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
-        </p>
+      </div>
 
-        {/* Price — below title for clear hierarchy */}
-        <div className="flex items-baseline gap-2.5 mt-3 flex-wrap">
-          <span className="text-3xl font-bold text-foreground">
-            ${price.toLocaleString('es-MX')}
-            <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
-          </span>
-          <span className="text-base text-muted-foreground line-through">$1,199 MXN</span>
-          <span className="text-xs text-muted-foreground">· Envío incluido</span>
-        </div>
-
-        {/* Social proof + delivery */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Eye className="w-3.5 h-3.5 text-primary" />
-            <span className="font-medium text-foreground">{viewerCount}</span> personas lo están viendo ahora
-          </span>
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Truck className="w-3.5 h-3.5 text-primary" />
-            Llega entre <span className="font-medium text-foreground ml-1">{deliveryRange}</span>
-          </span>
-        </div>
-
-        {/* Urgency — artisan scarcity */}
-        <div className="flex items-center gap-1.5 mt-2.5">
-          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            Hacemos pocos pedidos por semana para mantener la calidad
-          </span>
+      {/* ── MOBILE PREVIEW — static, full-width, after title, before price/description ── */}
+      <div className="lg:hidden">
+        <CanvasPreview
+          style={style}
+          pets={pets.slice(0, petCount)}
+          phrase={phrase}
+          phrase2={phrase2}
+          onPreviewReady={onPreviewReady}
+        />
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-3">
+          <span className="bg-muted rounded-lg px-2 py-1">🇲🇽 Hecho en México</span>
+          <span className="bg-muted rounded-lg px-2 py-1">📦 Envío a todo el país</span>
+          <span className="bg-muted rounded-lg px-2 py-1">⭐ Garantía de satisfacción</span>
         </div>
       </div>
 
@@ -219,7 +202,6 @@ export function StepPets({
             pets={pets.slice(0, petCount)}
             phrase={phrase}
             phrase2={phrase2}
-            onPreviewReady={onPreviewReady}
           />
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-3">
             <span className="bg-muted rounded-lg px-2 py-1">🇲🇽 Hecho en México</span>
@@ -231,16 +213,40 @@ export function StepPets({
         {/* ── RIGHT: form (mobile: full-width, desktop: right col) ── */}
         <div className="space-y-6">
 
-          {/* MOBILE: sticky preview — first thing visible */}
-          <div className="lg:hidden sticky top-16 z-10 -mx-2 px-2 py-2 bg-background/95 backdrop-blur-sm">
-            <div className="mx-auto max-w-[100%]">
-              <CanvasPreview
-                style={style}
-                pets={pets.slice(0, petCount)}
-                phrase={phrase}
-                phrase2={phrase2}
-                onPreviewReady={onPreviewReady}
-              />
+          {/* ── PART B: description + price + social proof + urgency ── */}
+          <div className="pb-1">
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-md">
+              Sube la foto de tu mascota y ve cómo queda en tu tapete antes de pedirlo.
+            </p>
+
+            {/* Price */}
+            <div className="flex items-baseline gap-2.5 mt-3 flex-wrap">
+              <span className="text-3xl font-bold text-foreground">
+                ${price.toLocaleString('es-MX')}
+                <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
+              </span>
+              <span className="text-base text-muted-foreground line-through">$1,199 MXN</span>
+              <span className="text-xs text-muted-foreground">· Envío incluido</span>
+            </div>
+
+            {/* Social proof + delivery */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Eye className="w-3.5 h-3.5 text-primary" />
+                <span className="font-medium text-foreground">{viewerCount}</span> personas lo están viendo ahora
+              </span>
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Truck className="w-3.5 h-3.5 text-primary" />
+                Llega entre <span className="font-medium text-foreground ml-1">{deliveryRange}</span>
+              </span>
+            </div>
+
+            {/* Urgency — artisan scarcity */}
+            <div className="flex items-center gap-1.5 mt-2.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                Hacemos pocos pedidos por semana para mantener la calidad
+              </span>
             </div>
           </div>
 
@@ -430,7 +436,6 @@ export function StepPets({
               ) : (
                 <div className="min-w-0">
                   <p className="font-semibold text-sm text-foreground leading-tight">Falta la foto de tu mascota</p>
-                  <p className="text-xs text-muted-foreground">Es el primer paso para crear tu tapete</p>
                 </div>
               )}
             </div>
