@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tag, X, ShoppingBag, Loader2, RefreshCw } from "lucide-react";
+import { Tag, X, ShoppingBag, Loader2, RefreshCw, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CartAppliedRules } from "@/components/ui/CartAppliedRules";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +36,7 @@ export default function CheckoutUI() {
   const { params, hasParams } = useURLCheckoutParams();
   const { isLoadingToken, tokenError, hasToken } = useTokenCheckout();
   const navigate = useNavigate();
+  const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -81,6 +82,93 @@ export default function CheckoutUI() {
               <BrandLogoLeft />
             </div>
           </header>
+          {/* Mobile-only order summary accordion */}
+          <div className="md:hidden border-b bg-muted/30">
+            <button
+              onClick={() => setIsMobileSummaryOpen(prev => !prev)}
+              className="w-full px-4 py-3.5 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-1.5 text-primary">
+                <ShoppingBag className="h-4 w-4" />
+                <span className="text-sm font-medium">Resumen del pedido</span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMobileSummaryOpen ? 'rotate-180' : ''}`} />
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xs text-muted-foreground">{logic.currencyCode.toUpperCase()}</span>
+                <span className="font-bold text-base">{formatMoney(logic.finalTotal, logic.currencyCode)}</span>
+              </div>
+            </button>
+
+            {isMobileSummaryOpen && (
+              <div className="px-4 pb-5 space-y-4 bg-muted/20">
+                {/* Items */}
+                <div className="space-y-3 pt-1">
+                  {Array.isArray(logic.summaryItems) && logic.summaryItems.map(item => {
+                    let itemImage = item.product.images?.[0] || "/placeholder.svg"
+                    try {
+                      const stored = localStorage.getItem(`patapete_customization:${item.key}`)
+                      if (stored) {
+                        const parsed = JSON.parse(stored)
+                        itemImage = parsed.preview_image_url || parsed.preview_dataurl || (item as any).preview_image_url || itemImage
+                      } else if ((item as any).preview_image_url) {
+                        itemImage = (item as any).preview_image_url
+                      }
+                    } catch { /* ignore */ }
+                    return (
+                      <div key={item.key} className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          <img
+                            src={itemImage}
+                            alt={item.product.name}
+                            className="w-16 h-16 object-contain rounded-lg border bg-background"
+                          />
+                          <span className="absolute -top-1.5 -right-1.5 bg-foreground text-background text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                            {item.quantity}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium line-clamp-2 leading-snug">{item.product.name}</p>
+                          {item.variant && <p className="text-xs text-muted-foreground mt-0.5">{item.variant.name}</p>}
+                        </div>
+                        <span className="text-sm font-semibold shrink-0">
+                          {formatMoney(item.total || (item.price * item.quantity), logic.currencyCode)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Totals */}
+                <div className="border-t pt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatMoney(logic.summaryTotal, logic.currencyCode)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Envío</span>
+                    <span>
+                      {logic.selectedPickupLocation ? 'GRATIS (Recoger en tienda)' :
+                       logic.shippingCost > 0 ? formatMoney(logic.shippingCost, logic.currencyCode) : 'GRATIS'}
+                    </span>
+                  </div>
+                  {logic.discount && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Descuento</span>
+                      <span>-{formatMoney(logic.discountAmount, logic.currencyCode)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-base pt-1 border-t">
+                    <span>Total</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xs font-normal text-muted-foreground">{logic.currencyCode.toUpperCase()}</span>
+                      <span>{formatMoney(logic.finalTotal, logic.currencyCode)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Formulario de Checkout */}

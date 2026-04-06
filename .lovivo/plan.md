@@ -1,27 +1,21 @@
-# Patapete Store - Plan
+# Patapete Store — Plan
 
 ## Current State
-Tienda de tapetes personalizados con fotos de mascotas. Pipeline de IA funcionando (Supabase edge functions, ~23-26s por generación).
+E-commerce store for personalized pet mats (tapetes). Custom checkout with Stripe. Mobile-first refinements in progress.
 
 ## Recent Changes
-- **Checkout mobile fixes v2** (2026-04-06):
-  - **Stripe CardElement → campos separados**: `CardNumberElement` (fila completa) + `CardExpiryElement` + `CardCvcElement` lado a lado (grid-cols-2). Elimina el texto encimado en mobile.
-  - **Header "Tarjeta de crédito"**: `whitespace-nowrap` en texto + `shrink-0` en imagen. Ya no se parte en 3 líneas.
-  - **Imagen producto en checkout**: `w-16 h-16 object-contain bg-muted/40` — tamaño fijo, sin recorte, tapete retrato se ve completo.
-  - **Nombre producto**: `line-clamp-2 text-sm leading-snug` — máximo 2 líneas con `...`
-  - **Precio**: `shrink-0 text-sm` — no se comprime en flex
-  - **Container flex-1**: añadido `min-w-0` — necesario para que truncate/line-clamp funcione en flex
-- **Checkout mobile fixes v1** (2026-04-06):
-  - Botón "Completar Compra": texto en 2 líneas (título + precio separado), sin decimales .00, h-auto para no cortar
-  - Imagen producto en resumen: 64px → 80px (`w-20 h-20`)
-  - Badge cantidad: colores de marca (`bg-primary text-primary-foreground`)
-- Sticky bar de 3 estados (sin foto → procesando → listo)
-- Badge animado "Generando tu retrato..." sobre preview mobile durante procesamiento
+- **Checkout mobile summary accordion**: Added Shopify-style collapsible order summary at the top of checkout, mobile-only (`md:hidden`). Shows "Resumen del pedido" + chevron + total. When expanded shows product images (w-16 h-16 object-contain with quantity badge), name, variant, price; plus subtotal, shipping, discount (if any), and total with MXN label.
+- **MXN currency label**: Moved to inline left of price (small muted text), matching Shopify's style.
+- **Checkout responsive fields**: Postal/City/State grid stacks on mobile, 3-col on desktop.
+- **Credit card fields**: Number on its own row, expiry + CVC side by side on mobile.
+- **Product images in checkout**: `object-contain` to avoid cropping portrait/vertical products.
 
 ## User Preferences
-- No mencionar "IA" en copy al usuario
-- Mantener perro demo visible durante generación
-- Idioma: español
+- Checkout should match Shopify UX best practices for mobile.
+- Clean, functional mobile checkout is priority.
+- Prefer CSS solutions (truncation, object-fit) over JS workarounds.
+- No hardcoded mock data.
 
 ## Known Issues
-- Ninguno activo conocido
+- Multiple GoTrueClient instances warning (non-critical, pre-existing).
+- Meta Pixel non-standard events warning (non-critical, pre-existing).
