@@ -768,9 +768,9 @@ export default function CheckoutUI() {
                     )}
                     <div className="flex justify-between text-lg font-semibold pt-2 border-t">
                       <span>Total</span>
-                      <div className={`text-right ${logic.isCalculatingTotal ? 'opacity-50 blur-sm' : ''} transition-all duration-200`}>
-                        <div className="text-sm text-muted-foreground">{logic.currencyCode.toUpperCase()}</div>
-                        <div>{formatMoney(logic.finalTotal, logic.currencyCode)}</div>
+                      <div className={`flex items-baseline gap-1.5 ${logic.isCalculatingTotal ? 'opacity-50 blur-sm' : ''} transition-all duration-200`}>
+                        <span className="text-sm font-normal text-muted-foreground">{logic.currencyCode.toUpperCase()}</span>
+                        <span>{formatMoney(logic.finalTotal, logic.currencyCode)}</span>
                       </div>
                     </div>
                   </div>
