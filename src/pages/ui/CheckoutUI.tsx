@@ -172,7 +172,7 @@ export default function CheckoutUI() {
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Formulario de Checkout */}
-              <div className="space-y-8 bg-card p-3 sm:p-6 rounded-lg">
+              <div className="space-y-8 bg-card p-0 sm:p-6 rounded-lg">
                 {/* Contact Section */}
                 <section>
                   <h2 className="text-xl font-semibold mb-4">Contacto</h2>

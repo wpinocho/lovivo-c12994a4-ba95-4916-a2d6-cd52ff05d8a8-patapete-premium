@@ -501,8 +501,8 @@ function PaymentForm({
       </div>
 
       {/* Sección de pago con tarjeta */}
-      <Card>
-        <CardContent className="p-3 sm:p-6">
+      <Card className="border-0 shadow-none sm:border sm:shadow-sm">
+        <CardContent className="p-0 sm:p-6">
           <div className="flex items-center justify-between mb-4 gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-4 h-4 rounded-full border-2 border-primary bg-primary shrink-0"></div>
@@ -514,7 +514,7 @@ function PaymentForm({
           {/* Formulario de tarjeta - campos separados para mejor UX mobile */}
           <div className="space-y-3">
             {/* Número de tarjeta */}
-            <div className="border rounded-lg p-3 bg-background">
+            <div className="border rounded-lg p-2.5 sm:p-3 bg-background">
               <CardNumberElement
                 options={{
                   style: {
@@ -527,7 +527,7 @@ function PaymentForm({
             </div>
             {/* Expiración + CVC lado a lado */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="border rounded-lg p-3 bg-background">
+              <div className="border rounded-lg p-2.5 sm:p-3 bg-background">
                 <CardExpiryElement
                   options={{
                     style: {
@@ -537,7 +537,7 @@ function PaymentForm({
                   }}
                 />
               </div>
-              <div className="border rounded-lg p-3 bg-background">
+              <div className="border rounded-lg p-2.5 sm:p-3 bg-background">
                 <CardCvcElement
                   options={{
                     style: {
