@@ -641,18 +641,18 @@ export default function CheckoutUI() {
                       } catch { /* ignore */ }
                       return (
                       <div key={item.key} className="flex items-start gap-3">
-                        <div className="relative">
+                        <div className="relative shrink-0">
                           <img 
                             src={itemImage} 
                             alt={item.product.name} 
-                            className="w-20 h-20 object-cover rounded-lg border" 
+                            className="w-16 h-16 object-contain rounded-lg border bg-muted/40" 
                           />
                           <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                             {item.quantity}
                           </span>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{item.product.name}</h4>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium line-clamp-2 text-sm leading-snug">{item.product.name}</h4>
                           {item.variant && <p className="text-sm text-muted-foreground">{item.variant.name}</p>}
                           {item.selling_plan_id && (
                             <div className="flex items-center gap-1 mt-0.5">
@@ -689,7 +689,7 @@ export default function CheckoutUI() {
                             </div>
                           </div>
                         </div>
-                        <div className="font-semibold">
+                        <div className="font-semibold shrink-0 text-sm">
                           {formatMoney(item.total || (item.price * item.quantity), logic.currencyCode)}
                         </div>
                       </div>

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react"
 import { loadStripe } from "@stripe/stripe-js"
-import { Elements, CardElement, useElements, useStripe } from "@stripe/react-stripe-js"
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase"
@@ -99,7 +99,7 @@ function PaymentForm({
       return
     }
     
-    const card = elements.getElement(CardElement)
+    const card = elements.getElement(CardNumberElement)
     if (!card) {
       toast({ title: "Error", description: "Ingresa los datos de tu tarjeta", variant: "destructive" })
       return
@@ -503,33 +503,51 @@ function PaymentForm({
       {/* Sección de pago con tarjeta */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded-full border-2 border-primary bg-primary"></div>
-              <span className="font-medium">Tarjeta de crédito</span>
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-4 h-4 rounded-full border-2 border-primary bg-primary shrink-0"></div>
+              <span className="font-medium whitespace-nowrap">Tarjeta de crédito</span>
             </div>
-            <img src="/lovable-uploads/43c70209-0949-4d87-9c23-50bea4ff2d48.png" alt="Tarjetas aceptadas" className="h-6" />
+            <img src="/lovable-uploads/43c70209-0949-4d87-9c23-50bea4ff2d48.png" alt="Tarjetas aceptadas" className="h-6 shrink-0" />
           </div>
 
-          {/* Formulario de tarjeta */}
-          <div className="border rounded-lg p-4 bg-background">
-            <CardElement 
-              options={{
-                style: {
-                  base: {
-                    fontSize: '16px',
-                    color: '#424770',
-                    '::placeholder': {
-                      color: '#aab7c4',
+          {/* Formulario de tarjeta - campos separados para mejor UX mobile */}
+          <div className="space-y-3">
+            {/* Número de tarjeta */}
+            <div className="border rounded-lg p-3 bg-background">
+              <CardNumberElement
+                options={{
+                  style: {
+                    base: { fontSize: '16px', color: '#424770', '::placeholder': { color: '#aab7c4' } },
+                    invalid: { color: '#9e2146' },
+                  },
+                  placeholder: 'Número de tarjeta',
+                }}
+              />
+            </div>
+            {/* Expiración + CVC lado a lado */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border rounded-lg p-3 bg-background">
+                <CardExpiryElement
+                  options={{
+                    style: {
+                      base: { fontSize: '16px', color: '#424770', '::placeholder': { color: '#aab7c4' } },
+                      invalid: { color: '#9e2146' },
                     },
-                  },
-                  invalid: {
-                    color: '#9e2146',
-                  },
-                },
-                hidePostalCode: false,
-              }}
-            />
+                  }}
+                />
+              </div>
+              <div className="border rounded-lg p-3 bg-background">
+                <CardCvcElement
+                  options={{
+                    style: {
+                      base: { fontSize: '16px', color: '#424770', '::placeholder': { color: '#aab7c4' } },
+                      invalid: { color: '#9e2146' },
+                    },
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
