@@ -502,7 +502,7 @@ function PaymentForm({
 
       {/* Sección de pago con tarjeta */}
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-3 sm:p-6">
           <div className="flex items-center justify-between mb-4 gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-4 h-4 rounded-full border-2 border-primary bg-primary shrink-0"></div>
