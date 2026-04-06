@@ -1,75 +1,116 @@
 # CRO Plan — Patapete
 
-## Datos de conversión actuales (últimos 30 días)
-- Pageviews: 2,111 (total) — 1,097 Mobile / 972 Desktop
-- ⚠️ CONTAMINACIÓN: ~700+ sesiones Desktop vienen de lovivo.app y lovable.app (testing interno) — los números reales de clientes son mucho menores
-- Usuarios reales (Facebook/Instagram): principalmente mobile
+## Datos de conversión actuales (últimos 14 días)
+
+### Funnel por dispositivo (14 días — TODOS los eventos, incluyendo testing interno)
+| Evento | Mobile | Desktop (mayoría testing) |
+|--------|--------|---------------------------|
+| icon_generated | 83 | 11 |
+| configurator_order_now | 13 (15.7%) | 25 |
+| initiatecheckout | 18 (21.7%) | 45 |
+| addtocart | 8 (9.6%) | 16 |
+| purchase | 1 (1.2%) | 0 |
+
+### Fuentes de traffic mobile (icon_generated últimos 14 días)
+- Chrome Mobile: 64 sesiones
+- Facebook Mobile browser: 12 sesiones
+- Mobile Safari (iOS): 7 sesiones
 
 ---
 
-## ANÁLISIS COMPLETO DEL FUNNEL (usuarios únicos reales)
+## HALLAZGO CRÍTICO NUEVO — Checkout móvil posiblemente ROTO
 
-| Paso | Usuarios únicos | Drop |
-|------|----------------|------|
-| viewcontent | 873 | — |
-| upload_zone_viewed | 237 | -73% 🔴 |
-| photo_uploaded | 50 | -79% 🔴 |
-| icon_generated | 50 | 0% ✅ |
-| configurator_order_now | 13 | -74% 🔴 |
-| initiatecheckout | 17 | -66% 🔴 |
-| purchase | 2 | -88% 🔴 |
+Revisando las sesiones reales de clientes de Facebook/patapete.com:
 
-**Conversión total icon_generated → purchase: 4%** (catastrófico)
+**Sesión 019d215c (Mobile Chrome, patapete.com):**
+- 20:23:15 → toca "Ordenar" → entra a /pagar
+- 20:23:48 → VUELVE al producto (en 33 segundos!)
+- 20:23:56 → toca "Ordenar" SEGUNDA VEZ → entra a /pagar
+- 20:24:01 → VUELVE al producto (en 5 segundos!)
+- 20:24:26 → toca "Ordenar" TERCERA VEZ → entra a /pagar
+- Sesión termina en /pagar
 
----
+**3 intentos de compra en 70 segundos** — esto NO es falta de ganas. Es que ALGO en el checkout no funciona en mobile.
 
-## HALLAZGOS CRÍTICOS
+**Sesión 019d5e75 (Mobile Chrome, Facebook ad):**
+- 16:29:06 → entra a /pagar → vuelve en 10 segundos
+- 16:30:14 → entra a /pagar SEGUNDA VEZ → vuelve en 54 segundos
+- Sigue en la página del producto 28 minutos más
+- Vuelve 1 hora después y se va sin comprar
 
-### 1. Los datos están muy contaminados con sesiones internas
-- 631 visitas de lovivo.app, 105 de lovable.app = ~736 sesiones de testing
-- De los 12 InitiateCheckout de Desktop, la mayoría son sesiones internas
-- Solo 7 InitiateCheckout son usuarios reales móviles de Facebook/Instagram
-- Esto significa que el funnel real de clientes pagos es aún más pequeño
+**Sesión 019d5cc4 (Mobile Chrome, Facebook ad):**
+- Entra a /pagar → vuelve en 5 minutos
 
-### 2. El mayor drop: la gente NO llega a la zona de subida (73% drop)
-- 873 vieron el producto pero 636 nunca hicieron scroll hasta el configurador
-- La página tiene demasiado contenido antes del configurador
-- El sticky CTA ayuda (68 taps registrados) pero no es suficiente
+### Hipótesis del problema:
+El checkout en mobile puede tener un problema técnico donde:
+1. Stripe Elements no carga correctamente en el WebView de Facebook
+2. El formulario se ve pero los inputs no son interactuables
+3. La carga de Stripe.js falla en conexiones lentas de mobile
+4. O simplemente el formulario es tan pesado/intimidante que salen inmediatamente
 
-### 3. De los que suben foto, la conversión a generación es perfecta (100%)
-- photo_uploaded → icon_generated: 50/50 usuarios = sin drop ✅
-- El sistema de generación funciona perfectamente técnicamente
-
-### 4. PATRÓN DEVASTADOR detectado en sesiones reales:
-- Usuario genera ícono → toca "Ordenar" → entra a /pagar → **sale en <60 segundos** → vuelve al producto
-- Esto se repite en MÚLTIPLES sesiones (019d5e75, 019d5cc4, 019d215c, 019d5c2d, 019d25d4)
-- El tiempo promedio en /pagar antes de abandonar: 10-30 segundos
-- Nadie completó el formulario en las sesiones estudiadas
-
-### 5. El checkout móvil es el cuello de botella principal
-- De 7 usuarios móviles reales que llegaron a initiatecheckout: 1 compró (14%)
-- El tiempo en el checkout es muy bajo — sugiere que algo en el formulario los espanta
-- Hipótesis: el formulario largo, solo tarjeta (sin OXXO/SPEI), o miedo al pago online
-
-### 6. Sin remarketing visible
-- Los usuarios que generan ícono y no compran... desaparecen
-- No hay email capture antes de que se vayan
-- No hay retargeting efectivo (o si lo hay, no convierte)
+### DATO ALARMANTE:
+- click_count: 0.0 en TODAS las sesiones → PostHog no está capturando clicks
+- Esto significa que no podemos ver con qué hacen tap en el checkout
+- Necesitamos activar session recordings o agregar tracking de clicks explícito
 
 ---
 
-## DIAGNÓSTICO FINAL
+## FUNNEL 7 DÍAS (de la imagen del usuario)
+- Pageview: 463 → viewcontent: 440 (95%) → photo_uploaded: 35 (7.95%) → icon_generated: 35 (100%) → addtocart: 5 (14.29%) → initiatecheckout: 4 (80%) → purchase: 0 (0%)
 
-**El problema NO es el diseño del ícono generado.** La gente genera el ícono con gusto.  
-**El problema es la CONVERSIÓN POST-ÍCONO**, específicamente el checkout en mobile.
+Los % entre pasos intermedios se ven bien:
+- viewcontent → photo_uploaded: 7.95% (cold audience, normal)
+- photo_uploaded → icon_generated: 100% ✅
+- icon_generated → addtocart: 14.29% (hay oportunidad)
+- addtocart → initiatecheckout: 80% ✅
+- **initiatecheckout → purchase: 0% 🚨 CRÍTICO**
 
-Los 3 problemas reales en orden de impacto:
+---
 
-1. 🔴 **Checkout móvil mata la venta** — El cliente entra, ve el formulario de tarjeta, sale en segundos. Sin OXXO/SPEI, pierdes a todos los que no quieren/pueden dar tarjeta online.
+## DIAGNÓSTICO FINAL ACTUALIZADO
 
-2. 🟠 **Sin cierre emocional fuerte después del ícono** — El cliente ve el ícono generado pero no visualiza el producto final (el tapete completo). No hay urgencia ni social proof en ese momento de alta intención.
+**El problema principal es el checkout en mobile — potencialmente roto, no solo con fricción de UX.**
 
-3. 🟡 **73% no llega al configurador** — Aunque esto es un problema de tráfico/cold audience, reducir la fricción para llegar al configurador ayudaría al volumen.
+### Prioridad 1 — INVESTIGAR Y ARREGLAR el checkout mobile
+Antes de agregar OXXO/SPEI o email capture, necesitamos saber si el checkout funciona:
+
+**Acción inmediata:** Hacer una prueba real en mobile (pasar por todo el flujo en un teléfono real desde el link de Facebook) y ver qué pasa cuando llegas a /pagar.
+
+Posibles causas técnicas:
+- Stripe.js no carga en Facebook WebView
+- El endpoint de pago falla silenciosamente
+- Hay un error en el formulario que no se muestra al usuario
+
+### Prioridad 2 — OXXO/SPEI (requiere Edge Function propia)
+Dado que el backend de pagos es de Lovivo (checkout-create → payments-create-intent), podemos crear un flujo alternativo de OXXO directamente:
+- Nueva Edge Function en Supabase del usuario: `create-oxxo-intent`
+  - Llama a Stripe API con `payment_method_types: ['oxxo']`
+  - Regresa `client_secret` del PaymentIntent
+- Frontend: `src/components/StripePayment.tsx`
+  - Selector de método de pago (Tarjeta | OXXO | SPEI)
+  - Cuando OXXO seleccionado: llama a `create-oxxo-intent` y usa `OxxoElement` de Stripe
+  - OXXO no necesita número de tarjeta — solo email del cliente
+  - Stripe genera cupón imprimible → cliente paga en OXXO en 3 días
+
+**Archivos a modificar para OXXO:**
+- `supabase/functions/create-oxxo-intent/index.ts` (nuevo)
+- `src/components/StripePayment.tsx` (agregar selector + flujo OXXO)
+- Secreto en Supabase: `STRIPE_SECRET_KEY` (via supabase_create_secrets en Craft Mode)
+
+### Prioridad 3 — Email capture post-generación
+Popup que aparece si el usuario generó ícono pero no tocó "Ordenar" en 2 minutos:
+- "¿Te gustó el ícono de [nombre mascota]? Guarda tu diseño"
+- Capturar email + art_url generado
+- Requiere tabla Supabase: `patapete_leads(id, email, art_url, created_at)`
+- Archivo a modificar: `src/components/patapete/configurator/StepPets.tsx` o crear `EmailCaptureModal.tsx`
+- Activar desde `PatapeteConfigurator.tsx` con timer después de `icon_generated`
+
+### Prioridad 4 — Más CTA después del ícono
+El 85% de móviles que generan ícono NO tocan "Ordenar". Después del ícono necesitamos:
+- Mensaje más emocionante: "¡Tu tapete está listo! 🎉"
+- Mostrar un mockup rápido del tapete completo (no solo el ícono)
+- CTA más grande y urgente: "🚀 Pedir ahora por $299" (con precio visible)
+- Countdown: "Genera tu tapete en menos de X días"
 
 ---
 
@@ -82,43 +123,25 @@ Los 3 problemas reales en orden de impacto:
 
 ### Paso 2 — Traducir errores de pago al español ✅
 - **Archivo:** `src/components/StripePayment.tsx`
-- Todos los toasts traducidos al español
 
 ### Paso 3 — Trust Signals en Checkout ✅
 - **Archivo:** `src/components/StripePayment.tsx`
-- Leyenda compacta "Pago seguro encriptado con SSL" (sin banner verde gigante)
+- Leyenda compacta "Pago seguro encriptado con SSL"
 - Grid de 3 garantías debajo del botón
-- Nota de política tranquilizadora
 
 ---
 
-## PRÓXIMOS PASOS PRIORIZADOS
+## PRÓXIMA ACCIÓN RECOMENDADA
 
-### P1 — CRÍTICO: OXXO y SPEI como métodos de pago
-- **Impacto estimado: +20-40% conversión**
-- Requiere modificar Edge Function `payments-create-intent` para soportar `oxxo` y `boleto`/bank transfer
-- Frontend: `src/components/StripePayment.tsx` — agregar selección de método de pago
-- Stripe soporta OXXO nativamente en México
+**Antes de código:** El usuario debe probar manualmente el checkout en su teléfono, específicamente:
+1. Abrir patapete.com desde el browser de Facebook (como lo hacen sus clientes)
+2. Subir foto → generar ícono → tocar "Ordenar"  
+3. Ver qué pasa en /pagar — ¿carga bien? ¿aparece el formulario? ¿se pueden tocar los campos?
 
-### P2 — Cierre emocional post-generación
-- Mostrar mockup del TAPETE COMPLETO con el ícono generado (no solo el ícono)
-- Agregar: "¡Tu tapete personalizado está listo! 🎉" con más urgencia
-- Agregar countdown de stock o "Última vez que alguien ordenó este estilo: hace X"
-- Agregar mini reseñas/fotos de tapetes reales debajo del ícono
+Si confirma que el checkout funciona → implementar OXXO/SPEI (mayor impacto)
+Si el checkout está roto → debuggear primero
 
-### P3 — Email capture antes de que abandonen
-- Si el usuario generó un ícono pero no compra → popup de "Guarda tu diseño — te lo enviamos por email"
-- Captura el email + el art_url del ícono generado
-- Permite retargeting por email
-- Requiere tabla Supabase para guardar leads
-
-### P4 — Simplificar flujo de checkout móvil
-- Reducir pasos del formulario (separar datos de envío vs pago en 2 pasos claros)
-- Mostrar preview del tapete en el checkout para reforzar la decisión
-- Agregar "¿Tienes dudas? Escríbenos por WhatsApp" en el checkout
-
----
-
-## Archivos modificados
-- `src/pages/ui/CheckoutUI.tsx`: Fix campo Colonia, h3 facturación condicional
-- `src/components/StripePayment.tsx`: Trust signals compactos, todos los toasts en español
+**Links de sesiones reales para revisar en PostHog:**
+- https://us.posthog.com/project/233989/replay/019d215c-cdfc-76c3-95bf-a1e3a5f3ecd5 (3 intentos fallidos)
+- https://us.posthog.com/project/233989/replay/019d5e75-3529-7a6d-8300-5f05d79b36f5 (Facebook ad, 2 intentos)
+- https://us.posthog.com/project/233989/replay/019d5cc4-5c04-7219-83f7-97f227d690fe (Facebook ad, 1 intento)
