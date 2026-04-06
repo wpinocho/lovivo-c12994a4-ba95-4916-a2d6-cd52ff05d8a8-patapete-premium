@@ -1,57 +1,90 @@
-# Patapete — Estado del proyecto
+# Fix: Mobile Checkout UX
 
-## Cambios recientes implementados
+## Problemas identificados (screenshot del usuario + análisis del código)
 
-### Sticky bar 3 estados + badge en preview (✅ completado)
+### 1. Botón "Completar Compra" — texto desbordado
+**Archivo**: `src/components/StripePayment.tsx` línea 546
+**Causa**: El texto generado es `"Completar Compra - MXN $949.00"` (~32 chars) con `text-lg font-semibold` en un botón full-width. En mobile (390px), los ~350px útiles no alcanzan para ese texto.
+**Fix**: 
+- Acortar a "Pagar – $949 MXN" en mobile, o mejor aún usar layout flex-col con dos spans:
+  - Línea 1: "Completar Compra"
+  - Línea 2 (más pequeño): "MXN $949.00"
+- Alternativa más simple: cambiar a `text-base` en mobile con `text-sm sm:text-base` y truncar el label a `${cur} $${amt.toFixed(0)}` (sin decimales si son .00)
 
-**Archivos modificados:** `src/components/patapete/configurator/StepPets.tsx`
+**Implementación**:
+```tsx
+// En el botón del PaymentForm:
+{loading ? (
+  <div className="flex items-center space-x-2">
+    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+    <span>Procesando...</span>
+  </div>
+) : (
+  <span className="flex flex-col items-center leading-tight">
+    <span className="text-base font-semibold">Completar Compra</span>
+    <span className="text-sm opacity-90">{amountLabel}</span>
+  </span>
+)}
+```
+Also fix amountLabel format: strip trailing .00 from whole numbers → `amt % 1 === 0 ? amt.toFixed(0) : amt.toFixed(2)`
 
-#### Sticky bar — 3 estados
-- Eliminado el wrapper `{!isProcessing && (` que ocultaba el sticky durante procesamiento
-- Nueva condición: `(!hasAnyPhoto || isProcessing || !ctaInView)` para mostrar/ocultar
-- **Estado 1 (sin foto):** "Falta la foto de tu mascota" + botón "📸 Sube tu foto"
-- **Estado 2 (procesando):** Punto pulsando + "Creando la imagen de tu mascota" + "Solo tarda unos segundos" + spinner
-- **Estado 3 (foto lista, CTA fuera de vista):** Estrellas + precio + "Agregar al carrito" + "Ordenar →"
+### 2. Imagen del producto muy pequeña en order summary
+**Archivo**: `src/pages/ui/CheckoutUI.tsx` línea 644
+**Causa**: `w-16 h-16` (64px) es muy pequeña en mobile
+**Fix**: Cambiar a `w-20 h-20` (80px) — mejor proporción visual
 
-#### Badge flotante en preview mobile
-- Añadido `relative` al div sticky del preview mobile
-- Badge `absolute bottom-3 left-1/2 -translate-x-1/2` visible solo cuando `isProcessing`
-- Texto: "Generando tu retrato..." con punto pulsando de color primary
-- `pointer-events-none` para no interferir con el canvas
+### 3. Mejoras adicionales de UX mobile (basadas en best practices Shopify 2024)
 
----
+#### a. Order summary colapsable en mobile
+Shopify colapsa el resumen en mobile por defecto para que el formulario sea lo primero. Actualmente nuestro checkout en mobile apila:
+1. Formulario
+2. Resumen (abajo del todo)
 
-### Fix sticky mobile preview (✅ completado)
-Separado el bloque `lg:hidden` en dos divs:
-1. `<div className="lg:hidden sticky top-16 z-10 bg-background pt-1 pb-2">` — solo el `CanvasPreview` (sticky)
-2. `<div className="lg:hidden flex flex-wrap gap-2 ...">` — solo los badges (no sticky, se van con el scroll)
+Esto significa que el usuario tiene que scrollear mucho. Propuesta: en mobile, poner un banner sticky arriba que muestre "Tapete Personalizado – $949" y se pueda expandir para ver el detalle.
 
-### Layout mobile en StepPets (✅ completado)
-Nuevo orden visual en mobile:
-1. ⭐ Estrellas + título
-2. 🖼️ Preview del tapete (full-width, sticky)
-3. 🏷️ Badges ("Hecho en México", etc.) — no sticky
-4. 💰 Precio + social proof + urgencia
-5. 📸 Formulario de foto y textos
-6. 🛒 Botones de compra
+#### b. Tamaño del botón de pago
+El botón `h-12 text-lg` está bien en desktop pero en mobile con texto largo falla. El `h-12` puede reducirse a `h-11` o mantenerse si el texto se organiza en dos líneas.
 
-### Upload zone full-width mobile (✅ completado)
-- Upload zone full-width reemplaza el cuadrito 88px
-- Sticky CTA inteligente
-- Eventos PostHog: `upload_zone_viewed`, `sticky_cta_upload_tap`, `photo_uploaded`, `icon_generated`
-- Scroll depth tracking (50% y 90%)
+## Archivos a modificar
 
----
+### `src/components/StripePayment.tsx`
+1. Línea 66-70: Modificar `amountLabel` para no mostrar decimales si son .00:
+   ```tsx
+   const amountLabel = useMemo(() => {
+     const amt = (amountCents || 0) / 100
+     const cur = (currency || "usd").toUpperCase()
+     const formatted = amt % 1 === 0 ? amt.toFixed(0) : amt.toFixed(2)
+     return `${cur} $${formatted}`
+   }, [amountCents, currency])
+   ```
 
-## Métricas de referencia (baseline)
-- ~285 visitas reales Meta en últimos 30 días
-- 4% (14 usuarios) suben foto → cuello de botella crítico
-- 93% de quienes suben foto generan ícono
-- 7 intentan ordenar → 1 compra
-- Tráfico interno (lovivo.app): 631 visitas, 53 checkouts falsos
+2. Línea 534-548: Rediseñar el botón para layout flex-col en texto:
+   ```tsx
+   <Button 
+     onClick={handleFinalizarCompra} 
+     disabled={!stripe || loading || !amountCents}
+     className="w-full h-auto py-3 text-base font-semibold"
+     size="lg"
+   >
+     {loading ? (
+       <div className="flex items-center space-x-2">
+         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+         <span>Procesando...</span>
+       </div>
+     ) : (
+       <span className="flex flex-col items-center gap-0.5 leading-tight">
+         <span>Completar Compra</span>
+         <span className="text-sm font-normal opacity-90">{amountLabel}</span>
+       </span>
+     )}
+   </Button>
+   ```
 
-## Preferencias del usuario
-- Mobile-first (mayoría de tráfico de Meta)
-- UX pragmático, sin cambios radicales
-- Sin mencionar "IA" en textos de cara al usuario
-- Mejoras orientadas a conversión
+### `src/pages/ui/CheckoutUI.tsx`
+1. Línea 644: Cambiar `w-16 h-16` a `w-20 h-20` en la imagen del producto del order summary
+2. (Opcional) Agregar collapsible order summary header en mobile con total visible
+
+## Prioridad
+1. 🔴 CRÍTICO: Fix del botón desbordado (pérdida de conversión directa)
+2. 🟡 IMPORTANTE: Imagen más grande (trust/UX)
+3. 🟢 NICE TO HAVE: Collapsible order summary en mobile
