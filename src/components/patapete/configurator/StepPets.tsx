@@ -160,7 +160,7 @@ export function StepPets({
 
       {/* ── PART A: Stars + title — always on top ── */}
       <div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+        <div className="flex items-center gap-x-2 mb-2">
           <div className="flex shrink-0">
             {[0,1,2,3,4].map(i => (
               <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -171,8 +171,23 @@ export function StepPets({
           </span>
         </div>
         <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-          Tapete personalizado con tu mascota
+          Sube la foto de tu mascota y ve tu tapete antes de comprar
         </h1>
+        <p className="text-sm text-muted-foreground mt-1.5">
+          Gratis. En ~20 segundos. Solo pídelo si te encanta.
+        </p>
+        {!hasAnyPhoto && (
+          <Button
+            onClick={() => {
+              triggerPet0FileInput.current?.()
+              trackCustomEvent('hero_upload_tap', {})
+            }}
+            size="lg"
+            className="w-full rounded-xl mt-4"
+          >
+            📸 Sube la foto de tu mascota
+          </Button>
+        )}
       </div>
 
       {/* ── MOBILE PREVIEW — sticky, full-width, after title, before price/description ── */}
@@ -338,31 +353,33 @@ export function StepPets({
 
           {/* ── CTA section ── */}
           <div className="space-y-3" ref={ctaRef}>
-            {/* Primary CTA: Order now */}
-            <Button
-              onClick={() => validateAndProceed('order')}
-              disabled={isProcessing || isCreatingOrder}
-              className="w-full rounded-xl"
-              size="lg"
-            >
-              {isCreatingOrder
-                ? 'Preparando tu pedido...'
-                : isProcessing
-                  ? 'Generando tu retrato...'
-                  : `⚡ ¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
-            </Button>
-
-            {/* Secondary CTA: Add to cart */}
-            <Button
-              onClick={() => validateAndProceed('cart')}
-              disabled={isProcessing || isCreatingOrder}
-              variant="outline"
-              className="w-full rounded-xl"
-              size="lg"
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Agregar al carrito
-            </Button>
+            {/* Primary + Secondary CTAs — solo cuando ya hay foto */}
+            {hasAnyPhoto && (
+              <>
+                <Button
+                  onClick={() => validateAndProceed('order')}
+                  disabled={isProcessing || isCreatingOrder}
+                  className="w-full rounded-xl"
+                  size="lg"
+                >
+                  {isCreatingOrder
+                    ? 'Preparando tu pedido...'
+                    : isProcessing
+                      ? 'Generando tu retrato...'
+                      : `⚡ ¡Ordenar ahora! — $${price.toLocaleString('es-MX')} MXN →`}
+                </Button>
+                <Button
+                  onClick={() => validateAndProceed('cart')}
+                  disabled={isProcessing || isCreatingOrder}
+                  variant="outline"
+                  className="w-full rounded-xl"
+                  size="lg"
+                >
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Agregar al carrito
+                </Button>
+              </>
+            )}
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2">
