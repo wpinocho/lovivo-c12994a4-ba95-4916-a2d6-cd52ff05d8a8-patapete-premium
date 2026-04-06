@@ -27,7 +27,7 @@ export const PatapeteHero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-8 pb-14 md:py-32">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-20 pb-14 md:py-32">
         <div className="max-w-2xl animate-fade-up">
           {/* Pill badge */}
           <div className="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs md:text-sm font-medium text-white mb-4 md:mb-7">
