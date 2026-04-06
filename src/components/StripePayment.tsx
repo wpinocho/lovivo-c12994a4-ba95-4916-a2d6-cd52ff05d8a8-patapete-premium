@@ -3,6 +3,7 @@ import { loadStripe } from "@stripe/stripe-js"
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useElements, useStripe } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ShieldCheck, Truck, Lock, RefreshCcw } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { callEdge } from "@/lib/edge"
 import { STORE_ID, STRIPE_PUBLISHABLE_KEY } from "@/lib/config"
@@ -326,8 +327,8 @@ function PaymentForm({
       if (result.error) {
         console.error("Error confirmando pago:", result.error)
         toast({ 
-          title: "Payment failed", 
-          description: result.error.message || "Error processing payment", 
+          title: "Pago fallido", 
+          description: result.error.message || "Hubo un error al procesar el pago", 
           variant: "destructive" 
         })
         return
@@ -435,13 +436,13 @@ function PaymentForm({
         navigate(`/gracias/${orderId}`)
         
         toast({ 
-          title: "Payment successful!", 
-          description: "Your purchase has been processed successfully." 
+          title: "¡Pago exitoso!", 
+          description: "Tu compra fue procesada exitosamente." 
         })
       } else {
         toast({ 
-          title: "Payment status", 
-          description: `Status: ${result.paymentIntent?.status ?? "unknown"}` 
+          title: "Estado del pago", 
+          description: `Estado: ${result.paymentIntent?.status ?? "desconocido"}` 
         })
       }
     } catch (err: any) {
@@ -495,9 +496,26 @@ function PaymentForm({
 
   return (
     <div className="space-y-6">
-      {/* Security information */}
-      <div className="text-sm text-muted-foreground text-center">
-        🔒 Todas las transacciones son seguras y encriptadas.
+      {/* SSL Trust Banner */}
+      <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <Lock className="w-4 h-4 text-green-700" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-green-800">Pago 100% seguro · Encriptado SSL</p>
+          <p className="text-xs text-green-700 mt-0.5">Procesado por Stripe — estándar mundial de pagos seguros</p>
+        </div>
+        <div className="shrink-0 flex items-center gap-1.5">
+          <svg viewBox="0 0 48 16" className="h-4" aria-label="Visa">
+            <rect width="48" height="16" rx="2" fill="#1A1F71"/>
+            <text x="50%" y="12" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">VISA</text>
+          </svg>
+          <svg viewBox="0 0 32 20" className="h-4" aria-label="Mastercard">
+            <circle cx="12" cy="10" r="10" fill="#EB001B"/>
+            <circle cx="20" cy="10" r="10" fill="#F79E1B"/>
+            <path d="M16 4.8a10 10 0 0 1 0 10.4A10 10 0 0 1 16 4.8z" fill="#FF5F00"/>
+          </svg>
+        </div>
       </div>
 
       {/* Sección de pago con tarjeta */}
@@ -572,8 +590,28 @@ function PaymentForm({
         )}
       </Button>
 
-      <div className="text-xs text-muted-foreground text-center">
+      {/* Trust pack — garantías justo después del botón */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-muted/40 py-3 px-2 text-center">
+          <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+          <span className="text-[10px] font-semibold text-foreground leading-tight">Garantía Patapete</span>
+          <span className="text-[10px] text-muted-foreground leading-tight">Reponemos sin costo si llega con defecto</span>
+        </div>
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-muted/40 py-3 px-2 text-center">
+          <Truck className="w-4 h-4 text-primary shrink-0" />
+          <span className="text-[10px] font-semibold text-foreground leading-tight">Envío gratis</span>
+          <span className="text-[10px] text-muted-foreground leading-tight">A todo México incluido</span>
+        </div>
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-muted/40 py-3 px-2 text-center">
+          <RefreshCcw className="w-4 h-4 text-primary shrink-0" />
+          <span className="text-[10px] font-semibold text-foreground leading-tight">Sin complicaciones</span>
+          <span className="text-[10px] text-muted-foreground leading-tight">¿Problema? Lo resolvemos</span>
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground text-center leading-relaxed">
         Al hacer clic en "Completar Compra", aceptas nuestros términos y condiciones.
+        <span className="block mt-1">¿Dudas con tu pedido? Contáctanos y lo resolvemos. Sin letra pequeña.</span>
       </div>
     </div>
   )
