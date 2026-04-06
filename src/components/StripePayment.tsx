@@ -461,8 +461,8 @@ function PaymentForm({
             ).join(', ')
 
             toast({
-              title: "Items Out of Stock",
-              description: `The following items are out of stock: ${unavailableNames}. Please remove them from your cart to complete your order.`,
+              title: "Productos sin inventario",
+              description: `Los siguientes productos no tienen stock disponible: ${unavailableNames}. Por favor elimínalos de tu carrito para continuar.`,
               variant: "destructive"
             })
 

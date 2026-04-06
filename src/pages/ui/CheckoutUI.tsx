@@ -342,21 +342,17 @@ export default function CheckoutUI() {
                         />
                       </div>
 
-                      {/* Complemento de dirección */}
+                      {/* Colonia — se manda como line2 al backend */}
                       <div>
                         <Input 
+                          id="colonia"
                           value={logic.address.line2} 
                           onChange={e => logic.setAddress({
                             ...logic.address,
                             line2: e.target.value
                           })} 
-                          placeholder="Apartamento, suite, etc. (opcional)" 
+                          placeholder="Colonia" 
                         />
-                      </div>
-
-                      {/* Colonia */}
-                      <div>
-                        <Input id="colonia" placeholder="Colonia" />
                       </div>
 
                       {/* Código postal, Ciudad, Estado */}
@@ -464,7 +460,10 @@ export default function CheckoutUI() {
 
                 {/* Dirección de facturación */}
                 <section>
-                  <h3 className="text-lg font-semibold mb-4">Dirección de facturación</h3>
+                  {/* Solo mostramos el título cuando hay formulario visible */}
+                  {(logic.usePickup || !logic.useSameAddress) && (
+                    <h3 className="text-lg font-semibold mb-4">Dirección de facturación</h3>
+                  )}
                   <div className="space-y-4">
                     {/* Solo mostrar radio buttons cuando NO sea pickup */}
                     {!logic.usePickup && (
