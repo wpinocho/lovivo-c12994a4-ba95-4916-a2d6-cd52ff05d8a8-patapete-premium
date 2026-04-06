@@ -640,14 +640,14 @@ export default function CheckoutUI() {
                         }
                       } catch { /* ignore */ }
                       return (
-                      <div key={item.key} className="flex items-center space-x-4">
+                      <div key={item.key} className="flex items-start gap-3">
                         <div className="relative">
                           <img 
                             src={itemImage} 
                             alt={item.product.name} 
-                            className="w-16 h-16 object-cover rounded border" 
+                            className="w-20 h-20 object-cover rounded-lg border" 
                           />
-                          <span className="absolute -top-2 -right-2 bg-muted text-muted-foreground text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                          <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                             {item.quantity}
                           </span>
                         </div>

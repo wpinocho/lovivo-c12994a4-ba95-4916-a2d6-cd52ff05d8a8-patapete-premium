@@ -66,7 +66,11 @@ function PaymentForm({
   const amountLabel = useMemo(() => {
     const amt = (amountCents || 0) / 100
     const cur = (currency || "usd").toUpperCase()
-    return `${cur} $${amt.toFixed(2)}`
+    // Remove unnecessary .00 decimals
+    const formatted = amt % 1 === 0
+      ? `$${amt.toLocaleString('es-MX')}`
+      : `$${amt.toFixed(2)}`
+    return `${formatted} ${cur}`
   }, [amountCents, currency])
 
   // Normalize edge response into an order-like object for our cache
@@ -534,16 +538,19 @@ function PaymentForm({
       <Button 
         onClick={handleFinalizarCompra} 
         disabled={!stripe || loading || !amountCents}
-        className="w-full h-12 text-lg font-semibold"
+        className="w-full h-auto py-3.5 font-semibold"
         size="lg"
       >
         {loading ? (
-          <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
             <span>Procesando...</span>
           </div>
         ) : (
-          `Completar Compra - ${amountLabel}`
+          <span className="flex flex-col items-center leading-tight gap-0.5">
+            <span className="text-base font-semibold">Completar Compra</span>
+            <span className="text-sm font-normal opacity-85">{amountLabel}</span>
+          </span>
         )}
       </Button>
 
