@@ -496,26 +496,10 @@ function PaymentForm({
 
   return (
     <div className="space-y-6">
-      {/* SSL Trust Banner */}
-      <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-          <Lock className="w-4 h-4 text-green-700" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-green-800">Pago 100% seguro · Encriptado SSL</p>
-          <p className="text-xs text-green-700 mt-0.5">Procesado por Stripe — estándar mundial de pagos seguros</p>
-        </div>
-        <div className="shrink-0 flex items-center gap-1.5">
-          <svg viewBox="0 0 48 16" className="h-4" aria-label="Visa">
-            <rect width="48" height="16" rx="2" fill="#1A1F71"/>
-            <text x="50%" y="12" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">VISA</text>
-          </svg>
-          <svg viewBox="0 0 32 20" className="h-4" aria-label="Mastercard">
-            <circle cx="12" cy="10" r="10" fill="#EB001B"/>
-            <circle cx="20" cy="10" r="10" fill="#F79E1B"/>
-            <path d="M16 4.8a10 10 0 0 1 0 10.4A10 10 0 0 1 16 4.8z" fill="#FF5F00"/>
-          </svg>
-        </div>
+      {/* SSL Trust Badge — compact, on-brand */}
+      <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
+        <Lock className="w-3 h-3 shrink-0" />
+        <span className="text-xs">Pago seguro encriptado con SSL</span>
       </div>
 
       {/* Sección de pago con tarjeta */}
