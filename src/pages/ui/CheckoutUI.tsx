@@ -16,6 +16,7 @@ import { HeadlessCheckout } from "@/components/headless/HeadlessCheckout";
 import { useURLCheckoutParams } from "@/hooks/useURLCheckoutParams";
 import { useTokenCheckout } from "@/hooks/useTokenCheckout";
 import { formatMoney } from "@/lib/money";
+import { useSettings } from "@/contexts/SettingsContext";
 
 /**
  * EDITABLE UI COMPONENT - CheckoutUI
@@ -35,6 +36,7 @@ import { formatMoney } from "@/lib/money";
 export default function CheckoutUI() {
   const { params, hasParams } = useURLCheckoutParams();
   const { isLoadingToken, tokenError, hasToken } = useTokenCheckout();
+  const { stripeAccountId, chargeType } = useSettings();
   const navigate = useNavigate();
   const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
 
@@ -608,6 +610,8 @@ export default function CheckoutUI() {
                 <section>
                   <h3 className="text-lg font-semibold mb-4">Pago</h3>
                   <StripePayment 
+                    stripeAccountId={stripeAccountId}
+                    chargeType={chargeType}
                     amountCents={Math.round(logic.finalTotal * 100)} 
                     currency={logic.currencyCode.toLowerCase()} 
                     description={`Pedido #${logic.orderId ?? 's/n'}`} 

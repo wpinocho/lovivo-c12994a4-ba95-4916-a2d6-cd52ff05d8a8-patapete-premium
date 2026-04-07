@@ -32,9 +32,9 @@ interface StripePaymentProps {
   items?: any[]
   deliveryExpectations?: any[]
   pickupLocations?: any[]
+  stripeAccountId?: string | null
+  chargeType?: string | null
 }
-
-const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY)
 
 function PaymentForm({
   amountCents,
@@ -602,6 +602,13 @@ function PaymentForm({
 }
 
 export default function StripePayment(props: StripePaymentProps) {
+  const stripePromise = useMemo(() => {
+    const opts = props.chargeType === 'direct' && props.stripeAccountId
+      ? { stripeAccount: props.stripeAccountId }
+      : {}
+    return loadStripe(STRIPE_PUBLISHABLE_KEY, opts)
+  }, [props.stripeAccountId, props.chargeType])
+
   if (!stripePromise) {
     return (
       <div className="text-sm text-muted-foreground">

@@ -14,6 +14,8 @@ interface SettingsContextType {
   pickupLocations: any
   deliveryExpectations: any
   metaPixelId: string | null
+  stripeAccountId: string | null
+  chargeType: string | null
   isLoading: boolean
   error: Error | null
   formatMoney: (value: number) => string
@@ -78,6 +80,23 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   const deliveryExpectations = settings?.delivery_expectations || null
   const metaPixelId = settings?.meta_pixel_id || null
 
+  const { data: platformStore } = useQuery({
+    queryKey: ['platform-store', STORE_ID],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('platform_stores')
+        .select('stripe_account_id, charge_type')
+        .eq('store_id', STORE_ID)
+        .eq('status', 'ready')
+        .maybeSingle()
+      return data
+    },
+    staleTime: 60000,
+    retry: 1,
+  })
+  const stripeAccountId = platformStore?.stripe_account_id || null
+  const chargeType = platformStore?.charge_type || null
+
   const formatMoneyWithCurrency = (value: number): string => {
     return formatMoney(value, currencyCode)
   }
@@ -93,6 +112,8 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
         pickupLocations,
         deliveryExpectations,
         metaPixelId,
+        stripeAccountId,
+        chargeType,
         isLoading,
         error: error as Error | null,
         formatMoney: formatMoneyWithCurrency,
