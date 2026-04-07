@@ -26,7 +26,53 @@ Migración de Destination Charges a Direct Charge en Stripe:
 3. `src/components/StripePayment.tsx` — props nuevas `stripeAccountId` y `chargeType`; `loadStripe` movido de módulo-level static a `useMemo` dentro del wrapper, pasando `{ stripeAccount }` cuando `chargeType === 'direct'`
 4. `src/pages/ui/CheckoutUI.tsx` — importa `useSettings`, lee `stripeAccountId`/`chargeType`, los pasa a `<StripePayment>`
 
-**NOTA**: La lógica de localStorage al completar pago NO se modificó (ya era más robusta que en el otro repo — busca imagen preview de patapete).
+---
+
+## 🐛 BUG ACTIVO: "No such payment_intent" en checkout con Direct Charges
+
+### Root Cause (confirmado por logs)
+- `SettingsContext` tiene DOS queries async: `store_settings` y `platform_stores`
+- La query `platform_stores` (que trae `stripe_account_id` y `charge_type`) es async y llega tarde
+- Cuando `CheckoutUI` monta `<StripePayment>`, `stripeAccountId` es `null` (todavía loading)
+- `useMemo` en `StripePayment` crea `loadStripe(PK, {})` sin `stripeAccount` → inicializado en cuenta PLATAFORMA
+- Cuando la BD responde con el account ID, React intenta actualizar la prop `stripe` de `<Elements>` → Stripe SDK lanza warning: **"You cannot change the `stripe` prop after setting it"** (log #9) → la instancia NO se actualiza
+- El PaymentIntent se crea en la cuenta CONECTADA (edge function lo hace bien), pero `stripe.confirmCardPayment()` lo busca en la cuenta PLATAFORMA → **"No such payment_intent"** (log #10)
+
+### Fix Plan
+
+#### Opción elegida: Gate render de `<StripePayment>` hasta que platform store esté cargado
+
+**Files to modify:**
+
+1. **`src/contexts/SettingsContext.tsx`**
+   - Exponer `isPlatformStoreLoading: boolean` en el contexto (la query de `platform_stores` tiene su propio loading state)
+   - En el `useQuery` de `platform_stores`, destructurar también `isLoading: isPlatformStoreLoading`
+   - Agregar `isPlatformStoreLoading` al interface `SettingsContextType` y al valor del Provider
+
+2. **`src/pages/ui/CheckoutUI.tsx`**
+   - Importar `isPlatformStoreLoading` de `useSettings()`
+   - En la sección de Pago (section con `<StripePayment>`), no renderizar hasta que `isPlatformStoreLoading === false`
+   - Mostrar un spinner/skeleton simple mientras carga (e.g., div con animate-pulse h-32)
+   - Esto garantiza que cuando `<Elements stripe={stripePromise}>` monta por primera vez, ya tiene el `stripeAccountId` correcto
+
+**Implementation steps:**
+
+```tsx
+// SettingsContext.tsx — en el useQuery de platform_stores:
+const { data: platformStore, isLoading: isPlatformStoreLoading } = useQuery({ ... })
+
+// Agregar al interface:
+isPlatformStoreLoading: boolean
+
+// En CheckoutUI.tsx — en la sección de Pago:
+{isPlatformStoreLoading ? (
+  <div className="animate-pulse rounded-lg bg-muted h-48" />
+) : (
+  <StripePayment ... />
+)}
+```
+
+**Why this works:** Stripe Elements se monta una sola vez cuando `stripeAccountId` ya tiene el valor correcto desde la BD. No hay race condition.
 
 ---
 
@@ -52,7 +98,8 @@ Cuando `icon_generated` sucede (pet.generatedArtUrl cambia de null a URL):
 ## Próximos pasos
 1. ✅ Fix Facebook Mobile bug → DESCARTADO
 2. ✅ Direct Charge migration → COMPLETADO
-3. Toast/banner celebratorio post icon_generated
-4. Galería de ejemplos pre-upload
-5. Email capture: popup cuando generó ícono pero no compró
-6. OXXO/SPEI
+3. 🐛 Fix "No such payment_intent" — gate render de StripePayment hasta que platform_stores esté cargado
+4. Toast/banner celebratorio post icon_generated
+5. Galería de ejemplos pre-upload
+6. Email capture: popup cuando generó ícono pero no compró
+7. OXXO/SPEI
