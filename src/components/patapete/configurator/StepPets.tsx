@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { useInView } from 'react-intersection-observer'
 import { Pet, PRICES, Style } from './types'
 import { trackCustomEvent } from '@/lib/tracking-utils'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck, CheckCircle, Scissors, Home } from 'lucide-react'
+import { Star, Shield, Package, Clock, Truck, Eye, ShoppingCart, ShieldCheck, CheckCircle, Scissors, Home, X } from 'lucide-react'
 
 interface StepPetsProps {
   style: Style
@@ -142,6 +142,42 @@ export function StepPets({
       }
     }
   }
+
+  // ── Celebration banner after icon_generated ────────────────────────────
+  const [showCelebrationBanner, setShowCelebrationBanner] = useState(false)
+  const prevGeneratedUrls = useRef<(string | null)[]>([null, null, null])
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const dismissBanner = useCallback(() => {
+    setShowCelebrationBanner(false)
+    if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current)
+  }, [])
+
+  useEffect(() => {
+    // Only show once per session
+    if (sessionStorage.getItem('patapete_cta_shown')) return
+
+    pets.slice(0, petCount).forEach((pet, i) => {
+      const hadUrl = prevGeneratedUrls.current[i]
+      const hasUrl = pet.generatedArtUrl ?? null
+      // Detect: just got a new generated URL
+      if (hasUrl && !hadUrl) {
+        prevGeneratedUrls.current[i] = hasUrl
+        if (!sessionStorage.getItem('patapete_cta_shown')) {
+          sessionStorage.setItem('patapete_cta_shown', '1')
+          setShowCelebrationBanner(true)
+          trackCustomEvent('post_generation_banner_shown', { pet_index: i })
+          celebrationTimerRef.current = setTimeout(() => setShowCelebrationBanner(false), 6000)
+        }
+      } else {
+        prevGeneratedUrls.current[i] = hasUrl
+      }
+    })
+  }, [pets, petCount])
+
+  useEffect(() => {
+    return () => { if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current) }
+  }, [])
 
   const price = PRICES[style][petCount]
   const deliveryRange = useMemo(() => getDeliveryRange(), [])
@@ -429,6 +465,37 @@ export function StepPets({
           </div>
         </div>
       </div>
+
+      {/* ── Celebration banner post-generación ── */}
+      {showCelebrationBanner && (
+        <div className="fixed bottom-24 left-4 right-4 z-[60] mx-auto max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="bg-primary text-primary-foreground rounded-2xl shadow-2xl px-4 py-3.5 flex items-center gap-3">
+            <span className="text-2xl shrink-0">🐾</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm leading-tight">¡Tu tapete quedó increíble!</p>
+              <p className="text-xs opacity-80 mt-0.5">Ordénalo antes de que se llene el cupo</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                trackCustomEvent('post_generation_banner_clicked', { action: 'order' })
+                dismissBanner()
+                validateAndProceed('order')
+              }}
+              className="shrink-0 bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold text-xs px-3 rounded-xl"
+            >
+              Ordenar →
+            </Button>
+            <button
+              onClick={dismissBanner}
+              aria-label="Cerrar"
+              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity p-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Sticky CTA bar — 3 estados ── */}
       {/* Estado 1: sin foto | Estado 2: procesando | Estado 3: foto lista y CTA fuera de vista */}
