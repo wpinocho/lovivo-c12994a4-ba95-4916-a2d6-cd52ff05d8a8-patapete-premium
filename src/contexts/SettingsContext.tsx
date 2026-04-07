@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { STORE_ID } from '@/lib/config'
 import { formatMoney } from '@/lib/money'
-import type { StoreSettings } from '@/lib/supabase'
+import type { StoreSettings, PaymentMethods } from '@/lib/supabase'
 
 interface SettingsContextType {
   currencyCode: string
@@ -16,6 +16,7 @@ interface SettingsContextType {
   metaPixelId: string | null
   stripeAccountId: string | null
   chargeType: string | null
+  paymentMethods: PaymentMethods
   isLoading: boolean
   error: Error | null
   formatMoney: (value: number) => string
@@ -27,7 +28,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 const fetchStoreSettings = async (): Promise<StoreSettings> => {
   const { data, error } = await supabase
     .from('store_settings')
-    .select('currency_code, store_id, id, updated_at, social_links, store_language, date_format, shipping_coverage, pickup_locations, delivery_expectations, meta_pixel_id')
+    .select('currency_code, store_id, id, updated_at, social_links, store_language, date_format, shipping_coverage, pickup_locations, delivery_expectations, meta_pixel_id, payment_methods')
     .eq('store_id', STORE_ID)
     .maybeSingle()
 
@@ -79,6 +80,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
   const pickupLocations = settings?.pickup_locations || null
   const deliveryExpectations = settings?.delivery_expectations || null
   const metaPixelId = settings?.meta_pixel_id || null
+  const paymentMethods: PaymentMethods = settings?.payment_methods ?? { card: true, oxxo: false, spei: false }
 
   const { data: platformStore } = useQuery({
     queryKey: ['platform-store', STORE_ID],
@@ -114,6 +116,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
         metaPixelId,
         stripeAccountId,
         chargeType,
+        paymentMethods,
         isLoading,
         error: error as Error | null,
         formatMoney: formatMoneyWithCurrency,

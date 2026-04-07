@@ -38,6 +38,7 @@ const Cart = lazyWithReload(() => import('./pages/Cart'));
 const MyOrders = lazyWithReload(() => import('./pages/MyOrders'));
 const Bundle = lazyWithReload(() => import('./pages/Bundle'));
 const MySubscriptions = lazyWithReload(() => import('./pages/MySubscriptions'));
+const PendingPayment = lazyWithReload(() => import('./pages/PendingPayment'));
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,7 @@ const App = () => (
                         <Route path="/mis-suscripciones" element={<MySubscriptions />} />
                         <Route path="/blog" element={<Blog />} />
                         <Route path="/blog/:slug" element={<BlogPost />} />
+                        <Route path="/pago-pendiente/:orderId" element={<PendingPayment />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>

@@ -36,7 +36,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 export default function CheckoutUI() {
   const { params, hasParams } = useURLCheckoutParams();
   const { isLoadingToken, tokenError, hasToken } = useTokenCheckout();
-  const { stripeAccountId, chargeType } = useSettings();
+  const { stripeAccountId, chargeType, paymentMethods } = useSettings();
   const navigate = useNavigate();
   const [isMobileSummaryOpen, setIsMobileSummaryOpen] = useState(false);
 
@@ -646,6 +646,7 @@ export default function CheckoutUI() {
                       (logic.selectedPickupLocation ? [logic.selectedPickupLocation] : []) : 
                       []
                     }
+                    paymentMethods={paymentMethods}
                   />
                 </section>
               </div>

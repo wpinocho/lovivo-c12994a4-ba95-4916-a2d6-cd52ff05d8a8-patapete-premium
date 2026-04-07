@@ -251,6 +251,12 @@ export type PriceRule = {
   priority?: number
 }
 
+export type PaymentMethods = {
+  card?: boolean
+  oxxo?: boolean
+  spei?: boolean
+}
+
 export type StoreSettings = {
   id: string
   store_id: string
@@ -263,6 +269,7 @@ export type StoreSettings = {
   pickup_locations?: any
   delivery_expectations?: any
   meta_pixel_id?: string
+  payment_methods?: PaymentMethods
   updated_at?: string
 }
 
