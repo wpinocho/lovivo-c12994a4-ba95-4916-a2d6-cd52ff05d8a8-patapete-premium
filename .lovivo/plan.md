@@ -16,12 +16,22 @@ Ecommerce mexicano de tapetes personalizados con íconos de mascotas generados p
 - addtocart → initiatecheckout: 5 → 4 (80%)
 - initiatecheckout → purchase: 4 → 0 (0% — bug de checkout corregido)
 
+## Precios actuales (producto en DB)
+- Variantes 1/2/3 mascotas: **$799 MXN** (antes $949)
+- Compare at: **$1,499 MXN** (antes $1,199)
+- Hardcoded actualizado en: types.ts, PatapeteHero.tsx, StepPets.tsx
+
 ## Recent Changes
 
 ### Direct Charge Migration ✅ COMPLETADO (2026-04-07)
 ### Fix "No such payment_intent" ✅ COMPLETADO (2026-04-07)
 ### Banner celebratorio post-generación ✅ COMPLETADO (2026-04-07)
 ### OXXO + SPEI en Checkout ✅ COMPLETADO (2026-04-07)
+### Actualización de precios ✅ COMPLETADO (2026-04-08)
+- `types.ts`: PRICES 949 → 799
+- `PatapeteHero.tsx`: "$949 MXN" → "$799 MXN", "$1,199" → "$1,499"
+- `StepPets.tsx`: "$1,199 MXN" → "$1,499 MXN"
+- StepSummary.tsx y StepStyle.tsx usan PRICES de types.ts (se actualizan automáticamente)
 
 ---
 
@@ -47,16 +57,6 @@ Para activar OXXO o SPEI, actualizar `payment_methods` en `store_settings`:
 { "card": true, "oxxo": true, "spei": false }
 ```
 
-### Flujo
-```
-store_settings.payment_methods → SettingsContext → CheckoutUI → StripePayment
-                                                                    │
-                                         ┌──────────────────────────┤
-                                       card         oxxo          spei
-                                         │            │              │
-                                    /gracias/   /pago-pendiente/  /pago-pendiente/
-```
-
 ---
 
 ## Backlog CRO
@@ -72,5 +72,6 @@ store_settings.payment_methods → SettingsContext → CheckoutUI → StripePaym
 2. ✅ Fix "No such payment_intent" → COMPLETADO
 3. ✅ Banner celebratorio post icon_generated → COMPLETADO
 4. ✅ OXXO + SPEI en checkout → COMPLETADO
-5. Galería de ejemplos pre-upload
-6. Email capture: popup cuando generó ícono pero no compró
+5. ✅ Actualización de precios ($799 / $1,499) → COMPLETADO
+6. Galería de ejemplos pre-upload
+7. Email capture: popup cuando generó ícono pero no compró

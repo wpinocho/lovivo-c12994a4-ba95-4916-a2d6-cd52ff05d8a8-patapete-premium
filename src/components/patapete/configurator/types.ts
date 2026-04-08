@@ -44,6 +44,6 @@ export const STYLE_LABELS: Record<Style, string> = {
 }
 
 export const PRICES: Record<Style, Record<1 | 2 | 3, number>> = {
-  dibujo: { 1: 949, 2: 949, 3: 949 },
-  icono:  { 1: 949, 2: 949, 3: 949 },
+  dibujo: { 1: 799, 2: 799, 3: 799 },
+  icono:  { 1: 799, 2: 799, 3: 799 },
 }

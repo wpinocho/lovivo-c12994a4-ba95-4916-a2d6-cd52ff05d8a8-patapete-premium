@@ -78,13 +78,13 @@ export const PatapeteHero = () => {
               className="text-white font-bold text-base md:text-lg"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
             >
-              Desde $949 MXN
+              Desde $799 MXN
             </span>
             <span
               className="text-white/55 line-through text-sm md:text-base font-medium"
               style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
             >
-              $1,199
+              $1,499
             </span>
             <span
               className="text-white/70 text-xs md:text-sm"

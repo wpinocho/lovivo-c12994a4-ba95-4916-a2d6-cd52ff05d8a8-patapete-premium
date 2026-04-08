@@ -281,7 +281,7 @@ export function StepPets({
                 ${price.toLocaleString('es-MX')}
                 <span className="text-base font-normal text-muted-foreground ml-1">MXN</span>
               </span>
-              <span className="text-base text-muted-foreground line-through">$1,199 MXN</span>
+              <span className="text-base text-muted-foreground line-through">$1,499 MXN</span>
               <span className="text-xs text-muted-foreground">· Envío incluido</span>
             </div>
 
