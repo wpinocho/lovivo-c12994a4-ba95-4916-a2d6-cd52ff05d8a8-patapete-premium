@@ -59,6 +59,220 @@ Para activar OXXO o SPEI, actualizar `payment_methods` en `store_settings`:
 
 ---
 
+## PLAN ACTIVO: Usar `data.order` del edge como fuente de verdad ⏳
+
+### Contexto
+El edge `payments-create-intent` ahora devuelve un objeto `order` completo con:
+- `order_number` real de DB (ej. "ORD-00001234")
+- `shipping_address` con formato: `{ name, line1, line2, city, state, postal_code, country, phone }`
+- `billing_address` mismo formato
+- `order_items[]` con `{ product_name, product_images[], variant_name, quantity, price, total }`
+- `total_amount`, `currency_code`, etc.
+
+Actualmente el frontend construye `completedOrder` manualmente con datos del cliente que pueden ser incompletos o desincronizados.
+
+### Cambios requeridos
+
+#### 1. `src/components/StripePayment.tsx`
+
+**A) Al inicio de `handleFinalizarCompra` (antes del try):**
+- Declarar `let edgeOrderData: any = null` para que sea accesible desde los closures internos
+
+**B) En el bloque ONE-TIME FLOW (después de `callEdge("payments-create-intent", payload)`):**
+```typescript
+const data = await callEdge("payments-create-intent", payload)
+// Nueva línea: capturar y persistir el order del edge
+edgeOrderData = data?.order ?? null
+if (edgeOrderData && checkoutToken) {
+  try {
+    sessionStorage.setItem(`order_${checkoutToken}`, JSON.stringify(edgeOrderData))
+  } catch { /* ignore */ }
+}
+```
+
+**C) En `confirmCard` — reemplazar la construcción manual de `completedOrder`:**
+
+Actualmente construye order_number como `orderId?.slice(-8).toUpperCase()` y mapea shipping_address manualmente desde props. Reemplazar con:
+
+```typescript
+// Build order_items: preferir edgeOrderData.order_items y mergear preview images
+const orderItemsFromEdge: any[] = edgeOrderData?.order_items ?? []
+const completedOrderItems = orderItemsFromEdge.length > 0
+  ? orderItemsFromEdge.map((edgeItem: any) => {
+      // Intentar obtener preview image de Patapete desde localStorage
+      let productImages: string[] = edgeItem.product_images ?? []
+      const rawItem = Array.isArray(items) ? items.find((it: any) =>
+        (it.product_id || it.product?.id) === edgeItem.product_id &&
+        (it.variant_id || it.variant?.id) === edgeItem.variant_id
+      ) : undefined
+      const itemKey = rawItem?.key
+      if (itemKey) {
+        try {
+          const stored = localStorage.getItem(`patapete_customization:${itemKey}`)
+          if (stored) {
+            const parsed = JSON.parse(stored)
+            const previewUrl = parsed.preview_image_url || parsed.preview_dataurl
+            if (previewUrl) productImages = [previewUrl]
+          }
+        } catch { /* ignore */ }
+      }
+      return {
+        product_id: edgeItem.product_id,
+        variant_id: edgeItem.variant_id,
+        product_name: edgeItem.product_name,
+        variant_name: edgeItem.variant_name ?? '',
+        quantity: edgeItem.quantity,
+        price: edgeItem.price,  // ya en pesos (no centavos)
+        product_images: productImages,
+      }
+    })
+  : completedOrderItems  // fallback al cálculo manual anterior (mantener como fallback)
+
+const completedOrder = {
+  id: edgeOrderData?.id ?? orderId,
+  order_number: edgeOrderData?.order_number ?? orderId?.slice(-8).toUpperCase() ?? 'N/A',
+  checkout_token: edgeOrderData?.checkout_token ?? checkoutToken,
+  total_amount: edgeOrderData?.total_amount ?? totalCents / 100,
+  currency_code: (edgeOrderData?.currency_code ?? currency ?? 'mxn').toUpperCase(),
+  status: 'paid',
+  // Usar formato DB directo (name, line1, line2, city, state, postal_code, country, phone)
+  shipping_address: edgeOrderData?.shipping_address ?? (shippingAddress ? {
+    name: `${shippingAddress.first_name || ''} ${shippingAddress.last_name || ''}`.trim(),
+    line1: shippingAddress.line1 || '',
+    line2: shippingAddress.line2 || '',
+    city: shippingAddress.city || '',
+    state: shippingAddress.state || '',
+    postal_code: shippingAddress.postal_code || '',
+    country: shippingAddress.country || '',
+    phone: phone || '',
+  } : null),
+  billing_address: edgeOrderData?.billing_address ?? null,
+  order_items: completedOrderItemsFinal,
+  created_at: new Date().toISOString(),
+}
+localStorage.setItem('completed_order', JSON.stringify(completedOrder))
+```
+
+**NOTA:** El fallback de `completedOrderItems` manual debe mantenerse por si `edgeOrderData` es null (ej. error de red). La lógica debe ser: intentar con edge data, si falla caer al cálculo manual actual.
+
+Reorganizar el código de `confirmCard` en este orden:
+1. Calcular `completedOrderItemsFinal` (edge items + preview images OR fallback manual)
+2. Construir `completedOrder` usando edge data con fallbacks
+3. Guardar en localStorage
+4. `navigate('/gracias/${orderId}')`
+
+#### 2. `src/pages/ThankYou.tsx`
+
+**A) Agregar `callEdge` import de `@/lib/edge`**
+
+**B) Cambiar `loadOrder` para hacer fetch a DB como fuente primaria:**
+
+```typescript
+const loadOrder = async () => {
+  try {
+    // 1. Leer localStorage inmediatamente (UX rápida)
+    const localJson = localStorage.getItem('completed_order')
+    const localOrder = localJson ? JSON.parse(localJson) : null
+    if (localOrder) {
+      setOrder(normalizeOrder(localOrder))
+      localStorage.removeItem('completed_order')
+    }
+
+    // 2. Fetch de DB (fuente de verdad)
+    try {
+      const dbData = await callEdge('order-get', { order_id: orderId })
+      if (dbData?.order) {
+        setOrder(normalizeOrder(dbData.order))
+      }
+    } catch (dbErr) {
+      console.warn('Could not fetch order from DB, using localStorage:', dbErr)
+      // Si localStorage tampoco tenía nada, intentar sessionStorage
+      if (!localOrder) {
+        const sessionJson = sessionStorage.getItem(`order_${orderId}`)
+        if (sessionJson) setOrder(normalizeOrder(JSON.parse(sessionJson)))
+      }
+    }
+  } catch (error) {
+    console.error('Error loading order:', error)
+    setOrder(null)
+  } finally {
+    setLoading(false)
+  }
+}
+loadOrder()
+```
+
+**C) Agregar función `normalizeOrder` que acepta ambos formatos:**
+```typescript
+// Normaliza tanto el formato DB (name, line1) como el formato legacy (first_name, address1)
+const normalizeOrder = (raw: any): OrderDetails => ({
+  ...raw,
+  shipping_address: raw.shipping_address ? normalizeAddress(raw.shipping_address) : null,
+  billing_address: raw.billing_address ? normalizeAddress(raw.billing_address) : null,
+})
+
+const normalizeAddress = (addr: any) => ({
+  // Soporte para ambos formatos
+  name: addr.name || `${addr.first_name || ''} ${addr.last_name || ''}`.trim(),
+  line1: addr.line1 || addr.address1 || '',
+  line2: addr.line2 || addr.address2 || '',
+  city: addr.city || '',
+  state: addr.state || addr.province || '',
+  postal_code: addr.postal_code || addr.zip || '',
+  country: addr.country || '',
+  phone: addr.phone || '',
+})
+```
+
+**D) Actualizar la interfaz `OrderDetails`:**
+```typescript
+interface ShippingAddress {
+  name: string
+  line1: string
+  line2?: string
+  city: string
+  state: string
+  postal_code: string
+  country: string
+  phone?: string
+}
+interface OrderDetails {
+  id: string
+  order_number: string
+  total_amount: number
+  currency_code: string
+  status: string
+  shipping_address?: ShippingAddress
+  billing_address?: ShippingAddress
+  order_items: any[]
+  created_at: string
+}
+```
+
+**E) Actualizar el JSX de dirección para usar el formato normalizado:**
+```tsx
+<p>{order.shipping_address.name}</p>
+<p>{order.shipping_address.line1}{order.shipping_address.line2 ? `, ${order.shipping_address.line2}` : ''}</p>
+<p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.postal_code}</p>
+<p>{order.shipping_address.country}</p>
+{order.shipping_address.phone && <p>Tel: {order.shipping_address.phone}</p>}
+```
+
+**F) Para order_items desde DB**, los campos son `price` (en pesos, no centavos) y `total`.
+Verificar que `formatMoney(item.price * item.quantity, ...)` sea correcto — si DB devuelve `price` en pesos el cálculo está bien, si devuelve en centavos dividir entre 100. Según el payload del edge, `price: 500` = 500 MXN (pesos), así que el cálculo actual es correcto.
+
+**G) Cambiar `useEffect` a `async` wrapper** (loadOrder ya es async).
+
+### Archivos a modificar
+- `src/components/StripePayment.tsx` — usar `edgeOrderData` en `confirmCard`, guardar en sessionStorage
+- `src/pages/ThankYou.tsx` — fetch de DB, normalización de formato, fallback chain
+
+### Orden de implementación
+1. `ThankYou.tsx` primero (más independiente)
+2. `StripePayment.tsx` después
+
+---
+
 ## Backlog CRO
 
 ### Priority 1 (backlog): Galería de ejemplos pre-upload
@@ -73,5 +287,6 @@ Para activar OXXO o SPEI, actualizar `payment_methods` en `store_settings`:
 3. ✅ Banner celebratorio post icon_generated → COMPLETADO
 4. ✅ OXXO + SPEI en checkout → COMPLETADO
 5. ✅ Actualización de precios ($799 / $1,499) → COMPLETADO
-6. Galería de ejemplos pre-upload
-7. Email capture: popup cuando generó ícono pero no compró
+6. ⏳ Usar `data.order` del edge como fuente de verdad (ThankYou + StripePayment)
+7. Galería de ejemplos pre-upload
+8. Email capture: popup cuando generó ícono pero no compró
